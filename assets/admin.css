@@ -1,0 +1,277 @@
+/**
+ * Kaupang Stock — admin styling. Modest, WP-admin-native. All classes are
+ * .ks-*; all colours are --ks-* custom properties that fall back through the
+ * Ousia token contract to hardcoded WP-admin values, so the plugin looks right
+ * standalone and picks up the child theme's palette when present.
+ */
+
+.ks-wrap {
+	--ks-accent: var(--accent-color, #2271b1);
+	--ks-pos: var(--ks-color-pos, #1a7f37);
+	--ks-neg: var(--ks-color-neg, #b32d2e);
+	--ks-warning-bg: var(--ks-color-warning-bg, #fcf3d7);
+	--ks-warning-fg: var(--ks-color-warning-fg, #8a6d1b);
+	--ks-danger-bg: var(--ks-color-danger-bg, #fcebea);
+	--ks-danger-fg: var(--ks-color-danger-fg, #b32d2e);
+	--ks-muted: var(--ks-color-muted, #757575);
+	--ks-chip-bg: var(--ks-color-chip-bg, #f0f0f1);
+	--ks-chip-fg: var(--ks-color-chip-fg, #50575e);
+	--ks-space: var(--spacing-sm, 8px);
+}
+
+/* --- shared numerics + muted ------------------------------------------- */
+.ks-num {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.ks-muted {
+	color: var(--ks-muted);
+}
+
+.ks-delta-pos {
+	color: var(--ks-pos);
+	font-weight: 600;
+}
+
+.ks-delta-neg {
+	color: var(--ks-neg);
+	font-weight: 600;
+}
+
+/* --- chips -------------------------------------------------------------- */
+.ks-chip,
+.ks-reason-chip {
+	display: inline-block;
+	padding: 1px 8px;
+	border-radius: 9px;
+	font-size: 11px;
+	line-height: 18px;
+	white-space: nowrap;
+	background: var(--ks-chip-bg);
+	color: var(--ks-chip-fg);
+}
+
+.ks-chip-warning {
+	background: var(--ks-warning-bg);
+	color: var(--ks-warning-fg);
+}
+
+.ks-chip-danger {
+	background: var(--ks-danger-bg);
+	color: var(--ks-danger-fg);
+}
+
+.ks-chip-muted {
+	background: transparent;
+	color: var(--ks-muted);
+	border: 1px solid #dcdcde;
+}
+
+/* --- tables (responsive horizontal scroll) ------------------------------ */
+.ks-table {
+	margin-top: 1em;
+}
+
+@media screen and (max-width: 782px) {
+	.ks-status-table,
+	.ks-movements-wrap {
+		display: block;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+}
+
+.ks-status-table .ks-col-product {
+	width: 28%;
+}
+
+.ks-status-table .ks-col-adjust {
+	width: 260px;
+}
+
+.ks-neg {
+	color: var(--ks-neg);
+	font-weight: 600;
+}
+
+.ks-lastmove {
+	display: inline-block;
+}
+
+/* --- filters bar -------------------------------------------------------- */
+.ks-filters {
+	margin: 1em 0;
+}
+
+.ks-movements-filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--ks-space);
+	align-items: center;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 3px;
+	padding: 10px 12px;
+}
+
+.ks-movements-filters .ks-date-label {
+	display: inline-flex;
+	flex-direction: column;
+	font-size: 11px;
+	color: var(--ks-muted);
+}
+
+.ks-export-row {
+	margin: 1em 0 0.5em;
+}
+
+/* --- quick adjust (inline row form) ------------------------------------- */
+.ks-quick-adjust {
+	display: flex;
+	gap: 4px;
+	align-items: center;
+}
+
+.ks-quick-adjust .ks-adjust-delta {
+	width: 64px;
+}
+
+.ks-quick-adjust .ks-adjust-note {
+	flex: 1 1 auto;
+	min-width: 90px;
+}
+
+.ks-quick-adjust[title] {
+	opacity: 0.75;
+}
+
+/* --- collapsible panel -------------------------------------------------- */
+.ks-panel {
+	margin: 1em 0;
+}
+
+.ks-panel-body {
+	margin-top: 0.75em;
+	padding: 12px 16px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 3px;
+	max-width: 42em;
+}
+
+.ks-adjust-form .ks-field-label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 2px;
+}
+
+.ks-adjust-form p {
+	margin: 0 0 0.75em;
+}
+
+.ks-warning {
+	color: var(--ks-warning-fg);
+}
+
+/* --- reconcile banner --------------------------------------------------- */
+.ks-reconcile-banner {
+	padding: 8px 12px 12px;
+}
+
+.ks-reconcile-table {
+	margin: 0.5em 0;
+}
+
+.ks-reconcile-run {
+	margin: 1em 0;
+}
+
+.ks-inline-form {
+	display: inline-block;
+	margin: 0;
+}
+
+/* --- reverse row action ------------------------------------------------- */
+.ks-reverse-form {
+	display: inline;
+	margin: 0;
+	padding: 0;
+}
+
+.ks-reverse-btn {
+	color: var(--ks-neg);
+	background: none;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+	text-decoration: underline;
+}
+
+.ks-reverse-btn:hover {
+	color: var(--ks-neg);
+	opacity: 0.8;
+}
+
+/* --- product/order meta boxes ------------------------------------------- */
+.ks-product-panel .ks-panel-figures,
+.ks-order-box .ks-panel-moves {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.ks-panel-figures th,
+.ks-panel-figures td {
+	padding: 3px 0;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.ks-panel-figures th {
+	text-align: left;
+	font-weight: 400;
+	color: var(--ks-muted);
+}
+
+.ks-panel-heading {
+	margin: 12px 0 4px;
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	color: var(--ks-muted);
+}
+
+.ks-panel-moves {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 12px;
+}
+
+.ks-panel-moves td,
+.ks-panel-moves th {
+	padding: 3px 4px;
+	border-bottom: 1px solid #f0f0f1;
+	vertical-align: top;
+}
+
+.ks-panel-variations th {
+	text-align: left;
+	font-weight: 600;
+	color: inherit;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.ks-panel-link {
+	margin: 10px 0 0;
+}
+
+.ks-order-moves {
+	font-size: 12px;
+}
+
+.ks-order-moves th {
+	text-align: left;
+	color: var(--ks-muted);
+	font-weight: 400;
+	border-bottom: 1px solid #dcdcde;
+}

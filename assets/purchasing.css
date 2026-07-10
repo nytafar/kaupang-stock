@@ -1,0 +1,244 @@
+/**
+ * Kaupang Stock — Innkjøp (purchasing) admin styles. Layered on top of the shared
+ * admin.css handle. Consumes the Ousia token contract (--accent-color, --spacing-*)
+ * with hardcoded fallbacks so the plugin looks right even outside the theme.
+ */
+
+.ks-purchasing .ks-num {
+	text-align: right;
+	white-space: nowrap;
+}
+
+/* --- status chips -------------------------------------------------------- */
+
+.ks-purchasing .ks-chip,
+.ks-inline-status .ks-chip {
+	display: inline-block;
+	padding: 0.1em 0.6em;
+	border-radius: 999px;
+	font-size: 0.85em;
+	line-height: 1.6;
+	font-weight: 600;
+	border: 1px solid transparent;
+	white-space: nowrap;
+}
+
+.ks-chip-draft {
+	background: #f0f0f1;
+	color: #50575e;
+	border-color: #dcdcde;
+}
+
+.ks-chip-ordered {
+	background: #e5f0fb;
+	color: #0a4b78;
+	border-color: #b6d7f5;
+}
+
+.ks-chip-partial {
+	background: #fcf3e3;
+	color: #8a6116;
+	border-color: #f0d9a8;
+}
+
+.ks-chip-received {
+	background: #e6f4ea;
+	color: #14663a;
+	border-color: #a7d7ba;
+}
+
+.ks-chip-cancelled {
+	background: #fbeaea;
+	color: #8a1f1f;
+	border-color: #f0b8b8;
+}
+
+.ks-inline-status {
+	margin-left: 0.5em;
+	vertical-align: middle;
+}
+
+/* --- PO editor layout ---------------------------------------------------- */
+
+.ks-po-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+	gap: 2em;
+	align-items: start;
+	margin-top: 1em;
+}
+
+@media (max-width: 1100px) {
+	.ks-po-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+.ks-po-header h2,
+.ks-po-lines h2 {
+	margin-top: 0;
+}
+
+.ks-inline-form {
+	display: inline-block;
+	margin: 0 0 0 0.5em;
+}
+
+.ks-po-header .button,
+.ks-po-header .ks-inline-form {
+	margin-top: 0.5em;
+}
+
+/* --- lines + add-line ---------------------------------------------------- */
+
+.ks-lines .ks-line-actions {
+	white-space: nowrap;
+}
+
+.ks-danger,
+a.ks-danger {
+	color: #b32d2e;
+}
+
+.ks-add-line,
+.ks-line-edit {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 0.8em;
+	margin-top: 0.5em;
+	padding: 0.8em;
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+}
+
+.ks-add-line label,
+.ks-line-edit label {
+	display: flex;
+	flex-direction: column;
+	font-size: 0.9em;
+	gap: 0.2em;
+}
+
+.ks-line-edit {
+	background: #fcf9e8;
+}
+
+.ks-product-search {
+	display: flex;
+	gap: 0.5em;
+	align-items: center;
+	margin-top: 0.5em;
+}
+
+.ks-picker-results {
+	margin: 0.5em 0;
+	max-width: 46em;
+}
+
+.ks-picker-results td {
+	vertical-align: middle;
+}
+
+.ks-add-line.ks-has-product {
+	border-color: var(--accent-color, #2271b1);
+	box-shadow: 0 0 0 1px var(--accent-color, #2271b1);
+}
+
+/* --- receive grid -------------------------------------------------------- */
+
+.ks-receive {
+	margin-top: 1em;
+	max-width: 60em;
+}
+
+.ks-receive-grid .ks-receive-qty {
+	width: 6em;
+	text-align: right;
+}
+
+.ks-receive[data-disabled="1"] {
+	opacity: 0.7;
+}
+
+.ks-receive-feedback {
+	margin-left: 0.8em;
+	font-weight: 600;
+}
+
+.ks-receive-feedback.ks-ok {
+	color: #14663a;
+}
+
+.ks-receive-feedback.ks-error {
+	color: #b32d2e;
+}
+
+/* --- confirm dialog ------------------------------------------------------ */
+
+.ks-confirm {
+	max-width: 44em;
+	width: 90%;
+	border: 1px solid #c3c4c7;
+	border-radius: 6px;
+	padding: 1.5em;
+	box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.ks-confirm::backdrop {
+	background: rgba(0, 0, 0, 0.4);
+}
+
+.ks-confirm h2 {
+	margin-top: 0;
+}
+
+.ks-confirm table {
+	width: 100%;
+	margin: 1em 0;
+}
+
+.ks-confirm .ks-num {
+	text-align: right;
+	white-space: nowrap;
+}
+
+.ks-confirm .ks-over {
+	color: #8a6116;
+	font-weight: 600;
+}
+
+.ks-confirm-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.6em;
+	margin-top: 1em;
+}
+
+/* --- brreg lookup -------------------------------------------------------- */
+
+.ks-brreg-lookup {
+	display: flex;
+	gap: 0.6em;
+	align-items: center;
+	flex-wrap: wrap;
+	margin: 0.5em 0 1em;
+	padding: 0.8em;
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	max-width: 52em;
+}
+
+.ks-brreg-lookup label {
+	display: flex;
+	gap: 0.4em;
+	align-items: center;
+}
+
+.ks-brreg-attrib {
+	font-size: 0.9em;
+	color: #50575e;
+	margin: 0 0 1em;
+}

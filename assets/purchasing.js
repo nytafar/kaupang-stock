@@ -1,0 +1,342 @@
+/**
+ * Kaupang Stock — Innkjøp (purchasing) admin behaviour. Vanilla, no jQuery.
+ *
+ * Three progressive enhancements over the server-rendered page:
+ *
+ *  1. Product picker — a "Add" button next to a search result fills the add-line
+ *     form's product id + label (the form still posts server-side).
+ *  2. Inline line edit — "Edit" on a draft line reveals the shared edit form
+ *     pre-filled from the row's data-* attributes.
+ *  3. Receive flow — the receive grid POSTs to the kaupang-stock/v1 `receive`
+ *     route with the wp_rest nonce. The client NEVER decides over-receipt: it
+ *     sends the entered quantities, and if the server returns confirm_required it
+ *     renders ONE combined dialog from the server's issue rows and re-POSTs with
+ *     confirmed=true. The receive token is minted server-side at form load
+ *     (data-token) and reused across the confirm round-trip, so a double-submit or
+ *     the confirm resend dedupes to a single posting.
+ */
+(function () {
+	'use strict';
+
+	var ROOT = window.KaupangStock || {};
+	var PUR = window.KaupangStockPurchasing || {};
+	var I18N = PUR.i18n || {};
+
+	function t(key, fallback) {
+		return I18N[key] || fallback || key;
+	}
+
+	document.addEventListener('DOMContentLoaded', function () {
+		wireProductPicker();
+		wireLineEdit();
+		wireReceive();
+	});
+
+	/* ----------------------------- Product picker ---------------------------- */
+
+	function wireProductPicker() {
+		var form = document.querySelector('[data-ks-add-line]');
+		if (!form) {
+			return;
+		}
+		var idField = form.querySelector('[data-ks-add-product-id]');
+		var skuField = form.querySelector('[data-ks-add-product-sku]');
+
+		document.querySelectorAll('.ks-pick-product').forEach(function (btn) {
+			btn.addEventListener('click', function () {
+				var id = btn.getAttribute('data-id') || '0';
+				var label = btn.getAttribute('data-label') || '';
+				if (idField) {
+					idField.value = id;
+				}
+				if (skuField) {
+					skuField.value = label;
+					skuField.setAttribute('readonly', 'readonly');
+				}
+				form.classList.add('ks-has-product');
+				try {
+					form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				} catch (e) {
+					form.scrollIntoView();
+				}
+				var qty = form.querySelector('input[name="qty"]');
+				if (qty) {
+					qty.focus();
+					qty.select();
+				}
+			});
+		});
+
+		// Typing a raw SKU/id clears any picked id so the server resolves the text.
+		if (skuField) {
+			skuField.addEventListener('input', function () {
+				if (idField && !skuField.hasAttribute('readonly')) {
+					idField.value = '0';
+				}
+			});
+		}
+	}
+
+	/* ------------------------------- Line edit ------------------------------- */
+
+	function wireLineEdit() {
+		var editForm = document.querySelector('[data-ks-line-edit]');
+		if (!editForm) {
+			return;
+		}
+		var lineField = editForm.querySelector('[data-ks-edit-line]');
+		var qtyField = editForm.querySelector('[data-ks-edit-qty]');
+		var costField = editForm.querySelector('[data-ks-edit-cost]');
+		var cancelBtn = editForm.querySelector('[data-ks-edit-cancel]');
+
+		document.querySelectorAll('.ks-edit-line').forEach(function (btn) {
+			btn.addEventListener('click', function () {
+				if (lineField) {
+					lineField.value = btn.getAttribute('data-line') || '0';
+				}
+				if (qtyField) {
+					qtyField.value = btn.getAttribute('data-qty') || '';
+				}
+				if (costField) {
+					costField.value = btn.getAttribute('data-cost') || '';
+				}
+				editForm.hidden = false;
+				try {
+					editForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				} catch (e) {
+					editForm.scrollIntoView();
+				}
+				if (qtyField) {
+					qtyField.focus();
+					qtyField.select();
+				}
+			});
+		});
+
+		if (cancelBtn) {
+			cancelBtn.addEventListener('click', function () {
+				editForm.hidden = true;
+			});
+		}
+	}
+
+	/* ------------------------------- Receive --------------------------------- */
+
+	function wireReceive() {
+		var form = document.querySelector('[data-ks-receive]');
+		if (!form) {
+			return;
+		}
+		if (form.getAttribute('data-disabled') === '1') {
+			return; // shadow mode: server refuses receipts, UI is read-only
+		}
+
+		var poId = parseInt(form.getAttribute('data-po'), 10) || 0;
+		var token = form.getAttribute('data-token') || '';
+		var feedback = form.querySelector('.ks-receive-feedback');
+		var submitBtn = form.querySelector('.ks-receive-submit');
+		var occurred = form.querySelector('.ks-occurred');
+		var dialog = document.querySelector('[data-ks-confirm]');
+
+		form.addEventListener('submit', function (ev) {
+			ev.preventDefault();
+			send(false);
+		});
+
+		function collectLines() {
+			var lines = {};
+			form.querySelectorAll('.ks-receive-qty').forEach(function (input) {
+				var lineId = input.getAttribute('data-line');
+				var qty = parseFloat(input.value);
+				if (lineId && !isNaN(qty) && qty > 0) {
+					lines[lineId] = qty;
+				}
+			});
+			return lines;
+		}
+
+		function setBusy(busy) {
+			if (submitBtn) {
+				submitBtn.disabled = busy;
+			}
+		}
+
+		function say(msg, isError) {
+			if (!feedback) {
+				return;
+			}
+			feedback.textContent = msg || '';
+			feedback.className = 'ks-receive-feedback' + (isError ? ' ks-error' : ' ks-ok');
+		}
+
+		function send(confirmed) {
+			var lines = collectLines();
+			if (Object.keys(lines).length === 0) {
+				say(t('nothingToReceive', 'Enter a quantity on at least one line.'), true);
+				return;
+			}
+			setBusy(true);
+			say('', false);
+
+			var body = {
+				po_id: poId,
+				token: token,
+				lines: lines,
+				confirmed: !!confirmed
+			};
+			if (occurred && occurred.value) {
+				// Sent as-is (site-local); the REST controller converts to UTC.
+				body.occurred_at = occurred.value;
+			}
+
+			fetch(ROOT.restUrl + 'receive', {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: {
+					'Content-Type': 'application/json',
+					'X-WP-Nonce': ROOT.nonce || ''
+				},
+				body: JSON.stringify(body)
+			})
+				.then(function (res) {
+					return res.json().then(function (data) {
+						return { ok: res.ok, data: data };
+					});
+				})
+				.then(function (out) {
+					var data = out.data || {};
+					// A WP_Error (e.g. 403/501) comes back as {code, message}.
+					if (!out.ok && !data.status) {
+						setBusy(false);
+						say(data.message || t('genericError', 'Something went wrong.'), true);
+						return;
+					}
+					handleResult(data);
+				})
+				.catch(function () {
+					setBusy(false);
+					say(t('genericError', 'Something went wrong.'), true);
+				});
+		}
+
+		function handleResult(data) {
+			if (data.status === 'ok') {
+				say(data.message || t('received', 'Goods received.'), false);
+				// Reload so derived status / received columns refresh from the ledger.
+				window.setTimeout(function () {
+					window.location.reload();
+				}, 600);
+				return;
+			}
+			if (data.status === 'confirm_required') {
+				setBusy(false);
+				openConfirm(data.issues || []);
+				return;
+			}
+			// error
+			setBusy(false);
+			say(data.message || t('genericError', 'Something went wrong.'), true);
+		}
+
+		function openConfirm(issues) {
+			if (!dialog) {
+				// No <dialog> support / not rendered — fall back to a native confirm.
+				if (window.confirm(t('confirmIntro', 'Some lines exceed the remaining quantity. Receive anyway?'))) {
+					send(true);
+				}
+				return;
+			}
+			var titleEl = dialog.querySelector('[data-ks-confirm-title]');
+			var introEl = dialog.querySelector('[data-ks-confirm-intro]');
+			var rowsEl = dialog.querySelector('[data-ks-confirm-rows]');
+			var okBtn = dialog.querySelector('[data-ks-confirm-ok]');
+			var cancelBtn = dialog.querySelector('[data-ks-confirm-cancel]');
+
+			if (titleEl) {
+				titleEl.textContent = t('confirmTitle', 'Confirm over-receipt');
+			}
+			if (introEl) {
+				introEl.textContent = t('confirmIntro', 'These lines exceed the remaining quantity.');
+			}
+			if (rowsEl) {
+				rowsEl.innerHTML = '';
+				var head = document.createElement('tr');
+				head.appendChild(th('')); // label col
+				head.appendChild(th(t('ordered', 'Ordered')));
+				head.appendChild(th(t('alreadyGot', 'Received')));
+				head.appendChild(th(t('remaining', 'Remaining')));
+				head.appendChild(th(t('entered', 'Entered')));
+				rowsEl.appendChild(head);
+
+				issues.forEach(function (issue) {
+					var tr = document.createElement('tr');
+					tr.appendChild(td(issue.label || ('#' + issue.line_id), false));
+					tr.appendChild(td(fmt(issue.ordered), true));
+					tr.appendChild(td(fmt(issue.received), true));
+					tr.appendChild(td(fmt(issue.remaining), true));
+					tr.appendChild(td(fmt(issue.entered), true, 'ks-over'));
+					rowsEl.appendChild(tr);
+				});
+			}
+			if (okBtn) {
+				okBtn.textContent = t('confirmReceive', 'Receive anyway');
+				okBtn.onclick = function () {
+					closeDialog(dialog);
+					send(true);
+				};
+			}
+			if (cancelBtn) {
+				cancelBtn.textContent = t('cancel', 'Cancel');
+				cancelBtn.onclick = function () {
+					closeDialog(dialog);
+				};
+			}
+			showDialog(dialog);
+		}
+	}
+
+	/* -------------------------------- Helpers -------------------------------- */
+
+	function th(text) {
+		var el = document.createElement('th');
+		el.textContent = text;
+		return el;
+	}
+
+	function td(text, numeric, extraClass) {
+		var el = document.createElement('td');
+		el.textContent = text;
+		if (numeric) {
+			el.className = 'ks-num';
+		}
+		if (extraClass) {
+			el.className = (el.className ? el.className + ' ' : '') + extraClass;
+		}
+		return el;
+	}
+
+	function fmt(n) {
+		var num = parseFloat(n);
+		if (isNaN(num)) {
+			return String(n);
+		}
+		// Integer-only v1; show whole numbers cleanly.
+		return Number.isInteger(num) ? String(num) : String(num);
+	}
+
+	function showDialog(dialog) {
+		if (typeof dialog.showModal === 'function') {
+			dialog.showModal();
+		} else {
+			dialog.setAttribute('open', 'open');
+		}
+	}
+
+	function closeDialog(dialog) {
+		if (typeof dialog.close === 'function' && dialog.open) {
+			dialog.close();
+		} else {
+			dialog.removeAttribute('open');
+		}
+	}
+})();

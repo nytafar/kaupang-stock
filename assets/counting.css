@@ -1,0 +1,195 @@
+/*
+ * Varetelling (stock counting) — admin styles.
+ *
+ * Consumes the Ousia token contract via --ks-* custom properties with hardcoded
+ * fallbacks (suite convention: plugin CSS reads tokens, the child theme supplies
+ * materials). Scoped under .ks-counts so it never leaks into other admin screens.
+ * The scan bar is position:sticky so it stays in reach while the sheet scrolls.
+ */
+
+.ks-counts {
+	--ks-accent: var(--accent-color, #2271b1);
+	--ks-pos: var(--ks-color-pos, #1a7f37);
+	--ks-neg: var(--ks-color-neg, #b32d2e);
+	--ks-muted: var(--ks-color-muted, #646970);
+	--ks-border: var(--ks-color-border, #dcdcde);
+	--ks-flash-bg: var(--ks-color-flash, #f0f6fc);
+	--ks-radius: var(--border-radius-sm, 3px);
+	--ks-gap: var(--spacing-sm, 8px);
+}
+
+/* ------------------------------- Chips -------------------------------- */
+
+.ks-counts .ks-chip {
+	display: inline-block;
+	padding: 1px 8px;
+	border-radius: 10px;
+	font-size: 11px;
+	line-height: 18px;
+	font-weight: 600;
+	vertical-align: middle;
+	background: #f0f0f1;
+	color: #3c434a;
+}
+
+.ks-counts .ks-chip--open { background: #e5f0fb; color: #0a4b78; }
+.ks-counts .ks-chip--review { background: #fcf3d6; color: #7a5c00; }
+.ks-counts .ks-chip--applied { background: #e6f3ea; color: #1a7f37; }
+.ks-counts .ks-chip--cancelled { background: #f2f2f2; color: #646970; }
+
+.ks-counts .ks-chip--recount {
+	background: #fbeaea;
+	color: var(--ks-neg);
+	margin-left: 6px;
+}
+
+.ks-counts .ks-back { margin: 8px 0 12px; }
+.ks-counts .ks-note-trail { max-width: 60em; color: var(--ks-muted); }
+.ks-counts .ks-sku,
+.ks-counts code.ks-sku { margin-left: 6px; color: var(--ks-muted); font-size: 11px; }
+
+/* ------------------------------- Create form -------------------------- */
+
+.ks-create-form .ks-picker__list {
+	max-height: 260px;
+	overflow-y: auto;
+	border: 1px solid var(--ks-border);
+	border-radius: var(--ks-radius);
+	padding: var(--ks-gap);
+	background: #fff;
+	max-width: 40em;
+}
+
+.ks-create-form .ks-picker__item {
+	display: block;
+	padding: 3px 4px;
+}
+
+.ks-create-form .ks-picker__item code { color: var(--ks-muted); }
+.ks-create-form #ks-product-filter { margin-bottom: 8px; display: block; }
+
+/* ------------------------------- Capture ------------------------------ */
+
+.ks-capture__toolbar {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin: 10px 0;
+}
+
+.ks-blind-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-weight: 600;
+}
+
+.ks-scanbar {
+	position: sticky;
+	top: 32px;
+	z-index: 20;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	background: #fff;
+	border: 2px solid var(--ks-accent);
+	border-radius: var(--ks-radius);
+	padding: 10px 12px;
+	margin: 0 0 14px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.ks-scanbar__input {
+	flex: 1 1 auto;
+	font-size: 18px;
+	padding: 8px 10px;
+	min-width: 0;
+}
+
+.ks-scanbar__status {
+	flex: 0 1 auto;
+	min-width: 12em;
+	font-size: 13px;
+	color: var(--ks-muted);
+}
+
+.ks-scanbar__status--ok { color: var(--ks-pos); font-weight: 600; }
+.ks-scanbar__status--warn { color: #7a5c00; font-weight: 600; }
+.ks-scanbar__status--error { color: var(--ks-neg); font-weight: 600; }
+
+.ks-sheet .ks-count-input { width: 5em; text-align: right; }
+
+/* Blind mode hides the expected column until "Vis forventet" is ticked. */
+.ks-capture--blind .ks-col-expected { display: none; }
+
+.ks-sheet tr.ks-row--recount td { background: #fdf3f3; }
+
+.ks-sheet tr.ks-flash td {
+	animation: ks-flash 0.6s ease-out;
+}
+
+@keyframes ks-flash {
+	0% { background: var(--ks-flash-bg); }
+	100% { background: transparent; }
+}
+
+/* ------------------------------- Review ------------------------------- */
+
+.ks-review__toolbar {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin: 10px 0 16px;
+}
+
+.ks-review__toolbar .description { color: var(--ks-muted); }
+
+.ks-grid .ks-num { text-align: right; white-space: nowrap; }
+.ks-grid .ks-cell-diff { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.ks-grid .ks-pos { color: var(--ks-pos); }
+.ks-grid .ks-neg { color: var(--ks-neg); }
+.ks-grid .ks-zero { color: var(--ks-muted); }
+
+.ks-grid .ks-row-actions { white-space: nowrap; }
+.ks-grid .ks-row-actions .button-link { margin-right: 10px; }
+
+.ks-danger,
+.ks-counts .button.ks-danger { color: var(--ks-neg); }
+
+.ks-uncounted-note { color: #7a5c00; max-width: 60em; }
+
+/* ------------------------------- Drill-down --------------------------- */
+
+.ks-drill-cell { background: #f6f7f7; padding: 10px 16px !important; }
+
+.ks-drill-table {
+	width: auto;
+	min-width: 40em;
+	border-collapse: collapse;
+	font-size: 12px;
+}
+
+.ks-drill-table th,
+.ks-drill-table td {
+	text-align: left;
+	padding: 4px 12px 4px 0;
+	border-bottom: 1px solid var(--ks-border);
+}
+
+.ks-drill-table .ks-pos { color: var(--ks-pos); }
+.ks-drill-table .ks-neg { color: var(--ks-neg); }
+.ks-drill-empty { color: var(--ks-muted); font-style: italic; margin: 0; }
+
+/* ------------------------------- Import ------------------------------- */
+
+.ks-import {
+	margin-top: 2em;
+	padding-top: 1em;
+	border-top: 1px solid var(--ks-border);
+	max-width: 60em;
+}
+
+.ks-import input[type="file"] { margin-right: 8px; }

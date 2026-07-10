@@ -1,0 +1,166 @@
+<?php
+declare(strict_types=1);
+
+namespace Kaupang\Stock\Admin;
+
+use Kaupang\Stock\Observe\Seeder;
+use Kaupang\Stock\Settings;
+
+/**
+ * "Lager → Innstillinger" — the master switches every module gates on (§6.5).
+ * Built on the Settings API, mirroring kaupang-wholesale's SettingsPage.
+ *
+ * Every flag defaults false/safe (see Settings::defaults()); a fresh activation
+ * records nothing and shows only this screen. The ritual is shadow-first: turn
+ * stock_enabled on in `shadow` mode, prove reconciliation is clean over real
+ * traffic, then flip `mode` to `active` so owned operations may write through.
+ *
+ * CRITICAL: when stock_enabled transitions false→true, the sanitize callback
+ * runs the enable-time seeding sweep (Seeder::sweep()) so Lagerstatus and the
+ * reconciler are complete from the moment the feature turns on, and surfaces the
+ * seeded count as an admin notice.
+ */
+final class SettingsPage {
+
+    private const GROUP = 'kaupang_stock_settings_group';
+
+    public static function register(): void {
+        \add_action('admin_init', [self::class, 'settings']);
+    }
+
+    public static function settings(): void {
+        \register_setting(self::GROUP, Settings::OPTION_KEY, [
+            'type'              => 'array',
+            'sanitize_callback' => [self::class, 'sanitize'],
+            'default'           => Settings::defaults(),
+        ]);
+    }
+
+    /**
+     * @param mixed $input
+     * @return array<string,mixed>
+     */
+    public static function sanitize($input): array {
+        $in  = is_array($input) ? $input : [];
+        $was = Settings::enabled();
+
+        $mode      = (string) ($in['mode'] ?? Settings::MODE_SHADOW);
+        $threshold = (int) ($in['variance_threshold_pct'] ?? 20);
+
+        $clean = [
+            'stock_enabled'          => !empty($in['stock_enabled']),
+            'mode'                   => $mode === Settings::MODE_ACTIVE ? Settings::MODE_ACTIVE : Settings::MODE_SHADOW,
+            'po_enabled'             => !empty($in['po_enabled']),
+            'counting_enabled'       => !empty($in['counting_enabled']),
+            'variance_threshold_pct' => max(1, min(100, $threshold)),
+            'negative_warning'       => !empty($in['negative_warning']),
+        ];
+
+        // The static request-cache must be dropped before Seeder::sweep() reads
+        // through Settings (it seeds only stock-managed products; enabled() has
+        // to reflect the value being saved).
+        Settings::flushCache();
+
+        // false→true enable transition: prime the whole catalog now.
+        if (!$was && $clean['stock_enabled']) {
+            \update_option(Settings::OPTION_KEY, $clean, true);
+            Settings::flushCache();
+            $result = Seeder::sweep();
+            \add_settings_error(
+                Settings::OPTION_KEY,
+                'kaupang_stock_seeded',
+                sprintf(
+                    /* translators: 1: number of products seeded, 2: total stock-managed products */
+                    \esc_html__('Stock ledger enabled. Seeded %1$d of %2$d stock-managed products.', 'kaupang-stock'),
+                    (int) $result['seeded'],
+                    (int) $result['products']
+                ),
+                'success'
+            );
+        }
+
+        return $clean;
+    }
+
+    public static function render(): void {
+        if (!\current_user_can(Settings::capability())) {
+            return;
+        }
+        $s        = Settings::all();
+        $opt      = Settings::OPTION_KEY;
+        $enabled  = !empty($s['stock_enabled']);
+        $isActive = $enabled && ($s['mode'] ?? '') === Settings::MODE_ACTIVE;
+        ?>
+        <div class="wrap ks-wrap">
+            <h1><?php \esc_html_e('Stock — settings', 'kaupang-stock'); ?></h1>
+            <p class="description" style="max-width:52em">
+                <?php \esc_html_e('The ledger is the source of truth for stock; every other number is a projection of it. Turn the ledger on in shadow mode first, prove reconciliation is clean over real traffic, then switch to active mode so adjustments, receipts and counts write through to WooCommerce.', 'kaupang-stock'); ?>
+            </p>
+
+            <?php \settings_errors(Settings::OPTION_KEY); ?>
+
+            <form method="post" action="options.php">
+                <?php \settings_fields(self::GROUP); ?>
+                <table class="form-table" role="presentation">
+                    <tr>
+                        <th scope="row"><?php \esc_html_e('Stock ledger', 'kaupang-stock'); ?></th>
+                        <td>
+                            <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[stock_enabled]" value="1" <?php \checked($enabled); ?> />
+                                <?php \esc_html_e('Enable ledger-backed stock management', 'kaupang-stock'); ?></label>
+                            <p class="description"><?php \esc_html_e('Turning this on seeds an opening balance for every stock-managed product and starts recording every WooCommerce stock change. Turning it off stops the observer; recorded history is kept.', 'kaupang-stock'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php \esc_html_e('Mode', 'kaupang-stock'); ?></th>
+                        <td>
+                            <fieldset>
+                                <label style="display:block;margin-bottom:.35em">
+                                    <input type="radio" name="<?php echo \esc_attr($opt); ?>[mode]" value="<?php echo \esc_attr(Settings::MODE_SHADOW); ?>" <?php \checked(($s['mode'] ?? Settings::MODE_SHADOW) !== Settings::MODE_ACTIVE); ?> />
+                                    <strong><?php \esc_html_e('Shadow', 'kaupang-stock'); ?></strong> — <?php \esc_html_e('observe and record only; owned operations do not write to WooCommerce. Run this first.', 'kaupang-stock'); ?>
+                                </label>
+                                <label style="display:block">
+                                    <input type="radio" name="<?php echo \esc_attr($opt); ?>[mode]" value="<?php echo \esc_attr(Settings::MODE_ACTIVE); ?>" <?php \checked(($s['mode'] ?? '') === Settings::MODE_ACTIVE); ?> />
+                                    <strong><?php \esc_html_e('Active', 'kaupang-stock'); ?></strong> — <?php \esc_html_e('adjustments, receipts and counts write through to WooCommerce stock.', 'kaupang-stock'); ?>
+                                </label>
+                            </fieldset>
+                            <?php if ($isActive): ?>
+                                <p class="description ks-warning"><?php \esc_html_e('Active mode is on: owned stock operations now change WooCommerce _stock. Only switch to active once a shadow run has reconciled cleanly.', 'kaupang-stock'); ?></p>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php \esc_html_e('Purchasing', 'kaupang-stock'); ?></th>
+                        <td>
+                            <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[po_enabled]" value="1" <?php \checked(!empty($s['po_enabled'])); ?> />
+                                <?php \esc_html_e('Enable suppliers, purchase orders and receiving (Innkjøp)', 'kaupang-stock'); ?></label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php \esc_html_e('Stock counts', 'kaupang-stock'); ?></th>
+                        <td>
+                            <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[counting_enabled]" value="1" <?php \checked(!empty($s['counting_enabled'])); ?> />
+                                <?php \esc_html_e('Enable stock counting (Varetelling)', 'kaupang-stock'); ?></label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="ks-variance"><?php \esc_html_e('Recount threshold (%)', 'kaupang-stock'); ?></label></th>
+                        <td>
+                            <input name="<?php echo \esc_attr($opt); ?>[variance_threshold_pct]" id="ks-variance" type="number" step="1" min="1" max="100" class="small-text"
+                                   value="<?php echo \esc_attr((string) (int) ($s['variance_threshold_pct'] ?? 20)); ?>" /> %
+                            <p class="description"><?php \esc_html_e('Count lines whose variance exceeds this percentage are flagged for recount before the count can be applied.', 'kaupang-stock'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php \esc_html_e('Negative stock', 'kaupang-stock'); ?></th>
+                        <td>
+                            <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[negative_warning]" value="1" <?php \checked(!empty($s['negative_warning'])); ?> />
+                                <?php \esc_html_e('Show a warning chip on Lagerstatus when on-hand is negative', 'kaupang-stock'); ?></label>
+                        </td>
+                    </tr>
+                </table>
+                <?php \submit_button(); ?>
+            </form>
+        </div>
+        <?php
+    }
+}
