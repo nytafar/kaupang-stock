@@ -6,6 +6,7 @@ namespace Kaupang\Stock;
 use Kaupang\Stock\Admin\Menu;
 use Kaupang\Stock\Admin\OrderMetaBox;
 use Kaupang\Stock\Admin\ProductPanel;
+use Kaupang\Stock\Admin\SettingsPage;
 use Kaupang\Stock\Observe\Observer;
 use Kaupang\Stock\Reconcile\Reconciler;
 use Kaupang\Stock\Rest\Controller as RestController;
@@ -36,6 +37,12 @@ final class Plugin {
 
         // Version-gated schema upgrades on a code-only deploy (no reactivation).
         \add_action('admin_init', [Schema::class, 'maybeUpgrade']);
+
+        // Enable-transition watcher: seeds the catalog when stock_enabled flips
+        // false→true, however the option is written (settings screen, WP-CLI,
+        // Settings::update()). Must sit before the enabled() gate — the
+        // transition happens while the plugin is otherwise dormant.
+        SettingsPage::watch();
 
         // Admin menu + settings are always available; the feature screens gate
         // themselves on the flags inside Menu.

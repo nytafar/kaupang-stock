@@ -15,10 +15,14 @@ use Kaupang\Stock\Settings;
  * stock_enabled on in `shadow` mode, prove reconciliation is clean over real
  * traffic, then flip `mode` to `active` so owned operations may write through.
  *
- * CRITICAL: when stock_enabled transitions false→true, the sanitize callback
- * runs the enable-time seeding sweep (Seeder::sweep()) so Lagerstatus and the
- * reconciler are complete from the moment the feature turns on, and surfaces the
- * seeded count as an admin notice.
+ * CRITICAL: when stock_enabled transitions false→true, the option-transition
+ * watcher (watch(), hooked on add_option_/update_option_ for the key) runs the
+ * enable-time seeding sweep (Seeder::sweep()) AFTER the option is persisted, so
+ * Lagerstatus and the reconciler are complete from the moment the feature turns
+ * on. The sweep must NOT run inside sanitize(): update_option() sanitizes
+ * before it writes, so writing the same option from its own sanitize callback
+ * re-enters sanitize with the old DB value and recurses without end (the
+ * enable-toggle 500 of 2026-07-10).
  */
 final class SettingsPage {
 
@@ -26,6 +30,62 @@ final class SettingsPage {
 
     public static function register(): void {
         \add_action('admin_init', [self::class, 'settings']);
+    }
+
+    /**
+     * Option-transition watcher — registered unconditionally from Plugin::boot()
+     * (the enable transition happens while the plugin is otherwise dormant, and
+     * programmatic flips via Settings::update() / WP-CLI must seed too).
+     */
+    public static function watch(): void {
+        \add_action('add_option_' . Settings::OPTION_KEY, [self::class, 'optionAdded'], 10, 2);
+        \add_action('update_option_' . Settings::OPTION_KEY, [self::class, 'optionUpdated'], 10, 2);
+    }
+
+    /** @param mixed $value */
+    public static function optionAdded(string $option, $value): void {
+        self::maybeSeed([], is_array($value) ? $value : []);
+    }
+
+    /**
+     * @param mixed $old
+     * @param mixed $new
+     */
+    public static function optionUpdated($old, $new): void {
+        self::maybeSeed(is_array($old) ? $old : [], is_array($new) ? $new : []);
+    }
+
+    /**
+     * false→true enable transition: prime the whole catalog now. Runs after the
+     * option row is persisted; Seeder is idempotent so a double fire is harmless.
+     *
+     * @param array<string,mixed> $old
+     * @param array<string,mixed> $new
+     */
+    private static function maybeSeed(array $old, array $new): void {
+        // Drop the static request-cache after any save so later reads in this
+        // request (and the sweep below) see the value just written.
+        Settings::flushCache();
+
+        if (!empty($old['stock_enabled']) || empty($new['stock_enabled'])) {
+            return;
+        }
+
+        $result = Seeder::sweep();
+
+        if (\function_exists('add_settings_error')) {
+            \add_settings_error(
+                Settings::OPTION_KEY,
+                'kaupang_stock_seeded',
+                sprintf(
+                    /* translators: 1: number of products seeded, 2: total stock-managed products */
+                    \esc_html__('Stock ledger enabled. Seeded %1$d of %2$d stock-managed products.', 'kaupang-stock'),
+                    (int) $result['seeded'],
+                    (int) $result['products']
+                ),
+                'success'
+            );
+        }
     }
 
     public static function settings(): void {
@@ -41,13 +101,14 @@ final class SettingsPage {
      * @return array<string,mixed>
      */
     public static function sanitize($input): array {
-        $in  = is_array($input) ? $input : [];
-        $was = Settings::enabled();
+        $in = is_array($input) ? $input : [];
 
         $mode      = (string) ($in['mode'] ?? Settings::MODE_SHADOW);
         $threshold = (int) ($in['variance_threshold_pct'] ?? 20);
 
-        $clean = [
+        // Pure value cleaning only — the enable-time seeding side effect lives
+        // in maybeSeed(), fired by watch() after the option is written.
+        return [
             'stock_enabled'          => !empty($in['stock_enabled']),
             'mode'                   => $mode === Settings::MODE_ACTIVE ? Settings::MODE_ACTIVE : Settings::MODE_SHADOW,
             'po_enabled'             => !empty($in['po_enabled']),
@@ -55,31 +116,6 @@ final class SettingsPage {
             'variance_threshold_pct' => max(1, min(100, $threshold)),
             'negative_warning'       => !empty($in['negative_warning']),
         ];
-
-        // The static request-cache must be dropped before Seeder::sweep() reads
-        // through Settings (it seeds only stock-managed products; enabled() has
-        // to reflect the value being saved).
-        Settings::flushCache();
-
-        // false→true enable transition: prime the whole catalog now.
-        if (!$was && $clean['stock_enabled']) {
-            \update_option(Settings::OPTION_KEY, $clean, true);
-            Settings::flushCache();
-            $result = Seeder::sweep();
-            \add_settings_error(
-                Settings::OPTION_KEY,
-                'kaupang_stock_seeded',
-                sprintf(
-                    /* translators: 1: number of products seeded, 2: total stock-managed products */
-                    \esc_html__('Stock ledger enabled. Seeded %1$d of %2$d stock-managed products.', 'kaupang-stock'),
-                    (int) $result['seeded'],
-                    (int) $result['products']
-                ),
-                'success'
-            );
-        }
-
-        return $clean;
     }
 
     public static function render(): void {
