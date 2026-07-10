@@ -34,6 +34,9 @@
 
 	/* ----------------------------- Product picker ---------------------------- */
 
+	var SEARCH_DEBOUNCE = 250; // ms — mirror admin.js
+	var SEARCH_MIN = 2;        // chars — mirror admin.js
+
 	function wireProductPicker() {
 		var form = document.querySelector('[data-ks-add-line]');
 		if (!form) {
@@ -42,29 +45,33 @@
 		var idField = form.querySelector('[data-ks-add-product-id]');
 		var skuField = form.querySelector('[data-ks-add-product-sku]');
 
-		document.querySelectorAll('.ks-pick-product').forEach(function (btn) {
-			btn.addEventListener('click', function () {
-				var id = btn.getAttribute('data-id') || '0';
-				var label = btn.getAttribute('data-label') || '';
-				if (idField) {
-					idField.value = id;
-				}
-				if (skuField) {
-					skuField.value = label;
-					skuField.setAttribute('readonly', 'readonly');
-				}
-				form.classList.add('ks-has-product');
-				try {
-					form.scrollIntoView({ behavior: 'smooth', block: 'center' });
-				} catch (e) {
-					form.scrollIntoView();
-				}
-				var qty = form.querySelector('input[name="qty"]');
-				if (qty) {
-					qty.focus();
-					qty.select();
-				}
-			});
+		// Pick handler via event DELEGATION on the document so BOTH the
+		// server-rendered rows and any async-fetched rows work with one binding.
+		document.addEventListener('click', function (ev) {
+			var btn = ev.target.closest ? ev.target.closest('.ks-pick-product') : null;
+			if (!btn) {
+				return;
+			}
+			var id = btn.getAttribute('data-id') || '0';
+			var label = btn.getAttribute('data-label') || '';
+			if (idField) {
+				idField.value = id;
+			}
+			if (skuField) {
+				skuField.value = label;
+				skuField.setAttribute('readonly', 'readonly');
+			}
+			form.classList.add('ks-has-product');
+			try {
+				form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			} catch (e) {
+				form.scrollIntoView();
+			}
+			var qty = form.querySelector('input[name="qty"]');
+			if (qty) {
+				qty.focus();
+				qty.select();
+			}
 		});
 
 		// Typing a raw SKU/id clears any picked id so the server resolves the text.
@@ -75,6 +82,185 @@
 				}
 			});
 		}
+
+		wireAsyncSearch();
+	}
+
+	/**
+	 * Progressive enhancement over the GET search form: debounced REST search that
+	 * repaints the results <tbody> in place. The GET form + server-rendered rows
+	 * remain the no-JS fallback; on any fetch error we fall back silently.
+	 */
+	function wireAsyncSearch() {
+		var input = document.querySelector('[data-ks-product-search]');
+		var tbody = document.querySelector('[data-ks-picker-results]');
+		if (!input || !tbody || !ROOT.restUrl) {
+			return;
+		}
+		var table = tbody.closest ? tbody.closest('table') : null;
+		var status = document.querySelector('[data-ks-picker-status]');
+		var searchForm = input.closest ? input.closest('form') : null;
+		var timer = null;
+		var seq = 0;
+
+		function setStatus(msg) {
+			if (!status) {
+				return;
+			}
+			if (msg) {
+				status.textContent = msg;
+				status.hidden = false;
+			} else {
+				status.textContent = '';
+				status.hidden = true;
+			}
+		}
+
+		function showTable(show) {
+			if (table) {
+				table.hidden = !show;
+			}
+		}
+
+		function paint(results) {
+			tbody.innerHTML = '';
+			results.forEach(function (r) {
+				var tr = document.createElement('tr');
+
+				var tdTitle = document.createElement('td');
+				tdTitle.textContent = r.title || '';
+				tr.appendChild(tdTitle);
+
+				var tdSku = document.createElement('td');
+				var code = document.createElement('code');
+				code.textContent = r.sku || '';
+				tdSku.appendChild(code);
+				tr.appendChild(tdSku);
+
+				var tdAct = document.createElement('td');
+				tdAct.className = 'ks-num';
+				var btn = document.createElement('button');
+				btn.type = 'button';
+				btn.className = 'button button-small ks-pick-product';
+				btn.setAttribute('data-id', String(r.id));
+				btn.setAttribute('data-label', r.sku ? (r.title + ' (' + r.sku + ')') : (r.title || ''));
+				btn.textContent = t('add', 'Add');
+				tdAct.appendChild(btn);
+				tr.appendChild(tdAct);
+
+				tbody.appendChild(tr);
+			});
+		}
+
+		function run(term) {
+			var mine = ++seq;
+			setStatus(searchingText());
+			showTable(false);
+			fetch(ROOT.restUrl + 'products?term=' + encodeURIComponent(term), {
+				headers: { 'X-WP-Nonce': ROOT.nonce || '' },
+				credentials: 'same-origin'
+			})
+				.then(function (res) {
+					return res.ok ? res.json() : null;
+				})
+				.then(function (data) {
+					if (mine !== seq) {
+						return; // a newer search superseded this one
+					}
+					var results = data && Array.isArray(data.results) ? data.results
+						: (Array.isArray(data) ? data : null);
+					if (!results) {
+						setStatus('');
+						return; // silent fallback — the GET form still works
+					}
+					if (results.length === 0) {
+						paint([]);
+						showTable(false);
+						setStatus(noResultsText());
+						return;
+					}
+					paint(results);
+					showTable(true);
+					setStatus('');
+				})
+				.catch(function () {
+					if (mine !== seq) {
+						return;
+					}
+					setStatus(''); // silent — server fallback remains
+				});
+		}
+
+		input.addEventListener('input', function () {
+			var term = input.value.trim();
+			if (timer) {
+				window.clearTimeout(timer);
+			}
+			if (term.length < SEARCH_MIN) {
+				seq++; // invalidate any in-flight search
+				setStatus('');
+				showTable(false);
+				return;
+			}
+			timer = window.setTimeout(function () {
+				run(term);
+			}, SEARCH_DEBOUNCE);
+		});
+
+		// Enter in the box searches asynchronously too (no page reload).
+		if (searchForm) {
+			searchForm.addEventListener('submit', function (ev) {
+				var term = input.value.trim();
+				if (term.length < SEARCH_MIN) {
+					return; // let the server handle very short/empty terms
+				}
+				ev.preventDefault();
+				if (timer) {
+					window.clearTimeout(timer);
+				}
+				run(term);
+			});
+		}
+
+		// Roving focus between the search box and result buttons (dependency-free).
+		input.addEventListener('keydown', function (ev) {
+			if (ev.key === 'ArrowDown') {
+				var first = tbody.querySelector('.ks-pick-product');
+				if (first) {
+					ev.preventDefault();
+					first.focus();
+				}
+			}
+		});
+		tbody.addEventListener('keydown', function (ev) {
+			if (ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp') {
+				return;
+			}
+			var btn = ev.target.closest ? ev.target.closest('.ks-pick-product') : null;
+			if (!btn) {
+				return;
+			}
+			var buttons = Array.prototype.slice.call(tbody.querySelectorAll('.ks-pick-product'));
+			var i = buttons.indexOf(btn);
+			ev.preventDefault();
+			if (ev.key === 'ArrowDown') {
+				if (i < buttons.length - 1) {
+					buttons[i + 1].focus();
+				}
+			} else if (i > 0) {
+				buttons[i - 1].focus();
+			} else {
+				input.focus();
+			}
+		});
+	}
+
+	function searchingText() {
+		return (ROOT.i18n && ROOT.i18n.searching) || 'Searching…';
+	}
+
+	function noResultsText() {
+		return (ROOT.i18n && ROOT.i18n.noResults) || 'No products found.';
 	}
 
 	/* ------------------------------- Line edit ------------------------------- */

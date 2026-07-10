@@ -85,6 +85,8 @@ final class PurchasingPage {
                 'remaining'      => \__('Remaining', 'kaupang-stock'),
                 'entered'        => \__('Entered', 'kaupang-stock'),
                 'nothingToReceive' => \__('Enter a quantity on at least one line.', 'kaupang-stock'),
+                // Reused for the async-picker "Add" buttons the JS renders (already translated).
+                'add'            => \__('Add', 'kaupang-stock'),
             ],
         ]);
     }
@@ -143,7 +145,8 @@ final class PurchasingPage {
         <a href="<?php echo \esc_url(self::url(['view' => 'suppliers'])); ?>" class="page-title-action"><?php echo \esc_html('Leverandører'); ?></a>
         <hr class="wp-header-end" />
 
-        <table class="wp-list-table widefat fixed striped">
+        <div class="ks-tablewrap">
+        <table class="wp-list-table widefat striped">
             <thead>
                 <tr>
                     <th><?php \esc_html_e('PO', 'kaupang-stock'); ?></th>
@@ -181,6 +184,7 @@ final class PurchasingPage {
                 <?php endforeach; endif; ?>
             </tbody>
         </table>
+        </div>
         <?php
     }
 
@@ -299,6 +303,7 @@ final class PurchasingPage {
      */
     private static function renderLinesTable(int $poId, array $lines, bool $editable): void {
         ?>
+        <div class="ks-tablewrap">
         <table class="wp-list-table widefat striped ks-lines">
             <thead>
                 <tr>
@@ -340,6 +345,7 @@ final class PurchasingPage {
                 <?php endforeach; endif; ?>
             </tbody>
         </table>
+        </div>
 
         <?php if ($editable && $lines !== []): ?>
             <!-- Inline edit form, revealed by the Edit buttons (progressive enhancement). -->
@@ -375,33 +381,34 @@ final class PurchasingPage {
             <input type="hidden" name="view" value="edit" />
             <input type="hidden" name="po" value="<?php echo (int) $poId; ?>" />
             <input type="search" name="pline_q" class="regular-text" value="<?php echo \esc_attr($term); ?>"
+                   data-ks-product-search
                    placeholder="<?php \esc_attr_e('Search product by name or SKU…', 'kaupang-stock'); ?>" />
             <?php \submit_button(\__('Search', 'kaupang-stock'), 'secondary', 'submit', false); ?>
         </form>
 
-        <?php if ($term !== ''): ?>
-            <?php if ($results === []): ?>
-                <p class="description"><?php \esc_html_e('No products found.', 'kaupang-stock'); ?></p>
-            <?php else: ?>
-                <table class="wp-list-table widefat striped ks-picker-results">
-                    <tbody>
-                        <?php foreach ($results as $r): ?>
-                            <tr>
-                                <td><?php echo \esc_html((string) $r['title']); ?></td>
-                                <td><code><?php echo \esc_html((string) $r['sku']); ?></code></td>
-                                <td class="ks-num">
-                                    <button type="button" class="button button-small ks-pick-product"
-                                            data-id="<?php echo (int) $r['id']; ?>"
-                                            data-label="<?php echo \esc_attr(($r['sku'] !== '' ? $r['title'] . ' (' . $r['sku'] . ')' : $r['title'])); ?>">
-                                        <?php \esc_html_e('Add', 'kaupang-stock'); ?>
-                                    </button>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php endif; ?>
-        <?php endif; ?>
+        <?php // Empty-scope hint from the server path (no-JS); JS repaints the tbody below and drives the status line. ?>
+        <p class="ks-picker-status" data-ks-picker-status aria-live="polite" <?php echo ($term !== '' && $results === []) ? '' : 'hidden'; ?>>
+            <?php \esc_html_e('No products found.', 'kaupang-stock'); ?>
+        </p>
+
+        <?php // The results table shell is ALWAYS present so the async picker can repaint <tbody>; server rows below are the no-JS fallback. ?>
+        <table class="wp-list-table widefat striped ks-picker-results" <?php echo $results === [] ? 'hidden' : ''; ?>>
+            <tbody data-ks-picker-results>
+                <?php foreach ($results as $r): ?>
+                    <tr>
+                        <td><?php echo \esc_html((string) $r['title']); ?></td>
+                        <td><code><?php echo \esc_html((string) $r['sku']); ?></code></td>
+                        <td class="ks-num">
+                            <button type="button" class="button button-small ks-pick-product"
+                                    data-id="<?php echo (int) $r['id']; ?>"
+                                    data-label="<?php echo \esc_attr(($r['sku'] !== '' ? $r['title'] . ' (' . $r['sku'] . ')' : $r['title'])); ?>">
+                                <?php \esc_html_e('Add', 'kaupang-stock'); ?>
+                            </button>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
 
         <form method="post" action="<?php echo \esc_url(\admin_url('admin-post.php')); ?>" class="ks-add-line" data-ks-add-line>
             <input type="hidden" name="action" value="<?php echo \esc_attr(self::SAVE_LINE); ?>" />
@@ -466,6 +473,7 @@ final class PurchasingPage {
               <?php echo Settings::activeMode() ? '' : 'data-disabled="1"'; ?>>
             <p class="description"><?php \esc_html_e('Quantities are pre-filled with what remains. Adjust for a partial delivery, then confirm. The server re-checks each remaining quantity at submit.', 'kaupang-stock'); ?></p>
 
+            <div class="ks-tablewrap">
             <table class="wp-list-table widefat striped ks-receive-grid">
                 <thead>
                     <tr>
@@ -501,6 +509,7 @@ final class PurchasingPage {
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            </div>
 
             <table class="form-table" role="presentation">
                 <tr>
@@ -558,6 +567,7 @@ final class PurchasingPage {
         uasort($batches, static fn (array $a, array $b): int => strcmp($b['occurred'], $a['occurred']));
         ?>
         <h2><?php \esc_html_e('Receipts', 'kaupang-stock'); ?></h2>
+        <div class="ks-tablewrap">
         <table class="wp-list-table widefat striped">
             <thead>
                 <tr>
@@ -589,6 +599,7 @@ final class PurchasingPage {
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
         <?php
     }
 
@@ -602,7 +613,8 @@ final class PurchasingPage {
         <hr class="wp-header-end" />
         <p class="description"><?php \esc_html_e('Every open purchase-order line across all orders — the single "what is coming" answer.', 'kaupang-stock'); ?></p>
 
-        <table class="wp-list-table widefat fixed striped">
+        <div class="ks-tablewrap">
+        <table class="wp-list-table widefat striped">
             <thead>
                 <tr>
                     <th><?php \esc_html_e('Product', 'kaupang-stock'); ?></th>
@@ -630,6 +642,7 @@ final class PurchasingPage {
                 <?php endforeach; endif; ?>
             </tbody>
         </table>
+        </div>
         <?php
     }
 
@@ -654,7 +667,8 @@ final class PurchasingPage {
         <a href="<?php echo \esc_url(self::url(['view' => 'list'])); ?>" class="page-title-action"><?php \esc_html_e('Back to list', 'kaupang-stock'); ?></a>
         <hr class="wp-header-end" />
 
-        <table class="wp-list-table widefat fixed striped" style="max-width:60em">
+        <div class="ks-tablewrap ks-maxw-60">
+        <table class="wp-list-table widefat striped">
             <thead>
                 <tr>
                     <th><?php \esc_html_e('Name', 'kaupang-stock'); ?></th>
@@ -688,8 +702,9 @@ final class PurchasingPage {
                 <?php endforeach; endif; ?>
             </tbody>
         </table>
+        </div>
 
-        <h2 style="margin-top:1.5em"><?php echo $current ? \esc_html__('Edit supplier', 'kaupang-stock') : \esc_html__('New supplier', 'kaupang-stock'); ?></h2>
+        <h2 class="ks-mt-lg"><?php echo $current ? \esc_html__('Edit supplier', 'kaupang-stock') : \esc_html__('New supplier', 'kaupang-stock'); ?></h2>
 
         <?php if (Suppliers::brregAvailable()): ?>
             <form method="post" action="<?php echo \esc_url(\admin_url('admin-post.php')); ?>" class="ks-brreg-lookup">
@@ -714,7 +729,7 @@ final class PurchasingPage {
             <input type="hidden" name="action" value="<?php echo \esc_attr(self::SAVE_SUPPLIER); ?>" />
             <input type="hidden" name="supplier" value="<?php echo (int) $editId; ?>" />
             <?php \wp_nonce_field(self::SAVE_SUPPLIER); ?>
-            <table class="form-table" role="presentation" style="max-width:52em">
+            <table class="form-table ks-maxw-52" role="presentation">
                 <tr>
                     <th scope="row"><label for="ks-supp-name"><?php \esc_html_e('Name', 'kaupang-stock'); ?></label></th>
                     <td><input type="text" id="ks-supp-name" name="name" class="regular-text" required maxlength="200"

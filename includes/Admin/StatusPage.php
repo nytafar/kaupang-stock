@@ -89,7 +89,8 @@ final class StatusPage {
                 </p>
             </form>
 
-            <table class="wp-list-table widefat fixed striped ks-table ks-status-table">
+            <div class="ks-tablewrap">
+            <table class="wp-list-table widefat striped ks-table ks-status-table">
                 <thead>
                     <tr>
                         <th scope="col" class="ks-col-product"><?php \esc_html_e('Product', 'kaupang-stock'); ?></th>
@@ -135,6 +136,7 @@ final class StatusPage {
                     <?php endforeach; endif; ?>
                 </tbody>
             </table>
+            </div>
 
             <?php self::pagination($paged, $pages, $total); ?>
         </div>

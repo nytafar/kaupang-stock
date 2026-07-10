@@ -384,7 +384,9 @@
 		if (!rows.length) {
 			return '<p class="ks-drill-empty">' + t('noMovements', 'No movements since the count started.') + '</p>';
 		}
-		var html = '<table class="ks-drill-table"><thead><tr>' +
+		// Wrap in .ks-tablewrap so the drill table's min-width scrolls inside the
+		// colspan cell instead of pushing the page.
+		var html = '<div class="ks-tablewrap"><table class="ks-drill-table"><thead><tr>' +
 			'<th>' + t('when', 'When') + '</th>' +
 			'<th>' + t('change', 'Change') + '</th>' +
 			'<th>' + t('reason', 'Reason') + '</th>' +
@@ -401,7 +403,7 @@
 				'<td>' + escapeHtml(r.note || '') + '</td>' +
 				'</tr>';
 		}
-		html += '</tbody></table>';
+		html += '</tbody></table></div>';
 		return html;
 	}
 

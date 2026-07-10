@@ -137,6 +137,17 @@ a.ks-danger {
 	max-width: 46em;
 }
 
+/* Async-picker status line (fetch progress / no-results). */
+.ks-picker-status {
+	margin: 0.5em 0;
+	color: #50575e;
+}
+
+/* Structural widths moved off inline styles (spis-fiken convention). */
+.ks-maxw-60 { max-width: 60em; }
+.ks-maxw-52 { max-width: 52em; }
+.ks-mt-lg { margin-top: 1.5em; }
+
 .ks-picker-results td {
 	vertical-align: middle;
 }

@@ -129,7 +129,7 @@ final class SettingsPage {
         ?>
         <div class="wrap ks-wrap">
             <h1><?php \esc_html_e('Stock — settings', 'kaupang-stock'); ?></h1>
-            <p class="description" style="max-width:52em">
+            <p class="description ks-maxw-52">
                 <?php \esc_html_e('The ledger is the source of truth for stock; every other number is a projection of it. Turn the ledger on in shadow mode first, prove reconciliation is clean over real traffic, then switch to active mode so adjustments, receipts and counts write through to WooCommerce.', 'kaupang-stock'); ?>
             </p>
 

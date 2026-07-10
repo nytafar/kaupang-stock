@@ -132,10 +132,13 @@
 		}
 		fetch(url, { headers: headers, credentials: 'same-origin' })
 			.then(function (r) {
-				return r.ok ? r.json() : [];
+				return r.ok ? r.json() : null;
 			})
-			.then(function (items) {
-				if (!Array.isArray(items)) {
+			.then(function (data) {
+				// The endpoint returns {results:[…]}; accept a bare array too, defensively.
+				var items = data && Array.isArray(data.results) ? data.results
+					: (Array.isArray(data) ? data : null);
+				if (!items) {
 					return;
 				}
 				list.innerHTML = '';

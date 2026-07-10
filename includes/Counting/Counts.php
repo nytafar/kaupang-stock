@@ -90,8 +90,11 @@ final class Counts {
      */
     public static function progress(int $countId): array {
         global $wpdb;
+        // `lines` is a MySQL/MariaDB reserved word — backtick the alias or the
+        // whole query fails as a syntax error, get_row() returns null, and every
+        // caller reads progress as 0 (the spurious empty_scope warning of 2026-07).
         $row = $wpdb->get_row($wpdb->prepare(
-            'SELECT COUNT(*) AS lines,
+            'SELECT COUNT(*) AS `lines`,
                     SUM(CASE WHEN counted IS NOT NULL THEN 1 ELSE 0 END) AS counted,
                     SUM(CASE WHEN recount = 1 THEN 1 ELSE 0 END) AS recount
              FROM ' . Schema::countLines() . ' WHERE count_id = %d',

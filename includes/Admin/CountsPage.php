@@ -109,7 +109,8 @@ final class CountsPage {
             <?php self::renderCreateForm(); ?>
 
             <h2 style="margin-top:2em"><?php \esc_html_e('Counts', 'kaupang-stock'); ?></h2>
-            <table class="wp-list-table widefat fixed striped">
+            <div class="ks-tablewrap">
+            <table class="wp-list-table widefat striped">
                 <thead>
                     <tr>
                         <th>#</th>
@@ -146,6 +147,7 @@ final class CountsPage {
                 <?php endforeach; endif; ?>
                 </tbody>
             </table>
+            </div>
         </div>
         <?php
     }
@@ -261,7 +263,8 @@ final class CountsPage {
                 <span class="ks-scanbar__status" id="ks-scan-status" role="status" aria-live="polite"></span>
             </div>
 
-            <table class="wp-list-table widefat fixed striped ks-sheet">
+            <div class="ks-tablewrap">
+            <table class="wp-list-table widefat striped ks-sheet">
                 <thead>
                     <tr>
                         <th><?php \esc_html_e('SKU', 'kaupang-stock'); ?></th>
@@ -284,6 +287,7 @@ final class CountsPage {
                 <?php endforeach; ?>
                 </tbody>
             </table>
+            </div>
         </div>
         <?php
     }
@@ -343,7 +347,8 @@ final class CountsPage {
                 <?php echo self::exportButton($countId); // phpcs:ignore WordPress.Security.EscapeOutput ?>
             </div>
 
-            <table class="wp-list-table widefat fixed striped ks-grid">
+            <div class="ks-tablewrap">
+            <table class="wp-list-table widefat striped ks-grid">
                 <thead>
                     <tr>
                         <th><?php \esc_html_e('Product', 'kaupang-stock'); ?></th>
@@ -380,6 +385,7 @@ final class CountsPage {
                 <?php endforeach; ?>
                 </tbody>
             </table>
+            </div>
 
             <?php if ($uncounted > 0 && $canApply): ?>
                 <p class="description ks-uncounted-note">

@@ -82,9 +82,13 @@ final class MovementsPage {
         <?php
         $table = new MovementsListTable($filters);
         $table->prepare_items();
+        // The 9-column ledger is the widest table in the plugin; give it a real
+        // scroll container so it never pushes the page (see .ks-tablewrap).
         echo '<form method="get">';
         echo '<input type="hidden" name="page" value="' . \esc_attr(Menu::SLUG_MOVES) . '" />';
+        echo '<div class="ks-tablewrap">';
         $table->display();
+        echo '</div>';
         echo '</form>';
     }
 
@@ -98,7 +102,8 @@ final class MovementsPage {
         <?php if (empty($rows)): ?>
             <p><?php \esc_html_e('No movements in this batch.', 'kaupang-stock'); ?></p>
         <?php else: ?>
-            <table class="wp-list-table widefat fixed striped ks-table">
+            <div class="ks-tablewrap">
+            <table class="wp-list-table widefat striped ks-table">
                 <thead>
                     <tr>
                         <th><?php \esc_html_e('Time', 'kaupang-stock'); ?></th>
@@ -124,6 +129,7 @@ final class MovementsPage {
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            </div>
         <?php endif; ?>
         <?php
     }
