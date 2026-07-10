@@ -79,6 +79,25 @@
 	margin-top: 0;
 }
 
+/* The Detaljer form must shrink with its grid column: WP core's form-table
+   (200px th + 25em .regular-text) otherwise keeps its natural width and slides
+   under the Linjer card. Fixed layout + fluid inputs let it track the column. */
+.ks-po-header .form-table {
+	table-layout: fixed;
+	width: 100%;
+}
+
+.ks-po-header .form-table th {
+	width: 11em;
+}
+
+.ks-po-header .form-table .regular-text,
+.ks-po-header .form-table .large-text {
+	width: 100%;
+	max-width: 25em;
+	box-sizing: border-box;
+}
+
 .ks-inline-form {
 	display: inline-block;
 	margin: 0 0 0 0.5em;
@@ -91,8 +110,19 @@
 
 /* --- lines + add-line ---------------------------------------------------- */
 
-.ks-lines .ks-line-actions {
+/* Line actions stay reachable when the wrapper scrolls (same pattern as the
+   Lagerstatus quick-adjust column). */
+.ks-lines th.ks-line-actions,
+.ks-lines td.ks-line-actions {
 	white-space: nowrap;
+	position: sticky;
+	right: 0;
+	background: #fff;
+	box-shadow: -8px 0 8px -8px rgba(0, 0, 0, .15);
+}
+
+.ks-lines.striped > tbody > tr:nth-child(odd) .ks-line-actions {
+	background: #f6f7f7;
 }
 
 .ks-danger,

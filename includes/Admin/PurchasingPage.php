@@ -312,7 +312,7 @@ final class PurchasingPage {
                     <th class="ks-num"><?php \esc_html_e('Received', 'kaupang-stock'); ?></th>
                     <th class="ks-num"><?php \esc_html_e('Remaining', 'kaupang-stock'); ?></th>
                     <th class="ks-num"><?php \esc_html_e('Unit cost ex-VAT', 'kaupang-stock'); ?></th>
-                    <?php if ($editable): ?><th></th><?php endif; ?>
+                    <?php if ($editable): ?><th class="ks-line-actions"></th><?php endif; ?>
                 </tr>
             </thead>
             <tbody>
