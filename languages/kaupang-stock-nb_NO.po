@@ -1,0 +1,1469 @@
+# Copyright (C) 2026 Lasse Jellum
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Kaupang Stock 0.1.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/kaupang-stock\n"
+"POT-Creation-Date: 2026-07-10T16:00:58+00:00\n"
+"PO-Revision-Date: 2026-07-10 16:30+0000\n"
+"Last-Translator: Kaupang Stock <victoria@berganconsulting.no>\n"
+"Language-Team: Norwegian Bokmal\n"
+"Language: nb_NO\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: kaupang-stock\n"
+"X-Generator: WP-CLI 2.12.0\n"
+
+#. Plugin Name of the plugin
+#: kaupang-stock.php
+msgid "Kaupang Stock"
+msgstr "Kaupang Stock"
+
+#. Plugin URI of the plugin
+#: kaupang-stock.php
+msgid "https://jellum.net/kaupang-stock"
+msgstr "https://jellum.net/kaupang-stock"
+
+#. Description of the plugin
+#: kaupang-stock.php
+msgid "Ledger-backed lagerføring for WooCommerce — append-only stock movement ledger with full attribution, audit UI, varetelling (counting) and innkjøp/receiving. Mirrors WooCommerce on the sale path (never fights it); every quantity is re-derivable from the ledger. Part of the Kaupang suite."
+msgstr "Hovedbokstyrt lagerføring for WooCommerce — en lagerlogg som bare legges til, med full sporing, revisjons-UI, varetelling og innkjøp/varemottak. Speiler WooCommerce på salgsveien (kjemper aldri mot den); hver mengde kan utledes på nytt fra lagerloggen. Del av Kaupang-pakken."
+
+#. Author of the plugin
+#: kaupang-stock.php
+msgid "Lasse Jellum"
+msgstr "Lasse Jellum"
+
+#. Author URI of the plugin
+#: kaupang-stock.php
+msgid "https://jellum.net"
+msgstr "https://jellum.net"
+
+#: includes/Activation.php:18
+msgid "Kaupang Stock requires PHP 8.1 or newer."
+msgstr "Kaupang Stock krever PHP 8.1 eller nyere."
+
+#: includes/Admin/CountsPage.php:106
+#: includes/Ledger/Reasons.php:81
+msgid "Varetelling"
+msgstr "Varetelling"
+
+#: includes/Admin/CountsPage.php:111
+msgid "Counts"
+msgstr "Varetellinger"
+
+#: includes/Admin/CountsPage.php:116
+#: includes/Admin/PurchasingPage.php:151
+#: includes/Admin/StatusPage.php:101
+msgid "Status"
+msgstr "Status"
+
+#: includes/Admin/CountsPage.php:117
+#: includes/Admin/CountsPage.php:162
+msgid "Scope"
+msgstr "Omfang"
+
+#: includes/Admin/CountsPage.php:118
+msgid "Blind"
+msgstr "Blind"
+
+#: includes/Admin/CountsPage.php:119
+msgid "Progress"
+msgstr "Fremdrift"
+
+#: includes/Admin/CountsPage.php:120
+msgid "Created"
+msgstr "Opprettet"
+
+#: includes/Admin/CountsPage.php:126
+msgid "No counts yet."
+msgstr "Ingen varetellinger ennå."
+
+#: includes/Admin/CountsPage.php:136
+msgid "Yes"
+msgstr "Ja"
+
+#: includes/Admin/CountsPage.php:136
+msgid "No"
+msgstr "Nei"
+
+#: includes/Admin/CountsPage.php:140
+#: includes/Admin/CountsPage.php:366
+msgid "recount"
+msgstr "opptelling"
+
+#: includes/Admin/CountsPage.php:156
+msgid "Ny telling"
+msgstr "Ny telling"
+
+#: includes/Admin/CountsPage.php:165
+msgid "All stock-managed products"
+msgstr "Alle lagerstyrte produkter"
+
+#: includes/Admin/CountsPage.php:166
+msgid "One product category"
+msgstr "Én produktkategori"
+
+#: includes/Admin/CountsPage.php:167
+msgid "Manual selection"
+msgstr "Manuelt utvalg"
+
+#: includes/Admin/CountsPage.php:172
+msgid "Category"
+msgstr "Kategori"
+
+#: includes/Admin/CountsPage.php:183
+msgid "Products"
+msgstr "Produkter"
+
+#: includes/Admin/CountsPage.php:187
+msgid "Filter by name or SKU…"
+msgstr "Filtrer på navn eller SKU…"
+
+#: includes/Admin/CountsPage.php:188
+msgid "Stock-managed products"
+msgstr "Lagerstyrte produkter"
+
+#: includes/Admin/CountsPage.php:197
+msgid "Only stock-managed products are listed."
+msgstr "Bare lagerstyrte produkter vises."
+
+#: includes/Admin/CountsPage.php:202
+msgid "Blind count"
+msgstr "Blindtelling"
+
+#: includes/Admin/CountsPage.php:206
+msgid "Hide the expected quantity while counting (recommended)."
+msgstr "Skjul forventet mengde under tellingen (anbefalt)."
+
+#: includes/Admin/CountsPage.php:211
+#: includes/Admin/MovementsPage.php:110
+#: includes/Admin/MovementsPage.php:642
+#: includes/Admin/PurchasingPage.php:236
+#: includes/Admin/PurchasingPage.php:744
+#: includes/Admin/StatusPage.php:431
+msgid "Note"
+msgstr "Notat"
+
+#: includes/Admin/CountsPage.php:216
+msgid "Create count"
+msgstr "Opprett varetelling"
+
+#: includes/Admin/CountsPage.php:243
+#, php-format
+msgid "Varetelling #%d — capture"
+msgstr "Varetelling #%d — registrering"
+
+#: includes/Admin/CountsPage.php:247
+#: includes/Admin/CountsPage.php:321
+msgid "All counts"
+msgstr "Alle varetellinger"
+
+#: includes/Admin/CountsPage.php:252
+msgid "Vis forventet"
+msgstr "Vis forventet"
+
+#: includes/Admin/CountsPage.php:254
+#: includes/Admin/CountsPage.php:710
+msgid "Til gjennomgang"
+msgstr "Til gjennomgang"
+
+#: includes/Admin/CountsPage.php:260
+msgid "Scan or type a SKU, then Enter…"
+msgstr "Skann eller skriv en SKU, trykk deretter Enter…"
+
+#: includes/Admin/CountsPage.php:267
+msgid "SKU"
+msgstr "SKU"
+
+#: includes/Admin/CountsPage.php:268
+#: includes/Admin/CountsPage.php:349
+#: includes/Admin/MovementsPage.php:105
+#: includes/Admin/MovementsPage.php:635
+#: includes/Admin/OrderMetaBox.php:85
+#: includes/Admin/PurchasingPage.php:305
+#: includes/Admin/PurchasingPage.php:472
+#: includes/Admin/PurchasingPage.php:608
+#: includes/Admin/StatusPage.php:95
+#: includes/Admin/StatusPage.php:457
+msgid "Product"
+msgstr "Produkt"
+
+#: includes/Admin/CountsPage.php:269
+#: includes/Admin/CountsPage.php:350
+msgid "Forventet"
+msgstr "Forventet"
+
+#: includes/Admin/CountsPage.php:270
+#: includes/Admin/CountsPage.php:351
+msgid "Counted"
+msgstr "Talt"
+
+#: includes/Admin/CountsPage.php:317
+#: includes/Counting/Apply.php:169
+#, php-format
+msgid "Varetelling #%d"
+msgstr "Varetelling #%d"
+
+#: includes/Admin/CountsPage.php:324
+msgid "Note:"
+msgstr "Notat:"
+
+#: includes/Admin/CountsPage.php:329
+msgid "Reopen for counting"
+msgstr "Gjenåpne for telling"
+
+#: includes/Admin/CountsPage.php:332
+msgid "Bruk telling"
+msgstr "Bruk telling"
+
+#: includes/Admin/CountsPage.php:335
+#, php-format
+msgid "%d line(s) need a recount or override before applying."
+msgstr "%d linje(r) trenger opptelling eller overstyring før bokføring."
+
+#: includes/Admin/CountsPage.php:337
+msgid "Cancel count"
+msgstr "Avbryt varetelling"
+
+#: includes/Admin/CountsPage.php:339
+#, php-format
+msgid "Applied %s by %s."
+msgstr "Bokført %s av %s."
+
+#: includes/Admin/CountsPage.php:352
+msgid "Differanse"
+msgstr "Differanse"
+
+#: includes/Admin/CountsPage.php:373
+msgid "Movements since"
+msgstr "Bevegelser siden"
+
+#: includes/Admin/CountsPage.php:375
+msgid "Override"
+msgstr "Overstyr"
+
+#: includes/Admin/CountsPage.php:386
+#, php-format
+msgid "%d line(s) have not been counted. They post nothing and will require a combined confirmation at apply."
+msgstr "%d linje(r) er ikke talt. De bokfører ingenting og krever en samlet bekreftelse ved bokføring."
+
+#: includes/Admin/CountsPage.php:404
+msgid "Import counted quantities (CSV)"
+msgstr "Importer talte mengder (CSV)"
+
+#: includes/Admin/CountsPage.php:405
+msgid "Upload the exported sheet with the counted column filled. Matching is by SKU (falling back to a product id column if present). The count lands in review — never applied directly."
+msgstr "Last opp det eksporterte arket med den talte kolonnen utfylt. Samsvar skjer på SKU (faller tilbake til en produkt-ID-kolonne hvis den finnes). Varetellingen havner til gjennomgang — bokføres aldri direkte."
+
+#: includes/Admin/CountsPage.php:411
+msgid "Upload"
+msgstr "Last opp"
+
+#: includes/Admin/CountsPage.php:709
+#: includes/Admin/CountsPage.php:724
+#: includes/Admin/PurchasingPage.php:175
+msgid "Open"
+msgstr "Åpen"
+
+#: includes/Admin/CountsPage.php:711
+msgid "Applied"
+msgstr "Bokført"
+
+#: includes/Admin/CountsPage.php:712
+msgid "Cancelled"
+msgstr "Avbrutt"
+
+#: includes/Admin/CountsPage.php:721
+msgid "Capture"
+msgstr "Registrer"
+
+#: includes/Admin/CountsPage.php:722
+msgid "Review"
+msgstr "Gjennomgang"
+
+#: includes/Admin/CountsPage.php:732
+msgid "Cancel this count? This cannot be undone."
+msgstr "Avbryte denne varetellingen? Dette kan ikke angres."
+
+#: includes/Admin/CountsPage.php:752
+msgid "Export CSV"
+msgstr "Eksporter CSV"
+
+#: includes/Admin/CountsPage.php:807
+#: includes/Admin/MovementsPage.php:731
+msgid "system"
+msgstr "system"
+
+#: includes/Admin/CountsPage.php:831
+msgid "You are not allowed to do this."
+msgstr "Du har ikke tillatelse til å gjøre dette."
+
+#: includes/Admin/CountsPage.php:835
+msgid "Invalid request method."
+msgstr "Ugyldig forespørselsmetode."
+
+#: includes/Admin/CountsPage.php:859
+msgid "Count created. Start scanning below."
+msgstr "Varetelling opprettet. Begynn å skanne nedenfor."
+
+#: includes/Admin/CountsPage.php:860
+msgid "The count was created but no stock-managed products matched the scope."
+msgstr "Varetellingen ble opprettet, men ingen lagerstyrte produkter samsvarte med omfanget."
+
+#: includes/Admin/CountsPage.php:861
+msgid "Could not create the count."
+msgstr "Kunne ikke opprette varetellingen."
+
+#: includes/Admin/CountsPage.php:862
+msgid "Count updated."
+msgstr "Varetelling oppdatert."
+
+#: includes/Admin/CountsPage.php:863
+msgid "That status change is not allowed."
+msgstr "Den statusendringen er ikke tillatt."
+
+#: includes/Admin/CountsPage.php:864
+#: includes/Counting/Apply.php:45
+msgid "Count not found."
+msgstr "Fant ikke varetellingen."
+
+#: includes/Admin/CountsPage.php:865
+msgid "This count can no longer be imported into."
+msgstr "Denne varetellingen kan ikke lenger importeres til."
+
+#: includes/Admin/CountsPage.php:866
+msgid "No CSV file was uploaded."
+msgstr "Ingen CSV-fil ble lastet opp."
+
+#: includes/Admin/CountsPage.php:867
+msgid "The CSV could not be read."
+msgstr "CSV-filen kunne ikke leses."
+
+#. translators: %d: number of matched lines filled from the CSV.
+#: includes/Admin/CountsPage.php:870
+#, php-format
+msgid "%d line filled from the CSV. The count is now in review."
+msgid_plural "%d lines filled from the CSV. The count is now in review."
+msgstr[0] "%d linje fylt ut fra CSV-en. Varetellingen er nå til gjennomgang."
+msgstr[1] "%d linjer fylt ut fra CSV-en. Varetellingen er nå til gjennomgang."
+
+#: includes/Admin/Menu.php:70
+#: includes/Admin/Menu.php:90
+#: includes/Admin/StatusPage.php:77
+msgid "Stock status"
+msgstr "Lagerstatus"
+
+#: includes/Admin/Menu.php:78
+#: includes/Admin/Menu.php:130
+msgid "Settings"
+msgstr "Innstillinger"
+
+#: includes/Admin/Menu.php:99
+#: includes/Admin/MovementsPage.php:46
+msgid "Movements"
+msgstr "Bevegelser"
+
+#: includes/Admin/Menu.php:109
+#: includes/Admin/SettingsPage.php:139
+msgid "Stock counts"
+msgstr "Varetellinger"
+
+#: includes/Admin/Menu.php:120
+#: includes/Admin/PurchasingPage.php:129
+#: includes/Admin/SettingsPage.php:132
+msgid "Purchasing"
+msgstr "Innkjøp"
+
+#: includes/Admin/Menu.php:161
+msgid "Adjust"
+msgstr "Juster"
+
+#: includes/Admin/Menu.php:162
+#: includes/Admin/PurchasingPage.php:80
+#: includes/Admin/PurchasingPage.php:356
+#: includes/Admin/PurchasingPage.php:756
+msgid "Cancel"
+msgstr "Avbryt"
+
+#: includes/Admin/Menu.php:163
+#: includes/Admin/MovementsPage.php:499
+msgid "A note is required."
+msgstr "Et notat er påkrevd."
+
+#: includes/Admin/Menu.php:164
+msgid "Reverse this movement? Enter a note (required):"
+msgstr "Reversere denne bevegelsen? Skriv inn et notat (påkrevd):"
+
+#: includes/Admin/Menu.php:165
+msgid "A note is required to reverse a movement."
+msgstr "Et notat er påkrevd for å reversere en bevegelse."
+
+#: includes/Admin/Menu.php:166
+msgid "Searching…"
+msgstr "Søker…"
+
+#: includes/Admin/Menu.php:167
+#: includes/Admin/PurchasingPage.php:384
+msgid "No products found."
+msgstr "Fant ingen produkter."
+
+#: includes/Admin/MovementsPage.php:79
+msgid "Export CSV (current filter)"
+msgstr "Eksporter CSV (gjeldende filter)"
+
+#: includes/Admin/MovementsPage.php:96
+msgid "Back to movements"
+msgstr "Tilbake til bevegelser"
+
+#: includes/Admin/MovementsPage.php:97
+msgid "Batch"
+msgstr "Batch"
+
+#: includes/Admin/MovementsPage.php:99
+msgid "No movements in this batch."
+msgstr "Ingen bevegelser i denne batchen."
+
+#: includes/Admin/MovementsPage.php:104
+#: includes/Admin/MovementsPage.php:634
+#: includes/Admin/OrderMetaBox.php:84
+msgid "Time"
+msgstr "Tidspunkt"
+
+#: includes/Admin/MovementsPage.php:107
+#: includes/Admin/MovementsPage.php:637
+msgid "Balance after"
+msgstr "Saldo etter"
+
+#: includes/Admin/MovementsPage.php:108
+#: includes/Admin/MovementsPage.php:233
+#: includes/Admin/MovementsPage.php:638
+#: includes/Admin/OrderMetaBox.php:87
+msgid "Reason"
+msgstr "Årsak"
+
+#: includes/Admin/MovementsPage.php:109
+#: includes/Admin/MovementsPage.php:639
+#: includes/Admin/PurchasingPage.php:154
+msgid "Reference"
+msgstr "Referanse"
+
+#: includes/Admin/MovementsPage.php:140
+msgid "New adjustment"
+msgstr "Ny justering"
+
+#: includes/Admin/MovementsPage.php:144
+msgid "Adjustments write to WooCommerce stock and require active mode. Switch to active mode in settings first."
+msgstr "Justeringer skriver til WooCommerce-lageret og krever aktiv modus. Bytt til aktiv modus i innstillingene først."
+
+#: includes/Admin/MovementsPage.php:152
+msgid "Product (title, SKU or ID)"
+msgstr "Produkt (tittel, SKU eller ID)"
+
+#: includes/Admin/MovementsPage.php:158
+#: includes/Admin/StatusPage.php:430
+msgid "Quantity change"
+msgstr "Mengdeendring"
+
+#: includes/Admin/MovementsPage.php:164
+#: includes/Admin/StatusPage.php:431
+msgid "Note (required)"
+msgstr "Notat (påkrevd)"
+
+#: includes/Admin/MovementsPage.php:170
+msgid "Occurred date (optional, up to 90 days back)"
+msgstr "Dato inntruffet (valgfritt, inntil 90 dager tilbake)"
+
+#: includes/Admin/MovementsPage.php:175
+msgid "Record adjustment"
+msgstr "Registrer justering"
+
+#: includes/Admin/MovementsPage.php:231
+msgid "Product title, SKU or ID"
+msgstr "Produkttittel, SKU eller ID"
+
+#: includes/Admin/MovementsPage.php:239
+msgid "Reference type"
+msgstr "Referansetype"
+
+#: includes/Admin/MovementsPage.php:244
+msgid "Actor ID"
+msgstr "Aktør-ID"
+
+#: includes/Admin/MovementsPage.php:245
+msgid "From"
+msgstr "Fra"
+
+#: includes/Admin/MovementsPage.php:248
+msgid "To"
+msgstr "Til"
+
+#: includes/Admin/MovementsPage.php:251
+#: includes/Admin/StatusPage.php:88
+msgid "Filter"
+msgstr "Filtrer"
+
+#: includes/Admin/MovementsPage.php:252
+msgid "Reset"
+msgstr "Nullstill"
+
+#: includes/Admin/MovementsPage.php:337
+#: includes/Admin/MovementsPage.php:513
+#: includes/Admin/PurchasingPage.php:958
+#: includes/Admin/StatusPage.php:601
+msgid "You do not have permission to do this."
+msgstr "Du har ikke tillatelse til å gjøre dette."
+
+#: includes/Admin/MovementsPage.php:414
+msgid "Order"
+msgstr "Ordre"
+
+#: includes/Admin/MovementsPage.php:427
+#, php-format
+msgid "PO #%d, line"
+msgstr "Innkjøpsordre #%d, linje"
+
+#: includes/Admin/MovementsPage.php:427
+msgid "PO line"
+msgstr "Innkjøpsordrelinje"
+
+#: includes/Admin/MovementsPage.php:438
+#, php-format
+msgid "Count #%d, line"
+msgstr "Varetelling #%d, linje"
+
+#: includes/Admin/MovementsPage.php:438
+msgid "Count line"
+msgstr "Varetellingslinje"
+
+#: includes/Admin/MovementsPage.php:443
+msgid "Movement"
+msgstr "Bevegelse"
+
+#: includes/Admin/MovementsPage.php:487
+msgid "Adjustment recorded."
+msgstr "Justering registrert."
+
+#: includes/Admin/MovementsPage.php:488
+msgid "Movement reversed."
+msgstr "Bevegelse reversert."
+
+#: includes/Admin/MovementsPage.php:495
+msgid "Could not resolve a product from that value."
+msgstr "Kunne ikke finne et produkt fra den verdien."
+
+#: includes/Admin/MovementsPage.php:497
+#: includes/Admin/StatusPage.php:539
+msgid "Enter a non-zero quantity change."
+msgstr "Angi en mengdeendring som ikke er null."
+
+#: includes/Admin/MovementsPage.php:501
+msgid "A valid movement is required."
+msgstr "En gyldig bevegelse er påkrevd."
+
+#. translators: %s: ledger error
+#. translators: %s: ledger error message
+#: includes/Admin/MovementsPage.php:505
+#: includes/Admin/StatusPage.php:545
+#, php-format
+msgid "Could not record the movement: %s"
+msgstr "Kunne ikke registrere bevegelsen: %s"
+
+#: includes/Admin/MovementsPage.php:506
+#: includes/Admin/StatusPage.php:546
+msgid "unknown error"
+msgstr "ukjent feil"
+
+#: includes/Admin/MovementsPage.php:640
+msgid "Actor"
+msgstr "Aktør"
+
+#: includes/Admin/MovementsPage.php:641
+msgid "Via"
+msgstr "Via"
+
+#. translators: %s: system creation time
+#: includes/Admin/MovementsPage.php:699
+#: includes/Admin/StatusPage.php:364
+#, php-format
+msgid "Recorded %s"
+msgstr "Registrert %s"
+
+#: includes/Admin/MovementsPage.php:772
+msgid "Reverse"
+msgstr "Reverser"
+
+#: includes/Admin/MovementsPage.php:784
+msgid "No movements match the current filter."
+msgstr "Ingen bevegelser samsvarer med gjeldende filter."
+
+#: includes/Admin/OrderMetaBox.php:38
+#: includes/Admin/OrderMetaBox.php:53
+#: includes/Admin/ProductPanel.php:32
+msgid "Stock (Lager)"
+msgstr "Lager"
+
+#: includes/Admin/OrderMetaBox.php:78
+msgid "No stock movements for this order."
+msgstr "Ingen lagerbevegelser for denne ordren."
+
+#: includes/Admin/OrderMetaBox.php:88
+msgid "Balance"
+msgstr "Saldo"
+
+#: includes/Admin/ProductPanel.php:47
+msgid "Save the product first to see stock."
+msgstr "Lagre produktet først for å se lageret."
+
+#: includes/Admin/ProductPanel.php:76
+#: includes/Admin/ProductPanel.php:101
+#: includes/Admin/StatusPage.php:96
+#: includes/Admin/StatusPage.php:459
+msgid "On hand"
+msgstr "På lager"
+
+#: includes/Admin/ProductPanel.php:77
+#: includes/Admin/StatusPage.php:97
+msgid "Reserved"
+msgstr "Reservert"
+
+#: includes/Admin/ProductPanel.php:78
+#: includes/Admin/StatusPage.php:98
+msgid "Available"
+msgstr "Tilgjengelig"
+
+#: includes/Admin/ProductPanel.php:88
+msgid "No variations."
+msgstr "Ingen varianter."
+
+#: includes/Admin/ProductPanel.php:95
+msgid "No stock-managed variations."
+msgstr "Ingen lagerstyrte varianter."
+
+#: includes/Admin/ProductPanel.php:100
+msgid "Variation"
+msgstr "Variant"
+
+#: includes/Admin/ProductPanel.php:120
+msgid "No movements recorded yet."
+msgstr "Ingen bevegelser registrert ennå."
+
+#: includes/Admin/ProductPanel.php:123
+msgid "Recent movements"
+msgstr "Nylige bevegelser"
+
+#: includes/Admin/ProductPanel.php:145
+msgid "View all movements →"
+msgstr "Vis alle bevegelser →"
+
+#: includes/Admin/PurchasingPage.php:77
+msgid "Confirm over-receipt"
+msgstr "Bekreft overmottak"
+
+#: includes/Admin/PurchasingPage.php:78
+msgid "These lines exceed the remaining quantity. Receiving anyway is allowed (supplier overs are normal):"
+msgstr "Disse linjene overstiger gjenstående mengde. Å motta likevel er tillatt (overleveranser fra leverandør er normalt):"
+
+#: includes/Admin/PurchasingPage.php:79
+msgid "Receive anyway"
+msgstr "Motta likevel"
+
+#: includes/Admin/PurchasingPage.php:81
+#: includes/Purchasing/Receiving.php:204
+msgid "Goods received."
+msgstr "Varer mottatt."
+
+#: includes/Admin/PurchasingPage.php:82
+msgid "Something went wrong. Please try again."
+msgstr "Noe gikk galt. Prøv igjen."
+
+#: includes/Admin/PurchasingPage.php:83
+#: includes/Admin/PurchasingPage.php:306
+#: includes/Admin/PurchasingPage.php:473
+#: includes/Admin/PurchasingPage.php:609
+msgid "Ordered"
+msgstr "Bestilt"
+
+#: includes/Admin/PurchasingPage.php:84
+#: includes/Admin/PurchasingPage.php:307
+#: includes/Admin/PurchasingPage.php:474
+#: includes/Admin/PurchasingPage.php:610
+msgid "Received"
+msgstr "Mottatt"
+
+#: includes/Admin/PurchasingPage.php:85
+#: includes/Admin/PurchasingPage.php:308
+#: includes/Admin/PurchasingPage.php:475
+#: includes/Admin/PurchasingPage.php:611
+msgid "Remaining"
+msgstr "Gjenstående"
+
+#: includes/Admin/PurchasingPage.php:86
+msgid "Entered"
+msgstr "Angitt"
+
+#: includes/Admin/PurchasingPage.php:87
+msgid "Enter a quantity on at least one line."
+msgstr "Angi en mengde på minst én linje."
+
+#: includes/Admin/PurchasingPage.php:131
+msgid "Purchasing (Innkjøp) is not enabled. Turn it on under Lager → Innstillinger."
+msgstr "Innkjøp er ikke aktivert. Slå det på under Lager → Innstillinger."
+
+#: includes/Admin/PurchasingPage.php:141
+#: includes/Admin/PurchasingPage.php:206
+msgid "New purchase order"
+msgstr "Ny innkjøpsordre"
+
+#: includes/Admin/PurchasingPage.php:149
+#: includes/Admin/PurchasingPage.php:614
+msgid "PO"
+msgstr "Innkjøpsordre"
+
+#: includes/Admin/PurchasingPage.php:152
+#: includes/Admin/PurchasingPage.php:275
+#: includes/Admin/PurchasingPage.php:565
+msgid "Lines"
+msgstr "Linjer"
+
+#: includes/Admin/PurchasingPage.php:153
+#: includes/Admin/PurchasingPage.php:232
+#: includes/Admin/PurchasingPage.php:612
+msgid "ETA"
+msgstr "Forventet levering"
+
+#: includes/Admin/PurchasingPage.php:160
+msgid "No purchase orders yet."
+msgstr "Ingen innkjøpsordrer ennå."
+
+#: includes/Admin/PurchasingPage.php:195
+#: includes/Admin/PurchasingPage.php:430
+#: includes/Admin/PurchasingPage.php:1118
+#: includes/Purchasing/Receiving.php:55
+msgid "Purchase order not found."
+msgstr "Fant ikke innkjøpsordren."
+
+#: includes/Admin/PurchasingPage.php:211
+#: includes/Admin/PurchasingPage.php:601
+#: includes/Admin/PurchasingPage.php:654
+msgid "Back to list"
+msgstr "Tilbake til listen"
+
+#: includes/Admin/PurchasingPage.php:227
+msgid "Supplier reference"
+msgstr "Leverandørreferanse"
+
+#: includes/Admin/PurchasingPage.php:240
+msgid "The order is placed — line changes append to this note trail rather than editing locked lines."
+msgstr "Ordren er lagt inn — linjeendringer legges til i dette notatsporet i stedet for å endre låste linjer."
+
+#: includes/Admin/PurchasingPage.php:245
+msgid "Create draft"
+msgstr "Opprett kladd"
+
+#: includes/Admin/PurchasingPage.php:245
+msgid "Save details"
+msgstr "Lagre detaljer"
+
+#: includes/Admin/PurchasingPage.php:250
+msgid "Place this order? Lines will be locked; further changes append to the note."
+msgstr "Legge inn denne ordren? Linjene blir låst; videre endringer legges til i notatet."
+
+#: includes/Admin/PurchasingPage.php:254
+msgid "Place order"
+msgstr "Legg inn ordre"
+
+#: includes/Admin/PurchasingPage.php:264
+msgid "Cancel this purchase order? Any received stock stays; the remainder is written off."
+msgstr "Avbryte denne innkjøpsordren? Mottatt lager beholdes; resten avskrives."
+
+#: includes/Admin/PurchasingPage.php:268
+msgid "Cancel order"
+msgstr "Avbryt ordre"
+
+#: includes/Admin/PurchasingPage.php:279
+msgid "Add product"
+msgstr "Legg til produkt"
+
+#: includes/Admin/PurchasingPage.php:281
+msgid "Adding a product already on the order merges into that line (its quantity is increased)."
+msgstr "Å legge til et produkt som allerede finnes på ordren, slås sammen med den linjen (mengden økes)."
+
+#: includes/Admin/PurchasingPage.php:286
+msgid "Save the draft first, then add product lines."
+msgstr "Lagre kladden først, og legg deretter til produktlinjer."
+
+#: includes/Admin/PurchasingPage.php:309
+msgid "Unit cost ex-VAT"
+msgstr "Enhetskostnad eks. mva."
+
+#: includes/Admin/PurchasingPage.php:315
+msgid "No lines yet."
+msgstr "Ingen linjer ennå."
+
+#: includes/Admin/PurchasingPage.php:332
+#: includes/Admin/PurchasingPage.php:681
+msgid "Edit"
+msgstr "Rediger"
+
+#: includes/Admin/PurchasingPage.php:336
+msgid "Remove this line?"
+msgstr "Fjerne denne linjen?"
+
+#: includes/Admin/PurchasingPage.php:336
+msgid "Remove"
+msgstr "Fjern"
+
+#: includes/Admin/PurchasingPage.php:351
+#: includes/Admin/PurchasingPage.php:415
+msgid "Qty"
+msgstr "Ant."
+
+#: includes/Admin/PurchasingPage.php:353
+#: includes/Admin/PurchasingPage.php:417
+msgid "Unit cost ex-VAT (kr)"
+msgstr "Enhetskostnad eks. mva. (kr)"
+
+#: includes/Admin/PurchasingPage.php:355
+msgid "Save line"
+msgstr "Lagre linje"
+
+#: includes/Admin/PurchasingPage.php:378
+msgid "Search product by name or SKU…"
+msgstr "Søk etter produkt på navn eller SKU…"
+
+#: includes/Admin/PurchasingPage.php:379
+msgid "Search"
+msgstr "Søk"
+
+#: includes/Admin/PurchasingPage.php:396
+msgid "Add"
+msgstr "Legg til"
+
+#: includes/Admin/PurchasingPage.php:412
+msgid "Product (SKU or id)"
+msgstr "Produkt (SKU eller ID)"
+
+#: includes/Admin/PurchasingPage.php:414
+msgid "Pick above, or type a SKU / product id"
+msgstr "Velg over, eller skriv en SKU / produkt-ID"
+
+#: includes/Admin/PurchasingPage.php:419
+msgid "Add line"
+msgstr "Legg til linje"
+
+#: includes/Admin/PurchasingPage.php:446
+msgid "Back to order"
+msgstr "Tilbake til ordren"
+
+#: includes/Admin/PurchasingPage.php:451
+msgid "This purchase order is not open for receiving."
+msgstr "Denne innkjøpsordren er ikke åpen for varemottak."
+
+#: includes/Admin/PurchasingPage.php:458
+msgid "Receiving writes stock and requires active mode. It is disabled while the ledger runs in shadow mode — enable active mode under Lager → Innstillinger."
+msgstr "Varemottak skriver til lageret og krever aktiv modus. Det er deaktivert mens lagerloggen kjører i skyggemodus — aktiver aktiv modus under Lager → Innstillinger."
+
+#: includes/Admin/PurchasingPage.php:467
+msgid "Quantities are pre-filled with what remains. Adjust for a partial delivery, then confirm. The server re-checks each remaining quantity at submit."
+msgstr "Mengdene er forhåndsutfylt med det som gjenstår. Juster for en delleveranse, og bekreft deretter. Serveren kontrollerer hver gjenstående mengde på nytt ved innsending."
+
+#: includes/Admin/PurchasingPage.php:476
+msgid "Receive now"
+msgstr "Motta nå"
+
+#: includes/Admin/PurchasingPage.php:507
+#: includes/Admin/PurchasingPage.php:564
+msgid "Received at"
+msgstr "Mottatt tidspunkt"
+
+#: includes/Admin/PurchasingPage.php:511
+msgid "When the goods physically arrived. Defaults to now; set it back for \"the goods came last week\"."
+msgstr "Når varene fysisk ankom. Settes til nå som standard; still den tilbake for «varene kom forrige uke»."
+
+#: includes/Admin/PurchasingPage.php:518
+msgid "Receive goods"
+msgstr "Motta varer"
+
+#: includes/Admin/PurchasingPage.php:560
+msgid "Receipts"
+msgstr "Varemottak"
+
+#: includes/Admin/PurchasingPage.php:566
+msgid "Total qty"
+msgstr "Total ant."
+
+#: includes/Admin/PurchasingPage.php:585
+msgid "View in movements"
+msgstr "Vis i bevegelser"
+
+#: includes/Admin/PurchasingPage.php:603
+msgid "Every open purchase-order line across all orders — the single \"what is coming\" answer."
+msgstr "Hver åpne innkjøpsordrelinje på tvers av alle ordrer — det ene svaret på «hva er på vei»."
+
+#: includes/Admin/PurchasingPage.php:619
+msgid "Nothing incoming."
+msgstr "Ingenting innkommende."
+
+#: includes/Admin/PurchasingPage.php:660
+#: includes/Admin/PurchasingPage.php:719
+msgid "Name"
+msgstr "Navn"
+
+#: includes/Admin/PurchasingPage.php:661
+#: includes/Admin/PurchasingPage.php:724
+msgid "Org. nr"
+msgstr "Org.nr"
+
+#: includes/Admin/PurchasingPage.php:662
+#: includes/Admin/PurchasingPage.php:734
+msgid "Email"
+msgstr "E-post"
+
+#: includes/Admin/PurchasingPage.php:663
+#: includes/Admin/PurchasingPage.php:739
+msgid "Phone"
+msgstr "Telefon"
+
+#: includes/Admin/PurchasingPage.php:664
+#: includes/Admin/PurchasingPage.php:749
+#: includes/Admin/SettingsPage.php:123
+msgid "Active"
+msgstr "Aktiv"
+
+#: includes/Admin/PurchasingPage.php:670
+msgid "No suppliers yet."
+msgstr "Ingen leverandører ennå."
+
+#: includes/Admin/PurchasingPage.php:684
+msgid "Deactivate"
+msgstr "Deaktiver"
+
+#: includes/Admin/PurchasingPage.php:684
+msgid "Activate"
+msgstr "Aktiver"
+
+#: includes/Admin/PurchasingPage.php:692
+msgid "Edit supplier"
+msgstr "Rediger leverandør"
+
+#: includes/Admin/PurchasingPage.php:692
+msgid "New supplier"
+msgstr "Ny leverandør"
+
+#: includes/Admin/PurchasingPage.php:699
+msgid "Org. nr lookup"
+msgstr "Org.nr-oppslag"
+
+#: includes/Admin/PurchasingPage.php:702
+msgid "Slå opp"
+msgstr "Slå opp"
+
+#: includes/Admin/PurchasingPage.php:703
+#, php-format
+msgid "Looks the company up in %s and fills the name."
+msgstr "Slår opp selskapet i %s og fyller inn navnet."
+
+#: includes/Admin/PurchasingPage.php:707
+#, php-format
+msgid "Filled from %s."
+msgstr "Fylt ut fra %s."
+
+#: includes/Admin/PurchasingPage.php:708
+msgid "Source"
+msgstr "Kilde"
+
+#: includes/Admin/PurchasingPage.php:729
+msgid "Norwegian 9-digit organisation number (MOD11-validated)."
+msgstr "Norsk 9-sifret organisasjonsnummer (MOD11-validert)."
+
+#: includes/Admin/PurchasingPage.php:751
+msgid "Available for new purchase orders"
+msgstr "Tilgjengelig for nye innkjøpsordrer"
+
+#: includes/Admin/PurchasingPage.php:754
+msgid "Save supplier"
+msgstr "Lagre leverandør"
+
+#: includes/Admin/PurchasingPage.php:754
+msgid "Add supplier"
+msgstr "Legg til leverandør"
+
+#. translators: 1: product label, 2: requested qty
+#: includes/Admin/PurchasingPage.php:828
+#, php-format
+msgid "Endring etter bestilling avvist: %1$s → %2$s (linjer er låst)."
+msgstr "Endring etter bestilling avvist: %1$s → %2$s (linjer er låst)."
+
+#: includes/Admin/PurchasingPage.php:966
+msgid "— none —"
+msgstr "— ingen —"
+
+#: includes/Admin/PurchasingPage.php:973
+msgid "inactive"
+msgstr "inaktiv"
+
+#: includes/Admin/PurchasingPage.php:1106
+msgid "Draft purchase order created."
+msgstr "Innkjøpsordrekladd opprettet."
+
+#: includes/Admin/PurchasingPage.php:1107
+msgid "Purchase order saved."
+msgstr "Innkjøpsordre lagret."
+
+#: includes/Admin/PurchasingPage.php:1108
+msgid "Order placed. Lines are now locked."
+msgstr "Ordre lagt inn. Linjene er nå låst."
+
+#: includes/Admin/PurchasingPage.php:1109
+msgid "Purchase order cancelled. Any received stock was kept."
+msgstr "Innkjøpsordre avbrutt. Mottatt lager ble beholdt."
+
+#: includes/Admin/PurchasingPage.php:1110
+msgid "Line added."
+msgstr "Linje lagt til."
+
+#: includes/Admin/PurchasingPage.php:1111
+msgid "Product already on the order — its quantity was increased."
+msgstr "Produktet er allerede på ordren — mengden ble økt."
+
+#: includes/Admin/PurchasingPage.php:1112
+msgid "Line saved."
+msgstr "Linje lagret."
+
+#: includes/Admin/PurchasingPage.php:1113
+msgid "Line removed."
+msgstr "Linje fjernet."
+
+#: includes/Admin/PurchasingPage.php:1114
+msgid "Supplier saved."
+msgstr "Leverandør lagret."
+
+#: includes/Admin/PurchasingPage.php:1115
+msgid "Company found — the name was filled in below."
+msgstr "Selskap funnet — navnet ble fylt inn nedenfor."
+
+#: includes/Admin/PurchasingPage.php:1119
+msgid "Could not save. Please try again."
+msgstr "Kunne ikke lagre. Prøv igjen."
+
+#: includes/Admin/PurchasingPage.php:1120
+msgid "Could not place the order — add at least one line to a draft first."
+msgstr "Kunne ikke legge inn ordren — legg til minst én linje i en kladd først."
+
+#: includes/Admin/PurchasingPage.php:1121
+msgid "Could not save the line."
+msgstr "Kunne ikke lagre linjen."
+
+#: includes/Admin/PurchasingPage.php:1122
+msgid "Pick a product first."
+msgstr "Velg et produkt først."
+
+#: includes/Admin/PurchasingPage.php:1123
+msgid "The order is placed — lines are locked. The change was noted on the order instead."
+msgstr "Ordren er lagt inn — linjene er låst. Endringen ble i stedet notert på ordren."
+
+#: includes/Admin/PurchasingPage.php:1124
+msgid "A supplier name is required."
+msgstr "Et leverandørnavn er påkrevd."
+
+#: includes/Admin/PurchasingPage.php:1125
+msgid "That organisation number failed the MOD11 check."
+msgstr "Det organisasjonsnummeret bestod ikke MOD11-kontrollen."
+
+#: includes/Admin/PurchasingPage.php:1126
+msgid "No company found for that organisation number (or the registry was unavailable)."
+msgstr "Fant ikke noe selskap for det organisasjonsnummeret (eller registeret var utilgjengelig)."
+
+#. translators: 1: number of products seeded, 2: total stock-managed products
+#: includes/Admin/SettingsPage.php:74
+#, php-format
+msgid "Stock ledger enabled. Seeded %1$d of %2$d stock-managed products."
+msgstr "Lagerlogg aktivert. Klargjorde %1$d av %2$d lagerstyrte produkter."
+
+#: includes/Admin/SettingsPage.php:95
+msgid "Stock — settings"
+msgstr "Lager — innstillinger"
+
+#: includes/Admin/SettingsPage.php:97
+msgid "The ledger is the source of truth for stock; every other number is a projection of it. Turn the ledger on in shadow mode first, prove reconciliation is clean over real traffic, then switch to active mode so adjustments, receipts and counts write through to WooCommerce."
+msgstr "Lagerloggen er kilden til sannhet for lager; alle andre tall er en projeksjon av den. Slå på lagerloggen i skyggemodus først, bevis at avstemmingen er ren over reell trafikk, og bytt deretter til aktiv modus slik at justeringer, varemottak og varetellinger skrives gjennom til WooCommerce."
+
+#: includes/Admin/SettingsPage.php:106
+msgid "Stock ledger"
+msgstr "Lagerlogg"
+
+#: includes/Admin/SettingsPage.php:109
+msgid "Enable ledger-backed stock management"
+msgstr "Aktiver hovedbokstyrt lagerstyring"
+
+#: includes/Admin/SettingsPage.php:110
+msgid "Turning this on seeds an opening balance for every stock-managed product and starts recording every WooCommerce stock change. Turning it off stops the observer; recorded history is kept."
+msgstr "Å slå dette på klargjør en inngående saldo for hvert lagerstyrt produkt og begynner å registrere hver lagerendring i WooCommerce. Å slå det av stopper observatøren; registrert historikk beholdes."
+
+#: includes/Admin/SettingsPage.php:114
+msgid "Mode"
+msgstr "Modus"
+
+#: includes/Admin/SettingsPage.php:119
+msgid "Shadow"
+msgstr "Skygge"
+
+#: includes/Admin/SettingsPage.php:119
+msgid "observe and record only; owned operations do not write to WooCommerce. Run this first."
+msgstr "bare observer og registrer; egne operasjoner skriver ikke til WooCommerce. Kjør denne først."
+
+#: includes/Admin/SettingsPage.php:123
+msgid "adjustments, receipts and counts write through to WooCommerce stock."
+msgstr "justeringer, varemottak og varetellinger skrives gjennom til WooCommerce-lageret."
+
+#: includes/Admin/SettingsPage.php:127
+msgid "Active mode is on: owned stock operations now change WooCommerce _stock. Only switch to active once a shadow run has reconciled cleanly."
+msgstr "Aktiv modus er på: egne lageroperasjoner endrer nå WooCommerce _stock. Bytt bare til aktiv når en skyggekjøring har avstemt rent."
+
+#: includes/Admin/SettingsPage.php:135
+msgid "Enable suppliers, purchase orders and receiving (Innkjøp)"
+msgstr "Aktiver leverandører, innkjøpsordrer og varemottak (Innkjøp)"
+
+#: includes/Admin/SettingsPage.php:142
+msgid "Enable stock counting (Varetelling)"
+msgstr "Aktiver varetelling (Varetelling)"
+
+#: includes/Admin/SettingsPage.php:146
+msgid "Recount threshold (%)"
+msgstr "Terskel for opptelling (%)"
+
+#: includes/Admin/SettingsPage.php:150
+msgid "Count lines whose variance exceeds this percentage are flagged for recount before the count can be applied."
+msgstr "Varetellingslinjer der differansen overstiger denne prosentandelen, flagges for opptelling før varetellingen kan bokføres."
+
+#: includes/Admin/SettingsPage.php:154
+msgid "Negative stock"
+msgstr "Negativt lager"
+
+#: includes/Admin/SettingsPage.php:157
+msgid "Show a warning chip on Lagerstatus when on-hand is negative"
+msgstr "Vis et varselmerke på Lagerstatus når på lager er negativt"
+
+#: includes/Admin/StatusPage.php:85
+msgid "Search products"
+msgstr "Søk i produkter"
+
+#: includes/Admin/StatusPage.php:86
+msgid "Title or SKU…"
+msgstr "Tittel eller SKU…"
+
+#: includes/Admin/StatusPage.php:99
+msgid "Incoming"
+msgstr "Innkommende"
+
+#: includes/Admin/StatusPage.php:100
+msgid "Last movement"
+msgstr "Siste bevegelse"
+
+#: includes/Admin/StatusPage.php:102
+msgid "Quick adjust"
+msgstr "Hurtigjustering"
+
+#: includes/Admin/StatusPage.php:107
+msgid "No stock-managed products yet."
+msgstr "Ingen lagerstyrte produkter ennå."
+
+#: includes/Admin/StatusPage.php:148
+msgid "Stock"
+msgstr "Lager"
+
+#: includes/Admin/StatusPage.php:151
+msgid "The stock ledger is not enabled yet."
+msgstr "Lagerloggen er ikke aktivert ennå."
+
+#: includes/Admin/StatusPage.php:152
+msgid "Open settings to enable it."
+msgstr "Åpne innstillingene for å aktivere den."
+
+#: includes/Admin/StatusPage.php:382
+msgid "Negative"
+msgstr "Negativ"
+
+#: includes/Admin/StatusPage.php:385
+msgid "Low stock"
+msgstr "Lavt lager"
+
+#: includes/Admin/StatusPage.php:409
+msgid "deleted"
+msgstr "slettet"
+
+#: includes/Admin/StatusPage.php:411
+msgid "not stock managed"
+msgstr "ikke lagerstyrt"
+
+#: includes/Admin/StatusPage.php:421
+msgid "Switch to active mode in settings to adjust stock."
+msgstr "Bytt til aktiv modus i innstillingene for å justere lageret."
+
+#: includes/Admin/StatusPage.php:432
+msgid "Save"
+msgstr "Lagre"
+
+#: includes/Admin/StatusPage.php:449
+msgid "Reconciliation found stock discrepancies."
+msgstr "Avstemmingen fant lageravvik."
+
+#: includes/Admin/StatusPage.php:458
+msgid "Ledger sum"
+msgstr "Lagerloggsum"
+
+#: includes/Admin/StatusPage.php:461
+msgid "Lookup"
+msgstr "Oppslag"
+
+#: includes/Admin/StatusPage.php:462
+msgid "Owned tail"
+msgstr "Egen hale"
+
+#: includes/Admin/StatusPage.php:476
+msgid "yes"
+msgstr "ja"
+
+#: includes/Admin/StatusPage.php:476
+msgid "no"
+msgstr "nei"
+
+#: includes/Admin/StatusPage.php:482
+msgid "Heal"
+msgstr "Reparer"
+
+#: includes/Admin/StatusPage.php:502
+msgid "Run check now"
+msgstr "Kjør kontroll nå"
+
+#: includes/Admin/StatusPage.php:518
+msgid "Stock adjusted."
+msgstr "Lager justert."
+
+#. translators: %s: heal outcome
+#: includes/Admin/StatusPage.php:522
+#, php-format
+msgid "Heal complete: %s."
+msgstr "Reparasjon fullført: %s."
+
+#. translators: %d: number of discrepancies
+#: includes/Admin/StatusPage.php:530
+#, php-format
+msgid "Reconciliation complete: %d discrepancy found."
+msgid_plural "Reconciliation complete: %d discrepancies found."
+msgstr[0] "Avstemming fullført: %d avvik funnet."
+msgstr[1] "Avstemming fullført: %d avvik funnet."
+
+#: includes/Admin/StatusPage.php:533
+msgid "Reconciliation complete: no discrepancies."
+msgstr "Avstemming fullført: ingen avvik."
+
+#: includes/Admin/StatusPage.php:537
+msgid "A valid product is required."
+msgstr "Et gyldig produkt er påkrevd."
+
+#: includes/Admin/StatusPage.php:541
+msgid "A note is required for an adjustment."
+msgstr "Et notat er påkrevd for en justering."
+
+#: includes/Admin/StatusPage.php:561
+msgid "All categories"
+msgstr "Alle kategorier"
+
+#. translators: %d: total item count
+#: includes/Admin/StatusPage.php:589
+#, php-format
+msgid "%d item"
+msgid_plural "%d items"
+msgstr[0] "%d vare"
+msgstr[1] "%d varer"
+
+#: includes/Counting/Apply.php:54
+msgid "Count already applied."
+msgstr "Varetellingen er allerede bokført."
+
+#: includes/Counting/Apply.php:57
+msgid "Only a count in review can be applied."
+msgstr "Bare en varetelling til gjennomgang kan bokføres."
+
+#: includes/Counting/Apply.php:74
+msgid "Some lines are flagged for recount. Re-count or override them before applying."
+msgstr "Noen linjer er flagget for opptelling. Tell dem på nytt eller overstyr dem før bokføring."
+
+#: includes/Counting/Apply.php:129
+msgid "Stock moved for some lines since the count started, or some lines were never counted. Review and confirm to apply anyway."
+msgstr "Lageret har endret seg for noen linjer siden varetellingen startet, eller noen linjer ble aldri talt. Gå gjennom og bekreft for å bokføre likevel."
+
+#. translators: %s: error detail from the ledger.
+#: includes/Counting/Apply.php:145
+#, php-format
+msgid "Could not apply the count: %s"
+msgstr "Kunne ikke bokføre varetellingen: %s"
+
+#. translators: %d: number of stock movements posted.
+#: includes/Counting/Apply.php:158
+#, php-format
+msgid "Count applied — %d movement posted."
+msgid_plural "Count applied — %d movements posted."
+msgstr[0] "Varetelling bokført — %d bevegelse bokført."
+msgstr[1] "Varetelling bokført — %d bevegelser bokført."
+
+#. translators: 1: category name, 2: number of products.
+#: includes/Counting/Counts.php:304
+#, php-format
+msgid "Category: %1$s (%2$d products)"
+msgstr "Kategori: %1$s (%2$d produkter)"
+
+#. translators: %d: number of products.
+#: includes/Counting/Counts.php:308
+#, php-format
+msgid "Manual selection (%d products)"
+msgstr "Manuelt utvalg (%d produkter)"
+
+#. translators: %d: number of products.
+#: includes/Counting/Counts.php:311
+#, php-format
+msgid "All stock-managed products (%d)"
+msgstr "Alle lagerstyrte produkter (%d)"
+
+#: includes/Ledger/Reasons.php:77
+msgid "Salg"
+msgstr "Salg"
+
+#: includes/Ledger/Reasons.php:78
+msgid "Salg tilbakeført"
+msgstr "Salg tilbakeført"
+
+#: includes/Ledger/Reasons.php:79
+msgid "Refusjon (tilbake på lager)"
+msgstr "Refusjon (tilbake på lager)"
+
+#: includes/Ledger/Reasons.php:80
+msgid "Varemottak"
+msgstr "Varemottak"
+
+#: includes/Ledger/Reasons.php:82
+msgid "Justering"
+msgstr "Justering"
+
+#: includes/Ledger/Reasons.php:83
+msgid "Reversering"
+msgstr "Reversering"
+
+#: includes/Ledger/Reasons.php:84
+msgid "Ordrelinje-endring"
+msgstr "Ordrelinje-endring"
+
+#: includes/Ledger/Reasons.php:85
+msgid "Admin-endring"
+msgstr "Admin-endring"
+
+#: includes/Ledger/Reasons.php:86
+msgid "REST API"
+msgstr "REST API"
+
+#: includes/Ledger/Reasons.php:87
+msgid "Import"
+msgstr "Import"
+
+#: includes/Ledger/Reasons.php:88
+msgid "Inngående saldo"
+msgstr "Inngående saldo"
+
+#: includes/Ledger/Reasons.php:89
+msgid "Ekstern endring"
+msgstr "Ekstern endring"
+
+#: includes/Plugin.php:31
+msgid "Kaupang Stock requires WooCommerce to be active."
+msgstr "Kaupang Stock krever at WooCommerce er aktivert."
+
+#: includes/Purchasing/PurchaseOrders.php:279
+msgid "Kladd"
+msgstr "Kladd"
+
+#: includes/Purchasing/PurchaseOrders.php:280
+msgid "Bestilt"
+msgstr "Bestilt"
+
+#: includes/Purchasing/PurchaseOrders.php:281
+msgid "Delvis mottatt"
+msgstr "Delvis mottatt"
+
+#: includes/Purchasing/PurchaseOrders.php:282
+msgid "Mottatt"
+msgstr "Mottatt"
+
+#: includes/Purchasing/PurchaseOrders.php:283
+msgid "Kansellert"
+msgstr "Kansellert"
+
+#: includes/Purchasing/Receiving.php:60
+msgid "A receive token is required."
+msgstr "Et mottakstoken er påkrevd."
+
+#: includes/Purchasing/Receiving.php:74
+msgid "This purchase order is not open for receiving (it must be ordered)."
+msgstr "Denne innkjøpsordren er ikke åpen for varemottak (den må være bestilt)."
+
+#: includes/Purchasing/Receiving.php:88
+msgid "Receiving writes stock and requires active mode. Enable active mode under Lager → Innstillinger."
+msgstr "Varemottak skriver til lageret og krever aktiv modus. Aktiver aktiv modus under Lager → Innstillinger."
+
+#: includes/Purchasing/Receiving.php:119
+msgid "A submitted line does not belong to this purchase order."
+msgstr "En innsendt linje tilhører ikke denne innkjøpsordren."
+
+#: includes/Purchasing/Receiving.php:165
+msgid "Nothing to receive — enter a quantity on at least one line."
+msgstr "Ingenting å motta — angi en mengde på minst én linje."
+
+#: includes/Purchasing/Receiving.php:179
+msgid "Some lines exceed the remaining quantity. Confirm to receive anyway (over-receipt is allowed)."
+msgstr "Noen linjer overstiger gjenstående mengde. Bekreft for å motta likevel (overmottak er tillatt)."
+
+#: includes/Rest/Controller.php:244
+#: includes/Rest/Controller.php:286
+msgid "Counting is not enabled."
+msgstr "Varetelling er ikke aktivert."
+
+#: includes/Rest/Controller.php:254
+msgid "Provide either counted or increment."
+msgstr "Oppgi enten talt eller økning."
+
+#: includes/Rest/Controller.php:270
+msgid "That line cannot be updated (it may not exist, or its count is not open for counting)."
+msgstr "Den linjen kan ikke oppdateres (den finnes kanskje ikke, eller varetellingen er ikke åpen for telling)."
+
+#: includes/Rest/Controller.php:291
+msgid "A note is required to override a flagged line."
+msgstr "Et notat er påkrevd for å overstyre en flagget linje."
+
+#: includes/Rest/Controller.php:296
+msgid "Line not found."
+msgstr "Fant ikke linjen."
+
+#: includes/Rest/Controller.php:300
+msgid "Overrides are only possible while the count is in review."
+msgstr "Overstyringer er bare mulig mens varetellingen er til gjennomgang."
+
+#: includes/Rest/Controller.php:305
+msgid "Could not override the line."
+msgstr "Kunne ikke overstyre linjen."
+
+#. translators: 1: line id, 2: product label, 3: user display name, 4: note.
+#: includes/Rest/Controller.php:312
+#, php-format
+msgid "[override] line #%1$d, %2$s, %3$s: %4$s"
+msgstr "[overstyring] linje #%1$d, %2$s, %3$s: %4$s"
+
+#: includes/Rest/Controller.php:344
+msgid "Purchasing is not enabled."
+msgstr "Innkjøp er ikke aktivert."
+
+#: includes/Rest/Controller.php:351
+msgid "The receiving module is not available yet."
+msgstr "Varemottaksmodulen er ikke tilgjengelig ennå."
