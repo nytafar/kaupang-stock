@@ -60,18 +60,32 @@
 
 /* --- PO editor layout ---------------------------------------------------- */
 
+/* Detaljer is a short, fixed-shape form — cap it so it never hogs whitespace and
+   the Linjer card (a 6-column data table) keeps the rest. Below the breakpoint the
+   split can no longer seat the table without an inner scrollbar, so we stack and
+   let Linjer take the full page width (verified: the table fits ~1000px+). */
 .ks-po-grid {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+	grid-template-columns: minmax(0, 26em) minmax(0, 1fr);
 	gap: 2em;
 	align-items: start;
 	margin-top: 1em;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1300px) {
 	.ks-po-grid {
-		grid-template-columns: 1fr;
+		grid-template-columns: minmax(0, 1fr);
 	}
+}
+
+/* Grid items default to min-width:auto, which refuses to shrink below their
+   content's min size — that lets the Linjer card's wide table push the whole page
+   wider (the .ks-tablewrap overflow-x can only scroll once its column is allowed to
+   be narrower than the table). min-width:0 restores that, so the table scrolls
+   inside its wrap instead of widening the viewport (the spis-fiken pattern). */
+.ks-po-header,
+.ks-po-lines {
+	min-width: 0;
 }
 
 .ks-po-header h2,
@@ -91,10 +105,17 @@
 	width: 11em;
 }
 
+/* Every Detaljer control tracks its column and caps at a comfortable width. The
+   cap is in rem (root = 16px), NOT em: WordPress's ≤782px rule bumps control
+   font-size to 16px (to stop iOS focus-zoom), which would inflate a 25em cap to
+   400px ("slightly wide" inputs). The supplier <select> is capped here too — that
+   same ≤782px rule sets it width:100%, so without a cap it stretched the full row. */
 .ks-po-header .form-table .regular-text,
-.ks-po-header .form-table .large-text {
+.ks-po-header .form-table .large-text,
+.ks-po-header .form-table select,
+.ks-po-header .form-table input[type="date"] {
 	width: 100%;
-	max-width: 25em;
+	max-width: 20rem;
 	box-sizing: border-box;
 }
 
@@ -149,6 +170,20 @@ a.ks-danger {
 	flex-direction: column;
 	font-size: 0.9em;
 	gap: 0.2em;
+	min-width: 0; /* flex item must be allowed to shrink (see cap below) */
+}
+
+/* The product entry fields carry WP's .regular-text (25em → 400px under the ≤782px
+   rule), which would push a phone viewport wider than the .ks-tablewrap can absorb.
+   Cap them to their (now shrinkable) container so the whole form stays on-screen. */
+.ks-add-line .regular-text,
+.ks-line-edit .regular-text {
+	max-width: 100%;
+}
+
+.ks-product-search .regular-text {
+	flex: 1 1 auto;
+	min-width: 0;
 }
 
 .ks-line-edit {
@@ -260,26 +295,95 @@ a.ks-danger {
 /* --- brreg lookup -------------------------------------------------------- */
 
 .ks-brreg-lookup {
+	margin: 0.5em 0 1em;
+	max-width: 52em;
+}
+
+/* The search row inside the lookup box. */
+.ks-brreg-form {
 	display: flex;
 	gap: 0.6em;
-	align-items: center;
+	align-items: flex-end;
 	flex-wrap: wrap;
-	margin: 0.5em 0 1em;
 	padding: 0.8em;
 	background: #f6f7f7;
 	border: 1px solid #dcdcde;
 	border-radius: 4px;
-	max-width: 52em;
 }
 
-.ks-brreg-lookup label {
+.ks-brreg-form label {
 	display: flex;
-	gap: 0.4em;
-	align-items: center;
+	flex-direction: column;
+	gap: 0.2em;
+	min-width: 0;
+	flex: 1 1 16em;
+}
+
+.ks-brreg-form .regular-text {
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+}
+
+.ks-brreg-form .description {
+	flex-basis: 100%;
+	margin: 0;
+}
+
+/* Typeahead result dropdown — a picked hit fills the name + org-nr fields. */
+.ks-brreg-results {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	max-width: 52em;
+	max-height: 18em;
+	overflow-y: auto;
+	border: 1px solid #dcdcde;
+	border-top: none;
+	background: #fff;
+}
+
+.ks-brreg-results li {
+	margin: 0;
+}
+
+.ks-brreg-hit {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1em;
+	width: 100%;
+	text-align: left;
+	padding: 0.5em 0.8em;
+	background: none;
+	border: 0;
+	border-bottom: 1px solid #f0f0f1;
+	cursor: pointer;
+}
+
+.ks-brreg-hit:hover,
+.ks-brreg-hit:focus {
+	background: var(--accent-color, #2271b1);
+	color: #fff;
+	outline: none;
+}
+
+.ks-brreg-hit-name {
+	font-weight: 600;
+}
+
+.ks-brreg-hit-meta {
+	font-size: 0.85em;
+	opacity: 0.8;
+}
+
+.ks-brreg-empty {
+	padding: 0.5em 0.8em;
+	color: #50575e;
+	font-style: italic;
 }
 
 .ks-brreg-attrib {
 	font-size: 0.9em;
 	color: #50575e;
-	margin: 0 0 1em;
+	margin: 0.5em 0 1em;
 }

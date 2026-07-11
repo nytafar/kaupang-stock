@@ -7,6 +7,7 @@ use Kaupang\Stock\Counting\Apply;
 use Kaupang\Stock\Counting\CountLines;
 use Kaupang\Stock\Counting\Counts;
 use Kaupang\Stock\Ledger\Movements;
+use Kaupang\Stock\Purchasing\Suppliers;
 use Kaupang\Stock\Settings;
 use Kaupang\Stock\Support\ProductSearch;
 
@@ -92,6 +93,15 @@ final class Controller {
             ],
         ]);
 
+        \register_rest_route(self::NS, '/supplier-search', [
+            'methods'             => 'GET',
+            'callback'            => [self::class, 'supplierSearch'],
+            'permission_callback' => [self::class, 'can'],
+            'args'                => [
+                'q' => ['type' => 'string', 'required' => true],
+            ],
+        ]);
+
         \register_rest_route(self::NS, '/receive', [
             'methods'             => 'POST',
             'callback'            => [self::class, 'receive'],
@@ -118,6 +128,20 @@ final class Controller {
     public static function products(\WP_REST_Request $request): \WP_REST_Response {
         $term = \sanitize_text_field((string) $request->get_param('term'));
         $rows = \Kaupang\Stock\Support\ProductSearch::search($term, 20);
+        return new \WP_REST_Response(['results' => $rows], 200);
+    }
+
+    /**
+     * GET /supplier-search — BRREG typeahead for the supplier form (name or exact
+     * org-nr). Gated on po_enabled; returns [] when kaupang-brreg is absent (soft
+     * dep — Suppliers::search owns that check). Never writes.
+     */
+    public static function supplierSearch(\WP_REST_Request $request): \WP_REST_Response {
+        if (!Settings::get('po_enabled')) {
+            return new \WP_REST_Response(['results' => []], 200);
+        }
+        $q    = \sanitize_text_field((string) $request->get_param('q'));
+        $rows = Suppliers::search($q, 8);
         return new \WP_REST_Response(['results' => $rows], 200);
     }
 

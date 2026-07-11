@@ -30,6 +30,7 @@
 		wireProductPicker();
 		wireLineEdit();
 		wireReceive();
+		wireSupplierBrreg();
 	});
 
 	/* ----------------------------- Product picker ---------------------------- */
@@ -261,6 +262,174 @@
 
 	function noResultsText() {
 		return (ROOT.i18n && ROOT.i18n.noResults) || 'No products found.';
+	}
+
+	/* --------------------------- Supplier / BRREG ---------------------------- */
+
+	/**
+	 * The supplier form: (1) country gates the org-nr + BRREG affordances (Norway
+	 * only), and (2) a BRREG typeahead searches by company name or org-nr and fills
+	 * the name + org-nr fields on pick. The server-rendered lookup form remains the
+	 * no-JS fallback; on any fetch error we fall back silently.
+	 */
+	function wireSupplierBrreg() {
+		var countrySel = document.querySelector('[data-ks-supplier-country]');
+		var orgRow = document.querySelector('[data-ks-orgnr-row]');
+		var brregBlock = document.querySelector('[data-ks-brreg-block]');
+
+		// Org-nr + BRREG apply to Norway only; toggle their visibility with country.
+		function applyCountry() {
+			var isNo = !countrySel || countrySel.value === 'NO';
+			if (orgRow) {
+				orgRow.hidden = !isNo;
+			}
+			if (brregBlock) {
+				brregBlock.hidden = !isNo;
+			}
+		}
+		if (countrySel) {
+			countrySel.addEventListener('change', applyCountry);
+			applyCountry();
+		}
+
+		var input = document.querySelector('[data-ks-brreg-search]');
+		var results = document.querySelector('[data-ks-brreg-results]');
+		var nameField = document.getElementById('ks-supp-name');
+		var orgField = document.getElementById('ks-supp-org');
+		if (!input || !results || !ROOT.restUrl) {
+			return; // no-JS fallback form still posts to the lookup round-trip
+		}
+		var searchForm = input.closest ? input.closest('form') : null;
+		var timer = null;
+		var seq = 0;
+
+		function clear() {
+			results.innerHTML = '';
+			results.hidden = true;
+		}
+
+		function pick(hit) {
+			if (nameField && hit.name) {
+				nameField.value = hit.name;
+			}
+			if (orgField) {
+				orgField.value = hit.orgnr || '';
+			}
+			if (countrySel) {
+				countrySel.value = 'NO'; // a BRREG hit is a Norwegian entity
+				applyCountry();
+			}
+			clear();
+			if (nameField) {
+				nameField.focus();
+			}
+		}
+
+		function paint(hits) {
+			results.innerHTML = '';
+			if (!hits.length) {
+				var empty = document.createElement('li');
+				empty.className = 'ks-brreg-empty';
+				empty.textContent = t('brregNoResults', 'No companies found.');
+				results.appendChild(empty);
+				results.hidden = false;
+				return;
+			}
+			hits.forEach(function (h) {
+				var li = document.createElement('li');
+				var btn = document.createElement('button');
+				btn.type = 'button';
+				btn.className = 'ks-brreg-hit';
+
+				var name = document.createElement('span');
+				name.className = 'ks-brreg-hit-name';
+				name.textContent = h.name || h.orgnr || '';
+				btn.appendChild(name);
+
+				var metaText = [h.orgnr, h.city].filter(Boolean).join(' · ');
+				if (metaText) {
+					var meta = document.createElement('span');
+					meta.className = 'ks-brreg-hit-meta';
+					meta.textContent = metaText;
+					btn.appendChild(meta);
+				}
+
+				btn.addEventListener('click', function () {
+					pick(h);
+				});
+				li.appendChild(btn);
+				results.appendChild(li);
+			});
+			results.hidden = false;
+		}
+
+		function run(q) {
+			var mine = ++seq;
+			fetch(ROOT.restUrl + 'supplier-search?q=' + encodeURIComponent(q), {
+				headers: { 'X-WP-Nonce': ROOT.nonce || '' },
+				credentials: 'same-origin'
+			})
+				.then(function (res) {
+					return res.ok ? res.json() : null;
+				})
+				.then(function (data) {
+					if (mine !== seq) {
+						return; // superseded
+					}
+					var hits = data && Array.isArray(data.results) ? data.results : null;
+					if (!hits) {
+						clear(); // silent — the no-JS form still works
+						return;
+					}
+					paint(hits);
+				})
+				.catch(function () {
+					if (mine === seq) {
+						clear();
+					}
+				});
+		}
+
+		input.addEventListener('input', function () {
+			var q = input.value.trim();
+			if (timer) {
+				window.clearTimeout(timer);
+			}
+			if (q.length < SEARCH_MIN) {
+				seq++;
+				clear();
+				return;
+			}
+			timer = window.setTimeout(function () {
+				run(q);
+			}, SEARCH_DEBOUNCE);
+		});
+
+		if (searchForm) {
+			searchForm.addEventListener('submit', function (ev) {
+				var q = input.value.trim();
+				if (q.length < SEARCH_MIN) {
+					return; // let the server handle very short terms
+				}
+				ev.preventDefault();
+				if (timer) {
+					window.clearTimeout(timer);
+				}
+				run(q);
+			});
+		}
+
+		// Dismiss on Escape or an outside click.
+		input.addEventListener('keydown', function (ev) {
+			if (ev.key === 'Escape') {
+				clear();
+			}
+		});
+		document.addEventListener('click', function (ev) {
+			if (brregBlock && ev.target !== input && !brregBlock.contains(ev.target)) {
+				clear();
+			}
+		});
 	}
 
 	/* ------------------------------- Line edit ------------------------------- */

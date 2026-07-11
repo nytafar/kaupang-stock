@@ -6,6 +6,7 @@ namespace Kaupang\Stock\Admin;
 use Kaupang\Stock\Counting\CountLines;
 use Kaupang\Stock\Counting\Counts;
 use Kaupang\Stock\Settings;
+use Kaupang\Stock\Support\Assets;
 
 /**
  * The Varetelling screen (§6.3). Three views routed off ?view= / ?count=:
@@ -54,13 +55,13 @@ final class CountsPage {
             'kaupang-stock-counting',
             KAUPANG_STOCK_URL . 'assets/counting.css',
             ['kaupang-stock-admin'],
-            KAUPANG_STOCK_VERSION
+            Assets::ver('assets/counting.css')
         );
         \wp_enqueue_script(
             'kaupang-stock-counting',
             KAUPANG_STOCK_URL . 'assets/counting.js',
             ['kaupang-stock-admin'],
-            KAUPANG_STOCK_VERSION,
+            Assets::ver('assets/counting.js'),
             true
         );
     }

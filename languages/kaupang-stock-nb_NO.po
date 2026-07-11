@@ -1467,3 +1467,27 @@ msgstr "Innkjøp er ikke aktivert."
 #: includes/Rest/Controller.php:351
 msgid "The receiving module is not available yet."
 msgstr "Varemottaksmodulen er ikke tilgjengelig ennå."
+
+#: includes/Admin/PurchasingPage.php
+msgid "Country"
+msgstr "Land"
+
+#: includes/Admin/PurchasingPage.php
+msgid "Search Brønnøysund (name or org. nr)"
+msgstr "Søk i Brønnøysund (navn eller org.nr)"
+
+#: includes/Admin/PurchasingPage.php
+msgid "Company name or 9-digit org. nr…"
+msgstr "Firmanavn eller 9-sifret org.nr …"
+
+#: includes/Admin/PurchasingPage.php
+msgid "Looks the company up in %s and fills the name and org. nr."
+msgstr "Slår opp selskapet i %s og fyller inn navn og org.nr."
+
+#: includes/Admin/PurchasingPage.php
+msgid "Search results"
+msgstr "Søkeresultater"
+
+#: includes/Admin/PurchasingPage.php
+msgid "No companies found."
+msgstr "Fant ingen selskaper."

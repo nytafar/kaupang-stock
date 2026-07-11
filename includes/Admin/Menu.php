@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Kaupang\Stock\Admin;
 
 use Kaupang\Stock\Settings;
+use Kaupang\Stock\Support\Assets;
 
 /**
  * The "Lager" admin menu — the single entry point Plugin.php calls (§6). The
@@ -144,13 +145,13 @@ final class Menu {
             self::STYLE_HANDLE,
             KAUPANG_STOCK_URL . 'assets/admin.css',
             [],
-            KAUPANG_STOCK_VERSION
+            Assets::ver('assets/admin.css')
         );
         \wp_register_script(
             self::SCRIPT_HANDLE,
             KAUPANG_STOCK_URL . 'assets/admin.js',
             [],
-            KAUPANG_STOCK_VERSION,
+            Assets::ver('assets/admin.js'),
             true
         );
         \wp_localize_script(self::SCRIPT_HANDLE, 'KaupangStock', [

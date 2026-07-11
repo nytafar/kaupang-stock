@@ -17,7 +17,8 @@ namespace Kaupang\Stock;
  */
 final class Schema {
 
-    public const VERSION        = 1;
+    // v2: suppliers.country (dbDelta adds the column; existing rows default to NO).
+    public const VERSION        = 2;
     public const VERSION_OPTION = 'kaupang_stock_schema_version';
 
     public static function movements(): string {
@@ -112,6 +113,7 @@ final class Schema {
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   name VARCHAR(200) NOT NULL,
   org_nr VARCHAR(9) NULL,
+  country CHAR(2) NOT NULL DEFAULT 'NO',
   email VARCHAR(200) NULL,
   phone VARCHAR(50) NULL,
   note VARCHAR(255) NULL,

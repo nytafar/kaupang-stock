@@ -8,6 +8,7 @@ use Kaupang\Stock\Purchasing\Lines;
 use Kaupang\Stock\Purchasing\PurchaseOrders;
 use Kaupang\Stock\Purchasing\Suppliers;
 use Kaupang\Stock\Settings;
+use Kaupang\Stock\Support\Assets;
 use Kaupang\Stock\Support\ProductSearch;
 
 /**
@@ -63,13 +64,13 @@ final class PurchasingPage {
             'kaupang-stock-purchasing',
             KAUPANG_STOCK_URL . 'assets/purchasing.css',
             [Menu::STYLE_HANDLE],
-            KAUPANG_STOCK_VERSION
+            Assets::ver('assets/purchasing.css')
         );
         \wp_enqueue_script(
             'kaupang-stock-purchasing',
             KAUPANG_STOCK_URL . 'assets/purchasing.js',
             [Menu::SCRIPT_HANDLE],
-            KAUPANG_STOCK_VERSION,
+            Assets::ver('assets/purchasing.js'),
             true
         );
         \wp_localize_script('kaupang-stock-purchasing', 'KaupangStockPurchasing', [
@@ -87,6 +88,7 @@ final class PurchasingPage {
                 'nothingToReceive' => \__('Enter a quantity on at least one line.', 'kaupang-stock'),
                 // Reused for the async-picker "Add" buttons the JS renders (already translated).
                 'add'            => \__('Add', 'kaupang-stock'),
+                'brregNoResults' => \__('No companies found.', 'kaupang-stock'),
             ],
         ]);
     }
@@ -673,6 +675,7 @@ final class PurchasingPage {
                 <tr>
                     <th><?php \esc_html_e('Name', 'kaupang-stock'); ?></th>
                     <th><?php \esc_html_e('Org. nr', 'kaupang-stock'); ?></th>
+                    <th><?php \esc_html_e('Country', 'kaupang-stock'); ?></th>
                     <th><?php \esc_html_e('Email', 'kaupang-stock'); ?></th>
                     <th><?php \esc_html_e('Phone', 'kaupang-stock'); ?></th>
                     <th><?php \esc_html_e('Active', 'kaupang-stock'); ?></th>
@@ -681,13 +684,14 @@ final class PurchasingPage {
             </thead>
             <tbody>
                 <?php if ($suppliers === []): ?>
-                    <tr><td colspan="6"><?php \esc_html_e('No suppliers yet.', 'kaupang-stock'); ?></td></tr>
+                    <tr><td colspan="7"><?php \esc_html_e('No suppliers yet.', 'kaupang-stock'); ?></td></tr>
                 <?php else: foreach ($suppliers as $s):
                     $sid = (int) $s['id'];
                     ?>
                     <tr>
                         <td><strong><?php echo \esc_html((string) $s['name']); ?></strong></td>
                         <td><?php echo \esc_html((string) ($s['org_nr'] ?? '')); ?></td>
+                        <td><?php echo \esc_html(Suppliers::countryName((string) ($s['country'] ?? Suppliers::DEFAULT_COUNTRY))); ?></td>
                         <td><?php echo \esc_html((string) ($s['email'] ?? '')); ?></td>
                         <td><?php echo \esc_html((string) ($s['phone'] ?? '')); ?></td>
                         <td><?php echo !empty($s['active']) ? '✓' : '—'; ?></td>
@@ -704,25 +708,43 @@ final class PurchasingPage {
         </table>
         </div>
 
+        <?php
+        // Country drives the org-nr/BRREG affordances (Norway only). A BRREG prefill
+        // is by definition a Norwegian entity, so it forces the country to NO.
+        $curCountry = $current !== null
+            ? (string) ($current['country'] ?? Suppliers::DEFAULT_COUNTRY)
+            : Suppliers::DEFAULT_COUNTRY;
+        if ($prefillOrg !== '' || $prefillName !== '') {
+            $curCountry = 'NO';
+        }
+        $orgOn = Suppliers::orgNrApplies($curCountry);
+        $brreg = Suppliers::brregAvailable();
+        ?>
         <h2 class="ks-mt-lg"><?php echo $current ? \esc_html__('Edit supplier', 'kaupang-stock') : \esc_html__('New supplier', 'kaupang-stock'); ?></h2>
 
-        <?php if (Suppliers::brregAvailable()): ?>
-            <form method="post" action="<?php echo \esc_url(\admin_url('admin-post.php')); ?>" class="ks-brreg-lookup">
-                <input type="hidden" name="action" value="<?php echo \esc_attr(self::BRREG_LOOKUP); ?>" />
-                <input type="hidden" name="supplier" value="<?php echo (int) $editId; ?>" />
-                <?php \wp_nonce_field(self::BRREG_LOOKUP); ?>
-                <label><?php \esc_html_e('Org. nr lookup', 'kaupang-stock'); ?>
-                    <input type="text" name="lookup_orgnr" inputmode="numeric" maxlength="11" value="<?php echo \esc_attr($prefillOrg); ?>" />
-                </label>
-                <?php \submit_button(\__('Slå opp', 'kaupang-stock'), 'secondary', 'submit', false); ?>
-                <span class="description"><?php echo \esc_html(sprintf(__('Looks the company up in %s and fills the name.', 'kaupang-stock'), \Kaupang\Brreg\Client::SOURCE)); ?></span>
-            </form>
-            <?php if (is_array($lookup) && $prefillName !== ''): ?>
-                <p class="ks-brreg-attrib">
-                    <?php echo \esc_html(sprintf(__('Filled from %s.', 'kaupang-stock'), (string) $lookup['source'])); ?>
-                    <a href="<?php echo \esc_url((string) ($lookup['source_url'] ?? '')); ?>" target="_blank" rel="noopener"><?php \esc_html_e('Source', 'kaupang-stock'); ?></a>
-                </p>
-            <?php endif; ?>
+        <?php if ($brreg): ?>
+            <?php // Separate form (can't nest in the save form); JS fills the fields below on pick, no-JS submits to the lookup round-trip. ?>
+            <div class="ks-brreg-lookup" data-ks-brreg-block <?php echo $orgOn ? '' : 'hidden'; ?>>
+                <form method="post" action="<?php echo \esc_url(\admin_url('admin-post.php')); ?>" class="ks-brreg-form">
+                    <input type="hidden" name="action" value="<?php echo \esc_attr(self::BRREG_LOOKUP); ?>" />
+                    <input type="hidden" name="supplier" value="<?php echo (int) $editId; ?>" />
+                    <?php \wp_nonce_field(self::BRREG_LOOKUP); ?>
+                    <label><?php \esc_html_e('Search Brønnøysund (name or org. nr)', 'kaupang-stock'); ?>
+                        <input type="search" name="lookup_query" class="regular-text" autocomplete="off"
+                               data-ks-brreg-search value="<?php echo \esc_attr($prefillOrg); ?>"
+                               placeholder="<?php \esc_attr_e('Company name or 9-digit org. nr…', 'kaupang-stock'); ?>" />
+                    </label>
+                    <?php \submit_button(\__('Search', 'kaupang-stock'), 'secondary', 'submit', false); ?>
+                    <span class="description"><?php echo \esc_html(sprintf(__('Looks the company up in %s and fills the name and org. nr.', 'kaupang-stock'), \Kaupang\Brreg\Client::SOURCE)); ?></span>
+                </form>
+                <ul class="ks-brreg-results" data-ks-brreg-results hidden aria-label="<?php \esc_attr_e('Search results', 'kaupang-stock'); ?>"></ul>
+                <?php if (is_array($lookup) && $prefillName !== ''): ?>
+                    <p class="ks-brreg-attrib">
+                        <?php echo \esc_html(sprintf(__('Filled from %s.', 'kaupang-stock'), (string) $lookup['source'])); ?>
+                        <a href="<?php echo \esc_url((string) ($lookup['source_url'] ?? '')); ?>" target="_blank" rel="noopener"><?php \esc_html_e('Source', 'kaupang-stock'); ?></a>
+                    </p>
+                <?php endif; ?>
+            </div>
         <?php endif; ?>
 
         <form method="post" action="<?php echo \esc_url(\admin_url('admin-post.php')); ?>">
@@ -736,11 +758,23 @@ final class PurchasingPage {
                                value="<?php echo \esc_attr($current !== null ? (string) $current['name'] : $prefillName); ?>" /></td>
                 </tr>
                 <tr>
+                    <th scope="row"><label for="ks-supp-country"><?php \esc_html_e('Country', 'kaupang-stock'); ?></label></th>
+                    <td>
+                        <select id="ks-supp-country" name="country" data-ks-supplier-country>
+                            <?php foreach (Suppliers::countries() as $code => $label): ?>
+                                <option value="<?php echo \esc_attr((string) $code); ?>" <?php \selected($curCountry, (string) $code); ?>>
+                                    <?php echo \esc_html((string) $label); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </td>
+                </tr>
+                <tr data-ks-orgnr-row <?php echo $orgOn ? '' : 'hidden'; ?>>
                     <th scope="row"><label for="ks-supp-org"><?php \esc_html_e('Org. nr', 'kaupang-stock'); ?></label></th>
                     <td>
                         <input type="text" id="ks-supp-org" name="org_nr" inputmode="numeric" maxlength="11"
                                value="<?php echo \esc_attr($current !== null ? (string) ($current['org_nr'] ?? '') : $prefillOrg); ?>" />
-                        <?php if (Suppliers::brregAvailable()): ?>
+                        <?php if ($brreg): ?>
                             <p class="description"><?php \esc_html_e('Norwegian 9-digit organisation number (MOD11-validated).', 'kaupang-stock'); ?></p>
                         <?php endif; ?>
                     </td>
@@ -888,17 +922,19 @@ final class PurchasingPage {
         self::guard(self::SAVE_SUPPLIER);
         $sid  = (int) ($_POST['supplier'] ?? 0);
         $data = [
-            'name'   => (string) \wp_unslash($_POST['name'] ?? ''),
-            'org_nr' => (string) \wp_unslash($_POST['org_nr'] ?? ''),
-            'email'  => (string) \wp_unslash($_POST['email'] ?? ''),
-            'phone'  => (string) \wp_unslash($_POST['phone'] ?? ''),
-            'note'   => (string) \wp_unslash($_POST['note'] ?? ''),
-            'active' => !empty($_POST['active']),
+            'name'    => (string) \wp_unslash($_POST['name'] ?? ''),
+            'org_nr'  => (string) \wp_unslash($_POST['org_nr'] ?? ''),
+            'country' => (string) \wp_unslash($_POST['country'] ?? ''),
+            'email'   => (string) \wp_unslash($_POST['email'] ?? ''),
+            'phone'   => (string) \wp_unslash($_POST['phone'] ?? ''),
+            'note'    => (string) \wp_unslash($_POST['note'] ?? ''),
+            'active'  => !empty($_POST['active']),
         ];
         // Surface an invalid org-nr (MOD11) as a soft warning but still save — the
         // supplier registry accepts whatever the operator has (soft-dep posture).
+        // Only meaningful for Norwegian suppliers; sanitise() drops org-nr otherwise.
         $org = Suppliers::normalizeOrgNr($data['org_nr']);
-        $err = ($org['orgnr'] !== '' && !$org['valid']) ? 'orgnr' : '';
+        $err = (Suppliers::orgNrApplies($data['country']) && $org['orgnr'] !== '' && !$org['valid']) ? 'orgnr' : '';
 
         try {
             if ($sid > 0) {
@@ -929,38 +965,37 @@ final class PurchasingPage {
     }
 
     /**
-     * BRREG "Slå opp" round-trip: look the org-nr up, stash the name/attribution
-     * in a short-lived transient, and redirect back to the supplier form which
-     * prefills from it. Fails soft (no result) when brreg is absent / the number
-     * is unknown / BRREG is unavailable.
+     * BRREG search round-trip — the no-JS fallback for the supplier form's typeahead
+     * (the JS path fills the fields inline via the REST supplier-search route). The
+     * query is a company name OR an org-nr: a 9-digit number is resolved directly,
+     * otherwise the top name hit is taken. The chosen entity's name + org-nr are
+     * stashed in a short-lived transient and the form prefills from it. Fails soft
+     * (no result) when brreg is absent / nothing matches / BRREG is unavailable.
      */
     public static function handleBrregLookup(): void {
         self::guard(self::BRREG_LOOKUP);
         $sid   = (int) ($_POST['supplier'] ?? 0);
-        $orgnr = (string) \wp_unslash($_POST['lookup_orgnr'] ?? '');
-        $org   = Suppliers::normalizeOrgNr($orgnr);
+        $query = (string) \wp_unslash($_POST['lookup_query'] ?? '');
 
         $args = ['view' => 'suppliers'];
         if ($sid > 0) {
             $args['supplier'] = $sid;
         }
 
-        if ($org['orgnr'] === '' || !$org['valid']) {
-            $args['ks_err'] = 'orgnr';
+        // A single unified entry point: Suppliers::search resolves a 9-digit org-nr
+        // via lookup, anything else via name search, and returns the best hits.
+        $hits = Suppliers::search($query, 8);
+        if ($hits === []) {
+            $args['ks_err'] = trim($query) === '' ? 'orgnr' : 'brreg';
             self::redirect($args);
         }
 
-        $result = Suppliers::brregLookup($org['orgnr']);
-        if ($result === null) {
-            $args['ks_err'] = 'brreg';
-            self::redirect($args);
-        }
-
+        $hit = $hits[0];
         \set_transient('kaupang_stock_brreg_prefill_' . \get_current_user_id(), [
-            'name'       => $result['name'],
-            'orgnr'      => $org['orgnr'],
-            'source'     => $result['source'],
-            'source_url' => $result['source_url'],
+            'name'       => (string) $hit['name'],
+            'orgnr'      => (string) $hit['orgnr'],
+            'source'     => \Kaupang\Brreg\Client::SOURCE,
+            'source_url' => \Kaupang\Brreg\Client::SOURCE_URL,
         ], 120);
         $args['ks_msg'] = 'brreg_ok';
         self::redirect($args);

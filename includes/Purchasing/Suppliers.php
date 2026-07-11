@@ -16,6 +16,49 @@ use Kaupang\Stock\Schema;
  */
 final class Suppliers {
 
+    /** Suppliers default to Norway — the store's home market and the only country
+     *  where the org-nr / BRREG toolkit applies. */
+    public const DEFAULT_COUNTRY = 'NO';
+
+    /**
+     * Countries offered in the supplier form. WooCommerce owns the canonical,
+     * localised list (it is a hard dependency of this plugin), so we reuse it
+     * rather than shipping our own; a site can trim it to its real trading
+     * partners via the filter.
+     *
+     * @return array<string,string> ISO-3166 alpha-2 code => localised name
+     */
+    public static function countries(): array {
+        $list = [];
+        if (function_exists('WC') && \WC() !== null && isset(\WC()->countries)) {
+            $list = \WC()->countries->get_countries();
+        }
+        if (!is_array($list) || $list === []) {
+            $list = ['NO' => 'Norge']; // WC unavailable — at least offer home market.
+        }
+        /** @var array<string,string> $filtered */
+        $filtered = (array) \apply_filters('kaupang/stock/supplier_countries', $list);
+        return $filtered;
+    }
+
+    /** Localised country name for a code (falls back to the code itself). */
+    public static function countryName(?string $code): string {
+        $code = strtoupper(trim((string) $code));
+        if ($code === '') {
+            return '';
+        }
+        $all = self::countries();
+        return (string) ($all[$code] ?? $code);
+    }
+
+    /**
+     * Org-nr and the BRREG lookup are a Norwegian construct — they apply only when
+     * the supplier's country is Norway. The single gate the UI and sanitiser share.
+     */
+    public static function orgNrApplies(?string $code): bool {
+        return strtoupper(trim((string) ($code ?? self::DEFAULT_COUNTRY))) === 'NO';
+    }
+
     /**
      * All suppliers, active first then by name. Cheap: the table is a small
      * registry (a handful of rows at this store's scale).
@@ -151,17 +194,77 @@ final class Suppliers {
         return class_exists('\\Kaupang\\Brreg\\Client') && class_exists('\\Kaupang\\Brreg\\OrgNumber');
     }
 
+    /**
+     * Typeahead search backing the supplier form's "Søk i Brønnøysund" box. A query
+     * that is exactly a 9-digit org-nr is resolved as a direct lookup; anything else
+     * is a company-name search (kaupang-brreg's Client::search). Returns a small
+     * unified hit list — or [] when brreg is absent / nothing matches / BRREG is
+     * unavailable (fail soft: the operator can always type the fields by hand).
+     *
+     * @return array<int,array{orgnr:string,name:string,city:string}>
+     */
+    public static function search(string $q, int $limit = 8): array {
+        if (!class_exists('\\Kaupang\\Brreg\\Client')) {
+            return [];
+        }
+        $q       = trim($q);
+        $compact = str_replace(' ', '', $q);
+        $digits  = preg_replace('/\D/', '', $q) ?? '';
+
+        // Whole query is a 9-digit org-nr → exact lookup (one authoritative hit).
+        if (strlen($digits) === 9 && ctype_digit($compact)) {
+            $entity = \Kaupang\Brreg\Client::lookup($digits);
+            if (!is_array($entity)) {
+                return [];
+            }
+            $addr = is_array($entity['address'] ?? null) ? $entity['address'] : [];
+            return [[
+                'orgnr' => (string) ($entity['orgnr'] ?? $digits),
+                'name'  => (string) ($entity['name'] ?? ''),
+                'city'  => (string) ($addr['city'] ?? ''),
+            ]];
+        }
+
+        $out = [];
+        foreach (\Kaupang\Brreg\Client::search($q, $limit) as $hit) {
+            if (!is_array($hit)) {
+                continue;
+            }
+            $out[] = [
+                'orgnr' => (string) ($hit['orgnr'] ?? ''),
+                'name'  => (string) ($hit['name'] ?? ''),
+                'city'  => (string) ($hit['city'] ?? ''),
+            ];
+        }
+        return $out;
+    }
+
     /** @param array<string,mixed> $data  @return array<string,mixed> */
     private static function sanitize(array $data): array {
-        $org = self::normalizeOrgNr((string) ($data['org_nr'] ?? ''));
+        $country = self::cleanCountry((string) ($data['country'] ?? self::DEFAULT_COUNTRY));
+        $org     = self::normalizeOrgNr((string) ($data['org_nr'] ?? ''));
+        // Org-nr is Norwegian-only: a non-NO supplier never stores one, so switching
+        // a supplier's country away from Norway drops a stale org-nr by construction.
+        $orgnr = (self::orgNrApplies($country) && $org['orgnr'] !== '') ? $org['orgnr'] : null;
         return [
-            'name'   => \sanitize_text_field((string) ($data['name'] ?? '')),
-            'org_nr' => $org['orgnr'] !== '' ? $org['orgnr'] : null,
-            'email'  => self::cleanEmail((string) ($data['email'] ?? '')),
-            'phone'  => self::nullable(\sanitize_text_field((string) ($data['phone'] ?? '')), 50),
-            'note'   => self::nullable(\sanitize_text_field((string) ($data['note'] ?? '')), 255),
-            'active' => empty($data['active']) ? 0 : 1,
+            'name'    => \sanitize_text_field((string) ($data['name'] ?? '')),
+            'org_nr'  => $orgnr,
+            'country' => $country,
+            'email'   => self::cleanEmail((string) ($data['email'] ?? '')),
+            'phone'   => self::nullable(\sanitize_text_field((string) ($data['phone'] ?? '')), 50),
+            'note'    => self::nullable(\sanitize_text_field((string) ($data['note'] ?? '')), 255),
+            'active'  => empty($data['active']) ? 0 : 1,
         ];
+    }
+
+    /** Normalise a country to a known ISO alpha-2 code, defaulting to Norway. */
+    private static function cleanCountry(string $raw): string {
+        $code = strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $raw) ?? '', 0, 2));
+        if ($code === '') {
+            return self::DEFAULT_COUNTRY;
+        }
+        $all = self::countries();
+        return isset($all[$code]) ? $code : self::DEFAULT_COUNTRY;
     }
 
     private static function cleanEmail(string $raw): ?string {
