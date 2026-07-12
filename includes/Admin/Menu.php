@@ -18,11 +18,12 @@ use Kaupang\Stock\Support\Assets;
  */
 final class Menu {
 
-    public const SLUG          = 'kaupang-stock';
-    public const SLUG_MOVES    = 'kaupang-stock-movements';
-    public const SLUG_COUNTS   = 'kaupang-stock-counts';
-    public const SLUG_PURCHASE = 'kaupang-stock-purchasing';
-    public const SLUG_SETTINGS = 'kaupang-stock-settings';
+    public const SLUG           = 'kaupang-stock';
+    public const SLUG_MOVES     = 'kaupang-stock-movements';
+    public const SLUG_VALUATION = 'kaupang-stock-valuation';
+    public const SLUG_COUNTS    = 'kaupang-stock-counts';
+    public const SLUG_PURCHASE  = 'kaupang-stock-purchasing';
+    public const SLUG_SETTINGS  = 'kaupang-stock-settings';
 
     public const STYLE_HANDLE  = 'kaupang-stock-admin';
     public const SCRIPT_HANDLE = 'kaupang-stock-admin';
@@ -37,6 +38,10 @@ final class Menu {
         StatusPage::register();
         MovementsPage::register();
         SettingsPage::register();
+
+        if (Settings::enabled() && Settings::get('costing_enabled')) {
+            ValuationPage::register();
+        }
 
         if (Settings::enabled() && Settings::get('counting_enabled')
             && class_exists('\\Kaupang\\Stock\\Admin\\CountsPage')
@@ -103,6 +108,17 @@ final class Menu {
             self::SLUG_MOVES,
             [MovementsPage::class, 'render']
         );
+
+        if (Settings::get('costing_enabled')) {
+            \add_submenu_page(
+                self::SLUG,
+                \__('Stock value', 'kaupang-stock'),
+                'Lagerverdi',
+                $cap,
+                self::SLUG_VALUATION,
+                [ValuationPage::class, 'render']
+            );
+        }
 
         if (Settings::get('counting_enabled') && class_exists('\\Kaupang\\Stock\\Admin\\CountsPage')) {
             \add_submenu_page(

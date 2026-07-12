@@ -69,6 +69,52 @@
 	border: 1px solid #dcdcde;
 }
 
+.ks-chip-ok {
+	background: #edfaef;
+	color: #00753a;
+}
+
+/* --- Lagerverdi (valuation) --------------------------------------------- */
+.ks-valuation-filter,
+.ks-cogs-filter {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 12px 0;
+}
+
+.ks-opening-box {
+	margin: 16px 0;
+	padding: 4px 12px 12px;
+	border-left: 4px solid #72aee6;
+}
+
+.ks-opening-box .ks-opening-table {
+	margin-top: 8px;
+}
+
+.ks-opening-form {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.ks-valuation-csv {
+	margin: 12px 0 20px;
+}
+
+.ks-cogs-identity {
+	margin: 12px 0 24px;
+}
+
+.ks-order-cogs {
+	margin-top: 6px;
+}
+
+.ks-cogs-heading {
+	margin: 12px 0 4px;
+}
+
 /* --- tables (responsive horizontal scroll) ------------------------------ */
 .ks-table {
 	margin-top: 1em;

@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Kaupang Stock 0.1.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/kaupang-stock\n"
-"POT-Creation-Date: 2026-07-12T00:07:05+00:00\n"
+"POT-Creation-Date: 2026-07-12T00:20:12+00:00\n"
 "PO-Revision-Date: 2026-07-10 16:30+0000\n"
 "Last-Translator: Kaupang Stock <victoria@berganconsulting.no>\n"
 "Language-Team: Norwegian Bokmal\n"
@@ -182,6 +182,7 @@ msgstr "SKU"
 #: includes/Admin/OrderMetaBox.php:85 includes/Admin/PurchasingPage.php:312
 #: includes/Admin/PurchasingPage.php:483 includes/Admin/PurchasingPage.php:635
 #: includes/Admin/StatusPage.php:96 includes/Admin/StatusPage.php:481
+#: includes/Admin/ValuationPage.php:97 includes/Admin/ValuationPage.php:176
 msgid "Product"
 msgstr "Produkt"
 
@@ -288,7 +289,7 @@ msgstr "Gjennomgang"
 msgid "Cancel this count? This cannot be undone."
 msgstr "Avbryte denne varetellingen? Dette kan ikke angres."
 
-#: includes/Admin/CountsPage.php:759
+#: includes/Admin/CountsPage.php:759 includes/Admin/ValuationPage.php:234
 msgid "Export CSV"
 msgstr "Eksporter CSV"
 
@@ -350,54 +351,58 @@ msgid_plural "%d lines filled from the CSV. The count is now in review."
 msgstr[0] "%d linje fylt ut fra CSV-en. Varetellingen er nå til gjennomgang."
 msgstr[1] "%d linjer fylt ut fra CSV-en. Varetellingen er nå til gjennomgang."
 
-#: includes/Admin/Menu.php:71 includes/Admin/Menu.php:91
+#: includes/Admin/Menu.php:76 includes/Admin/Menu.php:96
 #: includes/Admin/StatusPage.php:77
 msgid "Stock status"
 msgstr "Lagerstatus"
 
-#: includes/Admin/Menu.php:79 includes/Admin/Menu.php:131
+#: includes/Admin/Menu.php:84 includes/Admin/Menu.php:147
 msgid "Settings"
 msgstr "Innstillinger"
 
-#: includes/Admin/Menu.php:100 includes/Admin/MovementsPage.php:46
+#: includes/Admin/Menu.php:105 includes/Admin/MovementsPage.php:46
 msgid "Movements"
 msgstr "Bevegelser"
 
-#: includes/Admin/Menu.php:110 includes/Admin/SettingsPage.php:185
+#: includes/Admin/Menu.php:115
+msgid "Stock value"
+msgstr "Lagerverdi"
+
+#: includes/Admin/Menu.php:126 includes/Admin/SettingsPage.php:185
 msgid "Stock counts"
 msgstr "Varetellinger"
 
-#: includes/Admin/Menu.php:121 includes/Admin/PurchasingPage.php:133
+#: includes/Admin/Menu.php:137 includes/Admin/PurchasingPage.php:133
 #: includes/Admin/SettingsPage.php:178
 msgid "Purchasing"
 msgstr "Innkjøp"
 
-#: includes/Admin/Menu.php:162
+#: includes/Admin/Menu.php:178
 msgid "Adjust"
 msgstr "Juster"
 
-#: includes/Admin/Menu.php:163 includes/Admin/PurchasingPage.php:81
+#: includes/Admin/Menu.php:179 includes/Admin/PurchasingPage.php:81
 #: includes/Admin/PurchasingPage.php:364 includes/Admin/PurchasingPage.php:818
 msgid "Cancel"
 msgstr "Avbryt"
 
-#: includes/Admin/Menu.php:164 includes/Admin/MovementsPage.php:505
+#: includes/Admin/Menu.php:180 includes/Admin/MovementsPage.php:505
 msgid "A note is required."
 msgstr "Et notat er påkrevd."
 
-#: includes/Admin/Menu.php:165
+#: includes/Admin/Menu.php:181
 msgid "Reverse this movement? Enter a note (required):"
 msgstr "Reversere denne bevegelsen? Skriv inn et notat (påkrevd):"
 
-#: includes/Admin/Menu.php:166
+#: includes/Admin/Menu.php:182
 msgid "A note is required to reverse a movement."
 msgstr "Et notat er påkrevd for å reversere en bevegelse."
 
-#: includes/Admin/Menu.php:167
+#: includes/Admin/Menu.php:183
 msgid "Searching…"
 msgstr "Søker…"
 
-#: includes/Admin/Menu.php:168 includes/Admin/PurchasingPage.php:393
+#: includes/Admin/Menu.php:184 includes/Admin/PurchasingPage.php:393
 msgid "No products found."
 msgstr "Fant ingen produkter."
 
@@ -428,6 +433,7 @@ msgstr "Saldo etter"
 
 #: includes/Admin/MovementsPage.php:113 includes/Admin/MovementsPage.php:239
 #: includes/Admin/MovementsPage.php:644 includes/Admin/OrderMetaBox.php:87
+#: includes/Admin/ValuationPage.php:270 includes/Admin/ValuationPage.php:365
 msgid "Reason"
 msgstr "Årsak"
 
@@ -480,11 +486,11 @@ msgstr "Referansetype"
 msgid "Actor ID"
 msgstr "Aktør-ID"
 
-#: includes/Admin/MovementsPage.php:251
+#: includes/Admin/MovementsPage.php:251 includes/Admin/ValuationPage.php:260
 msgid "From"
 msgstr "Fra"
 
-#: includes/Admin/MovementsPage.php:254
+#: includes/Admin/MovementsPage.php:254 includes/Admin/ValuationPage.php:262
 msgid "To"
 msgstr "Til"
 
@@ -498,6 +504,7 @@ msgstr "Nullstill"
 
 #: includes/Admin/MovementsPage.php:343 includes/Admin/MovementsPage.php:519
 #: includes/Admin/PurchasingPage.php:1021 includes/Admin/StatusPage.php:625
+#: includes/Admin/ValuationPage.php:391 includes/Admin/ValuationPage.php:411
 msgid "You do not have permission to do this."
 msgstr "Du har ikke tillatelse til å gjøre dette."
 
@@ -597,7 +604,7 @@ msgstr "Saldo"
 msgid "Cost of goods (FIFO)"
 msgstr "Varekostnad (FIFO)"
 
-#: includes/Admin/OrderMetaBox.php:148
+#: includes/Admin/OrderMetaBox.php:148 includes/Admin/ValuationPage.php:212
 msgid "Total"
 msgstr "Sum"
 
@@ -678,6 +685,7 @@ msgstr "Mottatt"
 
 #: includes/Admin/PurchasingPage.php:86 includes/Admin/PurchasingPage.php:315
 #: includes/Admin/PurchasingPage.php:486 includes/Admin/PurchasingPage.php:638
+#: includes/Admin/ValuationPage.php:333
 msgid "Remaining"
 msgstr "Gjenstående"
 
@@ -813,11 +821,14 @@ msgid "Remove"
 msgstr "Fjern"
 
 #: includes/Admin/PurchasingPage.php:359 includes/Admin/PurchasingPage.php:424
+#: includes/Admin/ValuationPage.php:177 includes/Admin/ValuationPage.php:271
+#: includes/Admin/ValuationPage.php:332 includes/Admin/ValuationPage.php:366
 msgid "Qty"
 msgstr "Ant."
 
 #: includes/Admin/PurchasingPage.php:361 includes/Admin/PurchasingPage.php:426
 #: includes/Admin/PurchasingPage.php:489 includes/Admin/StatusPage.php:453
+#: includes/Admin/ValuationPage.php:100
 msgid "Unit cost ex-VAT (kr)"
 msgstr "Enhetskostnad eks. mva. (kr)"
 
@@ -1308,7 +1319,7 @@ msgid "Unit cost ex-VAT (kr) — prices the cost layer when adding stock"
 msgstr ""
 "Enhetskostnad eks. mva. (kr) — prissetter kostlaget når lager legges til"
 
-#: includes/Admin/StatusPage.php:456
+#: includes/Admin/StatusPage.php:456 includes/Admin/ValuationPage.php:130
 msgid "Save"
 msgstr "Lagre"
 
@@ -1385,6 +1396,228 @@ msgid "%d item"
 msgid_plural "%d items"
 msgstr[0] "%d vare"
 msgstr[1] "%d varer"
+
+#: includes/Admin/ValuationPage.php:69 includes/Admin/ValuationPage.php:77
+msgid "Stock value (Lagerverdi)"
+msgstr "Lagerverdi"
+
+#: includes/Admin/ValuationPage.php:78
+msgid "Cost tracking is not enabled. Turn it on under Lager → Innstillinger."
+msgstr "Kostprissporing er ikke aktivert. Slå det på under Lager → Innstillinger."
+
+#: includes/Admin/ValuationPage.php:93
+msgid "Opening costs missing"
+msgstr "Inngående kostpriser mangler"
+
+#: includes/Admin/ValuationPage.php:94
+msgid ""
+"these products had stock when cost tracking was enabled. Enter what one unit "
+"cost (ex-VAT) so the value on hand is complete; sales made in the meantime "
+"settle automatically."
+msgstr ""
+"disse produktene hadde lager da kostprissporing ble aktivert. Oppgi hva én "
+"enhet kostet (eks. mva.) så lagerverdien blir komplett; salg gjort i "
+"mellomtiden gjøres opp automatisk."
+
+#: includes/Admin/ValuationPage.php:98
+msgid "Qty at start"
+msgstr "Antall ved start"
+
+#: includes/Admin/ValuationPage.php:99
+msgid "Last PO cost"
+msgstr "Siste innkjøpspris"
+
+#: includes/Admin/ValuationPage.php:159
+msgid "Value as of"
+msgstr "Verdi per"
+
+#: includes/Admin/ValuationPage.php:161 includes/Admin/ValuationPage.php:264
+msgid "Show"
+msgstr "Vis"
+
+#: includes/Admin/ValuationPage.php:163
+msgid "Now"
+msgstr "Nå"
+
+#: includes/Admin/ValuationPage.php:169
+msgid ""
+"Order COGS stamping is on, but WooCommerce’s “Cost of goods sold” feature is "
+"disabled — only the plugin’s own øre meta is being written. Enable the "
+"feature under WooCommerce → Settings → Advanced → Features for the native "
+"fields."
+msgstr ""
+"Varekost på ordre er på, men WooCommerce-funksjonen «Cost of goods sold» er "
+"deaktivert — bare utvidelsens egen øre-metadata skrives. Aktiver funksjonen "
+"under WooCommerce → Innstillinger → Avansert → Funksjoner for de innebygde "
+"feltene."
+
+#: includes/Admin/ValuationPage.php:178
+msgid "Avg cost"
+msgstr "Snittkost"
+
+#: includes/Admin/ValuationPage.php:179
+msgid "Value"
+msgstr "Verdi"
+
+#: includes/Admin/ValuationPage.php:180
+msgid "Flags"
+msgstr "Merker"
+
+#: includes/Admin/ValuationPage.php:185
+msgid ""
+"No cost layers yet — receive goods with a cost, add stock with “à kr”, or "
+"enter opening costs."
+msgstr ""
+"Ingen kostlag ennå — motta varer med kostpris, legg til lager med «à kr», "
+"eller oppgi inngående kostpriser."
+
+#: includes/Admin/ValuationPage.php:198
+#, php-format
+msgid "Uncosted %s"
+msgstr "Ukostet %s"
+
+#: includes/Admin/ValuationPage.php:201
+#, php-format
+msgid "Estimate %s"
+msgstr "Estimat %s"
+
+#: includes/Admin/ValuationPage.php:204
+#, php-format
+msgid "Provisional %s"
+msgstr "Provisorisk %s"
+
+#: includes/Admin/ValuationPage.php:207
+msgid "Details"
+msgstr "Detaljer"
+
+#. translators: 1: products with value, 2: products holding uncosted stock
+#: includes/Admin/ValuationPage.php:220
+#, php-format
+msgid "%1$d products · %2$d with uncosted stock"
+msgstr "%1$d produkter · %2$d med ukostet lager"
+
+#: includes/Admin/ValuationPage.php:257
+msgid "Cost of goods sold"
+msgstr "Varekostnad (COGS)"
+
+#: includes/Admin/ValuationPage.php:272
+msgid "COGS"
+msgstr "Varekost"
+
+#: includes/Admin/ValuationPage.php:273
+msgid "Uncosted qty"
+msgstr "Ukostet antall"
+
+#: includes/Admin/ValuationPage.php:277
+msgid "No consumption in the period."
+msgstr "Ingen forbruk i perioden."
+
+#. translators: 1: opening value, 2: inbound value, 3: COGS, 4: closing value
+#: includes/Admin/ValuationPage.php:295
+#, php-format
+msgid "Opening %1$s + inbound %2$s − COGS %3$s = closing %4$s"
+msgstr "Inngående %1$s + tilgang %2$s − varekost %3$s = utgående %4$s"
+
+#: includes/Admin/ValuationPage.php:302
+msgid "Ties out to the øre"
+msgstr "Stemmer på øret"
+
+#. translators: %s: gap amount
+#: includes/Admin/ValuationPage.php:306
+#, php-format
+msgid "Gap %s — expected with uncosted stock in the period"
+msgstr "Avvik %s — forventet med ukostet lager i perioden"
+
+#. translators: %s: product label
+#: includes/Admin/ValuationPage.php:321
+#, php-format
+msgid "Cost layers — %s"
+msgstr "Kostlag — %s"
+
+#: includes/Admin/ValuationPage.php:324
+msgid "Back to stock value"
+msgstr "Tilbake til lagerverdi"
+
+#: includes/Admin/ValuationPage.php:326
+msgid "Layers"
+msgstr "Kostlag"
+
+#: includes/Admin/ValuationPage.php:331
+msgid "Origin"
+msgstr "Opphav"
+
+#: includes/Admin/ValuationPage.php:334
+msgid "Unit cost"
+msgstr "Enhetskost"
+
+#: includes/Admin/ValuationPage.php:335 includes/Admin/ValuationPage.php:368
+msgid "Ref"
+msgstr "Ref"
+
+#: includes/Admin/ValuationPage.php:336 includes/Admin/ValuationPage.php:363
+msgid "Date"
+msgstr "Dato"
+
+#: includes/Admin/ValuationPage.php:345
+msgid "Estimate"
+msgstr "Estimat"
+
+#: includes/Admin/ValuationPage.php:359
+msgid "Consumption"
+msgstr "Forbruk"
+
+#: includes/Admin/ValuationPage.php:364
+msgid "Kind"
+msgstr "Type"
+
+#: includes/Admin/ValuationPage.php:367
+msgid "Cost"
+msgstr "Kost"
+
+#: includes/Admin/ValuationPage.php:464
+msgid "Opening cost saved — value on hand updated."
+msgstr "Inngående kostpris lagret — lagerverdien er oppdatert."
+
+#: includes/Admin/ValuationPage.php:467
+msgid "Enter a non-negative unit cost in kr."
+msgstr "Oppgi en ikke-negativ enhetskostnad i kr."
+
+#: includes/Admin/ValuationPage.php:470
+msgid "Could not save the opening cost."
+msgstr "Kunne ikke lagre inngående kostpris."
+
+#: includes/Admin/ValuationPage.php:477
+msgid "Opening cost"
+msgstr "Inngående kost"
+
+#: includes/Admin/ValuationPage.php:480
+msgid "Cost correction"
+msgstr "Kostkorreksjon"
+
+#: includes/Admin/ValuationPage.php:487
+msgid "FIFO"
+msgstr "FIFO"
+
+#: includes/Admin/ValuationPage.php:488
+msgid "Provisional"
+msgstr "Provisorisk"
+
+#: includes/Admin/ValuationPage.php:489
+msgid "True-up (reversal)"
+msgstr "Etteroppgjør (reversering)"
+
+#: includes/Admin/ValuationPage.php:490
+msgid "True-up (backfill)"
+msgstr "Etteroppgjør (mot lag)"
+
+#: includes/Admin/ValuationPage.php:491
+msgid "Correction"
+msgstr "Korreksjon"
+
+#: includes/Admin/ValuationPage.php:508
+#, php-format
+msgid "corrects layer #%d"
+msgstr "korrigerer kostlag #%d"
 
 #: includes/Counting/Apply.php:54
 msgid "Count already applied."
