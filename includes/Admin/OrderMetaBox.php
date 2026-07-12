@@ -102,7 +102,56 @@ final class OrderMetaBox {
             echo '</tr>';
         }
         echo '</tbody></table>';
+        self::cogsSection($orderId);
         echo '</div>';
+    }
+
+    /**
+     * Ledger COGS per line + order total — the margin spot-check surface.
+     * Read-only from the cost tables; shown whenever costing is enabled
+     * (independent of the order-meta stamping flag).
+     */
+    private static function cogsSection(int $orderId): void {
+        if (!\Kaupang\Stock\Costing\Costing::enabled()) {
+            return;
+        }
+        $order = \wc_get_order($orderId);
+        if (!$order instanceof \WC_Order) {
+            return;
+        }
+
+        $rows  = [];
+        $total = 0;
+        foreach ($order->get_items('line_item') as $item) {
+            $ore = \Kaupang\Stock\Costing\WcCogsBridge::ledgerCogsOreForItem($orderId, (int) $item->get_id());
+            if ($ore === null) {
+                continue;
+            }
+            $rows[] = [
+                'name' => $item->get_name(),
+                'ore'  => $ore,
+            ];
+            $total += $ore;
+        }
+        if ($rows === []) {
+            return;
+        }
+
+        echo '<h4 class="ks-cogs-heading">' . \esc_html__('Cost of goods (FIFO)', 'kaupang-stock') . '</h4>';
+        echo '<table class="ks-panel-moves ks-order-cogs"><tbody>';
+        foreach ($rows as $row) {
+            echo '<tr>';
+            echo '<td>' . \esc_html((string) $row['name']) . '</td>';
+            echo '<td class="ks-num">' . \esc_html(self::kr((int) $row['ore'])) . '</td>';
+            echo '</tr>';
+        }
+        echo '<tr class="ks-cogs-total"><td><strong>' . \esc_html__('Total', 'kaupang-stock') . '</strong></td>';
+        echo '<td class="ks-num"><strong>' . \esc_html(self::kr($total)) . '</strong></td></tr>';
+        echo '</tbody></table>';
+    }
+
+    private static function kr(int $ore): string {
+        return \number_format_i18n($ore / 100, 2) . ' kr';
     }
 
     /** @param mixed $postOrOrder */

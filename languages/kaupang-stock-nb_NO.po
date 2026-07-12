@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Kaupang Stock 0.1.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/kaupang-stock\n"
-"POT-Creation-Date: 2026-07-11T23:58:19+00:00\n"
+"POT-Creation-Date: 2026-07-12T00:07:05+00:00\n"
 "PO-Revision-Date: 2026-07-10 16:30+0000\n"
 "Last-Translator: Kaupang Stock <victoria@berganconsulting.no>\n"
 "Language-Team: Norwegian Bokmal\n"
@@ -592,6 +592,14 @@ msgstr "Ingen lagerbevegelser for denne ordren."
 #: includes/Admin/OrderMetaBox.php:88
 msgid "Balance"
 msgstr "Saldo"
+
+#: includes/Admin/OrderMetaBox.php:140
+msgid "Cost of goods (FIFO)"
+msgstr "Varekostnad (FIFO)"
+
+#: includes/Admin/OrderMetaBox.php:148
+msgid "Total"
+msgstr "Sum"
 
 #: includes/Admin/ProductPanel.php:47
 msgid "Save the product first to see stock."
@@ -1297,7 +1305,8 @@ msgstr "à kr"
 
 #: includes/Admin/StatusPage.php:453
 msgid "Unit cost ex-VAT (kr) — prices the cost layer when adding stock"
-msgstr "Enhetskostnad eks. mva. (kr) — prissetter kostlaget når lager legges til"
+msgstr ""
+"Enhetskostnad eks. mva. (kr) — prissetter kostlaget når lager legges til"
 
 #: includes/Admin/StatusPage.php:456
 msgid "Save"

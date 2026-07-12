@@ -73,6 +73,9 @@ final class Plugin {
         // gated on its own costing_enabled flag inside register().
         Costing::register();
 
+        // Order-COGS stamping for margin analytics (own flag inside register()).
+        \Kaupang\Stock\Costing\WcCogsBridge::register();
+
         // Embedded surfaces on the product/order edit screens.
         if (\is_admin()) {
             ProductPanel::register();
