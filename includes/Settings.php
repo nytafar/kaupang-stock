@@ -34,6 +34,11 @@ final class Settings {
             'variance_threshold_pct' => 20,
             // Surface negative on-hand as a warning chip on Lagerstatus.
             'negative_warning'       => true,
+            // FIFO cost layers: fold movements into cost basis + COGS (projection
+            // only — works in shadow mode; receipts still require active mode).
+            'costing_enabled'        => false,
+            // Stamp per-order-item COGS meta (analytics surface; see WcCogsBridge).
+            'cogs_order_meta_enabled' => false,
         ];
     }
 

@@ -510,6 +510,24 @@
 			return lines;
 		}
 
+		// Actual unit costs for THIS delivery (kr → integer øre at the edge).
+		// Only lines that also have a qty are sent; blank inputs are omitted so
+		// the engine falls back to the PO line cost.
+		function collectCosts(lines) {
+			var costs = {};
+			form.querySelectorAll('.ks-receive-cost').forEach(function (input) {
+				var lineId = input.getAttribute('data-line');
+				if (!lineId || !(lineId in lines) || input.value === '') {
+					return;
+				}
+				var kr = parseFloat(String(input.value).replace(',', '.'));
+				if (!isNaN(kr) && kr >= 0) {
+					costs[lineId] = Math.round(kr * 100);
+				}
+			});
+			return costs;
+		}
+
 		function setBusy(busy) {
 			if (submitBtn) {
 				submitBtn.disabled = busy;
@@ -539,6 +557,10 @@
 				lines: lines,
 				confirmed: !!confirmed
 			};
+			var costs = collectCosts(lines);
+			if (Object.keys(costs).length > 0) {
+				body.costs = costs;
+			}
 			if (occurred && occurred.value) {
 				// Sent as-is (site-local); the REST controller converts to UTC.
 				body.occurred_at = occurred.value;

@@ -7,6 +7,7 @@ use Kaupang\Stock\Admin\Menu;
 use Kaupang\Stock\Admin\OrderMetaBox;
 use Kaupang\Stock\Admin\ProductPanel;
 use Kaupang\Stock\Admin\SettingsPage;
+use Kaupang\Stock\Costing\Costing;
 use Kaupang\Stock\Observe\Observer;
 use Kaupang\Stock\Reconcile\Reconciler;
 use Kaupang\Stock\Rest\Controller as RestController;
@@ -67,6 +68,10 @@ final class Plugin {
 
         // Daily invariant check (report-only; healing is operator-initiated).
         Reconciler::register();
+
+        // FIFO cost layers — a pure projection over the movement stream,
+        // gated on its own costing_enabled flag inside register().
+        Costing::register();
 
         // Embedded surfaces on the product/order edit screens.
         if (\is_admin()) {

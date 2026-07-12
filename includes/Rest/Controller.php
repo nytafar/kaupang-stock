@@ -112,6 +112,7 @@ final class Controller {
                 'lines'       => ['type' => 'object', 'required' => true],
                 'occurred_at' => ['type' => 'string', 'required' => false],
                 'confirmed'   => ['type' => 'boolean', 'required' => false],
+                'costs'       => ['type' => 'object', 'required' => false],
             ],
         ]);
     }
@@ -391,6 +392,16 @@ final class Controller {
 
         $confirmed = (bool) ($params['confirmed'] ?? $req->get_param('confirmed'));
 
+        // Per-session actual unit costs in øre (optional, costing feature).
+        $rawCosts = $params['costs'] ?? $req->get_param('costs');
+        $costs    = [];
+        foreach ((array) $rawCosts as $lineId => $ore) {
+            if ($ore === null || $ore === '') {
+                continue;
+            }
+            $costs[(int) $lineId] = max(0, (int) $ore);
+        }
+
         // Site-local → UTC before delegating (the ledger stores UTC).
         $occurredAtUtc = null;
         $occurredRaw   = trim((string) ($params['occurred_at'] ?? $req->get_param('occurred_at')));
@@ -399,7 +410,7 @@ final class Controller {
             $occurredAtUtc = \get_gmt_from_date($normalized, 'Y-m-d H:i:s');
         }
 
-        $result = \call_user_func([$receiver, 'receive'], $poId, $token, $lines, $occurredAtUtc, $confirmed);
+        $result = \call_user_func([$receiver, 'receive'], $poId, $token, $lines, $occurredAtUtc, $confirmed, $costs);
         return \rest_ensure_response($result);
     }
 

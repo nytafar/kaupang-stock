@@ -55,7 +55,45 @@ final class Observer {
         \add_action('woocommerce_variation_set_stock', [self::class, 'markDirtyProduct']);
         \add_action('woocommerce_updated_product_stock', [self::class, 'markDirtyId']);
 
+        // Cross-plugin claim seam: an external system about to move WC stock
+        // (e.g. spis-fiken mirroring a decrease made in Fiken) announces its
+        // attribution first, so the absorber labels the residual with it
+        // instead of a bare `external`. Registry: kaupang-dev-context.md §4.
+        \add_action('kaupang/stock/claim', [self::class, 'claimExternal'], 10, 2);
+
         Absorber::register();
+    }
+
+    /**
+     * `do_action('kaupang/stock/claim', $managedId, $claim)` — file a claim on
+     * behalf of an external mover. Claim keys: reason? (validated, default
+     * `external`), ref_type?, ref_id?, ref_line?, via?, actor_id?, note is NOT
+     * carried (the movement note comes from the absorber caller).
+     *
+     * @param int|mixed   $managedId stock-managing product id
+     * @param array|mixed $claim
+     */
+    public static function claimExternal($managedId, $claim = []): void {
+        try {
+            $managedId = (int) $managedId;
+            $claim     = is_array($claim) ? $claim : [];
+            if ($managedId <= 0) {
+                return;
+            }
+            $reason = isset($claim['reason']) && Reasons::isValid((string) $claim['reason'])
+                ? (string) $claim['reason']
+                : Reasons::EXTERNAL;
+            DirtyRegistry::claim($managedId, [
+                'reason'   => $reason,
+                'ref_type' => isset($claim['ref_type']) ? \sanitize_key((string) $claim['ref_type']) : null,
+                'ref_id'   => isset($claim['ref_id']) ? (int) $claim['ref_id'] : null,
+                'ref_line' => isset($claim['ref_line']) ? (int) $claim['ref_line'] : null,
+                'via'      => isset($claim['via']) ? mb_substr((string) $claim['via'], 0, 40) : 'seam',
+                'actor_id' => isset($claim['actor_id']) ? (int) $claim['actor_id'] : null,
+            ]);
+        } catch (\Throwable $e) {
+            Logger::error('claim_seam_failed', ['error' => $e->getMessage()]);
+        }
     }
 
     /* ----------------------------- Rich hooks ----------------------------- */

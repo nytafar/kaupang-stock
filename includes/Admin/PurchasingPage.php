@@ -475,6 +475,7 @@ final class PurchasingPage {
               <?php echo Settings::activeMode() ? '' : 'data-disabled="1"'; ?>>
             <p class="description"><?php \esc_html_e('Quantities are pre-filled with what remains. Adjust for a partial delivery, then confirm. The server re-checks each remaining quantity at submit.', 'kaupang-stock'); ?></p>
 
+            <?php $withCosts = \Kaupang\Stock\Costing\Costing::enabled(); ?>
             <div class="ks-tablewrap">
             <table class="wp-list-table widefat striped ks-receive-grid">
                 <thead>
@@ -484,6 +485,9 @@ final class PurchasingPage {
                         <th class="ks-num"><?php \esc_html_e('Received', 'kaupang-stock'); ?></th>
                         <th class="ks-num"><?php \esc_html_e('Remaining', 'kaupang-stock'); ?></th>
                         <th class="ks-num"><?php \esc_html_e('Receive now', 'kaupang-stock'); ?></th>
+                        <?php if ($withCosts): ?>
+                            <th class="ks-num"><?php \esc_html_e('Unit cost ex-VAT (kr)', 'kaupang-stock'); ?></th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -507,6 +511,15 @@ final class PurchasingPage {
                                        value="<?php echo \esc_attr(self::inputQty($remaining)); ?>"
                                        <?php echo Settings::activeMode() ? '' : 'disabled'; ?> />
                             </td>
+                            <?php if ($withCosts): ?>
+                                <td class="ks-num">
+                                    <input type="number" step="0.01" min="0" class="small-text ks-receive-cost"
+                                           data-line="<?php echo (int) $lineId; ?>"
+                                           value="<?php echo isset($line['unit_cost_ore']) && $line['unit_cost_ore'] !== null ? \esc_attr(number_format(((int) $line['unit_cost_ore']) / 100, 2, '.', '')) : ''; ?>"
+                                           title="<?php \esc_attr_e('Actual unit cost ex-VAT for THIS delivery — pre-filled from the PO line; adjust if the invoice differs.', 'kaupang-stock'); ?>"
+                                           <?php echo Settings::activeMode() ? '' : 'disabled'; ?> />
+                                </td>
+                            <?php endif; ?>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

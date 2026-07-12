@@ -45,11 +45,17 @@ final class Receiving {
      * @param array<int,float>   $lines         [line_id => qty]; qty 0 / negative lines are skipped
      * @param string|null        $occurredAtUtc UTC 'Y-m-d H:i:s' (operator-editable "varene kom i forrige uke") or null=now
      * @param bool               $confirmed     true once the operator acknowledged the over-receipt / changed-PO dialog
+     * @param array<int,int>     $costs         [line_id => actual unit cost ex-VAT in øre] for THIS session —
+     *                                          partial deliveries may be invoiced at different prices, so the
+     *                                          actual cost is captured per receive, not per PO line. Stashed
+     *                                          durably (CostInputs, keyed by the line's idempotency key) BEFORE
+     *                                          the ledger posts, because the costing fold runs inside
+     *                                          recordBatch's post-commit hook and rebuilds re-derive from inputs.
      *
      * @return array{status:string,issues:array<int,array<string,mixed>>,batch:string,movements:int,po_status:string,message:string}
      *         status is one of ok | confirm_required | error.
      */
-    public static function receive(int $poId, string $token, array $lines, ?string $occurredAtUtc, bool $confirmed): array {
+    public static function receive(int $poId, string $token, array $lines, ?string $occurredAtUtc, bool $confirmed, array $costs = []): array {
         $po = PurchaseOrders::find($poId);
         if ($po === null) {
             return self::result('error', [], '', 0, '', \__('Purchase order not found.', 'kaupang-stock'));
@@ -178,6 +184,27 @@ final class Receiving {
                 self::deriveStatus($po),
                 \__('Some lines exceed the remaining quantity. Confirm to receive anyway (over-receipt is allowed).', 'kaupang-stock')
             );
+        }
+
+        // Stash entered actual costs BEFORE posting: the costing fold fires
+        // inside recordBatch (post-commit) and resolves them by the same
+        // idempotency key the movement carries. REPLACE-idempotent, so a
+        // confirm-resend of the same token is harmless.
+        if ($costs !== [] && \Kaupang\Stock\Costing\Costing::enabled()) {
+            $stash = [];
+            foreach ($intents as $intent) {
+                $lineId = (int) $intent->refId;
+                if (isset($costs[$lineId]) && (int) $costs[$lineId] >= 0 && $intent->idempotencyKey !== null) {
+                    $stash[$intent->idempotencyKey] = (int) $costs[$lineId];
+                }
+            }
+            if ($stash !== []) {
+                try {
+                    \Kaupang\Stock\Costing\CostInputs::stashMany($stash);
+                } catch (\Throwable $e) {
+                    Logger::error('receive_cost_stash_failed', ['po' => $poId, 'token' => $token, 'error' => $e->getMessage()]);
+                }
+            }
         }
 
         // Post the batch. The token is the batch id; the per-line idempotency keys

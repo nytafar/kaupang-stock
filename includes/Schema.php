@@ -18,7 +18,11 @@ namespace Kaupang\Stock;
 final class Schema {
 
     // v2: suppliers.country (dbDelta adds the column; existing rows default to NO).
-    public const VERSION        = 2;
+    // v3: costing — immutable FIFO cost layers + consumptions + derived cache +
+    //     durable operator-entered cost inputs. Pure projection tables: only the
+    //     Costing engine writes them, and all of them (except opening layers /
+    //     cost inputs, which are operator input) re-derive from movements.
+    public const VERSION        = 3;
     public const VERSION_OPTION = 'kaupang_stock_schema_version';
 
     public static function movements(): string {
@@ -59,6 +63,26 @@ final class Schema {
     public static function countLines(): string {
         global $wpdb;
         return $wpdb->prefix . 'kaupang_stock_count_lines';
+    }
+
+    public static function costLayers(): string {
+        global $wpdb;
+        return $wpdb->prefix . 'kaupang_stock_cost_layers';
+    }
+
+    public static function costConsumptions(): string {
+        global $wpdb;
+        return $wpdb->prefix . 'kaupang_stock_cost_consumptions';
+    }
+
+    public static function productCost(): string {
+        global $wpdb;
+        return $wpdb->prefix . 'kaupang_stock_product_cost';
+    }
+
+    public static function costInputs(): string {
+        global $wpdb;
+        return $wpdb->prefix . 'kaupang_stock_cost_inputs';
     }
 
     /** Run dbDelta for all tables and stamp the schema version. Idempotent. */
@@ -171,6 +195,65 @@ final class Schema {
   recount TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY  (id),
   UNIQUE KEY count_product (count_id, product_id)
+) $collate;");
+
+        \dbDelta("CREATE TABLE " . self::costLayers() . " (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  product_id BIGINT UNSIGNED NOT NULL,
+  location_id BIGINT UNSIGNED NOT NULL,
+  source_movement_id BIGINT UNSIGNED NULL,
+  origin VARCHAR(20) NOT NULL,
+  ref_type VARCHAR(20) NULL,
+  ref_id BIGINT UNSIGNED NULL,
+  ref_line BIGINT UNSIGNED NULL,
+  batch CHAR(36) NULL,
+  unit_cost_ore BIGINT NULL,
+  qty_original DECIMAL(15,3) NOT NULL,
+  is_estimate TINYINT(1) NOT NULL DEFAULT 0,
+  actor_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  note VARCHAR(255) NULL,
+  occurred_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL,
+  PRIMARY KEY  (id),
+  UNIQUE KEY source_movement (source_movement_id),
+  KEY fifo (product_id, location_id, occurred_at, id)
+) $collate;");
+
+        \dbDelta("CREATE TABLE " . self::costConsumptions() . " (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  layer_id BIGINT UNSIGNED NULL,
+  movement_id BIGINT UNSIGNED NULL,
+  product_id BIGINT UNSIGNED NOT NULL,
+  location_id BIGINT UNSIGNED NOT NULL,
+  kind VARCHAR(20) NOT NULL DEFAULT 'fifo',
+  qty DECIMAL(15,3) NOT NULL,
+  unit_cost_ore BIGINT NULL,
+  cost_ore BIGINT NULL,
+  occurred_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL,
+  PRIMARY KEY  (id),
+  KEY movement (movement_id),
+  KEY layer (layer_id),
+  KEY product_time (product_id, location_id, occurred_at, id)
+) $collate;");
+
+        \dbDelta("CREATE TABLE " . self::productCost() . " (
+  product_id BIGINT UNSIGNED NOT NULL,
+  location_id BIGINT UNSIGNED NOT NULL,
+  open_qty DECIMAL(15,3) NOT NULL DEFAULT 0,
+  value_ore BIGINT NOT NULL DEFAULT 0,
+  provisional_qty DECIMAL(15,3) NOT NULL DEFAULT 0,
+  provisional_cost_ore BIGINT NOT NULL DEFAULT 0,
+  last_movement_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY  (product_id, location_id)
+) $collate;");
+
+        \dbDelta("CREATE TABLE " . self::costInputs() . " (
+  idempotency_key VARCHAR(100) NOT NULL,
+  unit_cost_ore BIGINT NOT NULL,
+  created_at DATETIME NOT NULL,
+  PRIMARY KEY  (idempotency_key)
 ) $collate;");
 
         // Seed the single v1 location. Multi-location is schema-ready, UI-deferred.

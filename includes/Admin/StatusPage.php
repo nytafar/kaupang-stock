@@ -179,6 +179,25 @@ final class StatusPage {
         }
 
         $idem = $key !== '' ? 'adjust:' . $key : null;
+
+        // Optional "à kr" unit cost: entering stock at a known cost ("add 20 @
+        // 101") stashes the øre amount under the movement's idempotency key so
+        // the costing fold prices the layer exactly. Positive deltas only —
+        // removals are valued FIFO by the engine.
+        $costRaw = trim((string) ($_POST['unit_cost'] ?? ''));
+        if ($costRaw !== '' && $delta !== null && $delta > 0 && $idem !== null
+            && \Kaupang\Stock\Costing\Costing::enabled()
+        ) {
+            $ore = (int) round(((float) str_replace(',', '.', $costRaw)) * 100);
+            if ($ore >= 0) {
+                try {
+                    \Kaupang\Stock\Costing\CostInputs::stash($idem, $ore);
+                } catch (\Throwable $e) {
+                    \Kaupang\Stock\Logging\Logger::error('adjust_cost_stash_failed', ['error' => $e->getMessage()]);
+                }
+            }
+        }
+
         try {
             Ledger::adjust($productId, (float) $delta, $note, null, $idem);
             self::redirect(['ks_msg' => 'adjusted']);
@@ -430,6 +449,9 @@ final class StatusPage {
             <input type="hidden" name="product_id" value="<?php echo \esc_attr((string) $productId); ?>" />
             <input type="hidden" name="idem" value="<?php echo \esc_attr($idem); ?>" />
             <input type="number" name="delta" step="1" class="ks-adjust-delta" placeholder="±0" aria-label="<?php \esc_attr_e('Quantity change', 'kaupang-stock'); ?>"<?php echo $disabled; ?> />
+            <?php if (\Kaupang\Stock\Costing\Costing::enabled()): ?>
+                <input type="number" name="unit_cost" step="0.01" min="0" class="ks-adjust-cost" placeholder="<?php \esc_attr_e('à kr', 'kaupang-stock'); ?>" title="<?php \esc_attr_e('Unit cost ex-VAT (kr) — prices the cost layer when adding stock', 'kaupang-stock'); ?>" aria-label="<?php \esc_attr_e('Unit cost ex-VAT (kr)', 'kaupang-stock'); ?>"<?php echo $disabled; ?> />
+            <?php endif; ?>
             <input type="text" name="note" class="ks-adjust-note" placeholder="<?php \esc_attr_e('Note (required)', 'kaupang-stock'); ?>" maxlength="255" aria-label="<?php \esc_attr_e('Note', 'kaupang-stock'); ?>"<?php echo $disabled; ?> />
             <button type="submit" class="button button-small ks-adjust-submit"<?php echo $disabled; ?>><?php \esc_html_e('Save', 'kaupang-stock'); ?></button>
         </form>

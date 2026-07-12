@@ -190,10 +190,15 @@ final class Command {
      * [--date=<date>]
      * : Effective date as Y-m-d (occurred_at). Defaults to now.
      *
+     * [--cost=<kr>]
+     * : Unit cost ex-VAT in kr for a positive adjustment ("add 20 @ 101") —
+     *   prices the FIFO cost layer exactly. Requires cost tracking enabled.
+     *
      * ## EXAMPLES
      *
      *     wp kaupang-stock adjust 1234 5 --note="Found in back room"
      *     wp kaupang-stock adjust 1234 -2 --note="Breakage" --date=2026-07-01
+     *     wp kaupang-stock adjust 1234 20 --note="Restock" --cost=101
      *
      * @param string[] $args
      * @param array<string,string> $assoc
@@ -228,13 +233,31 @@ final class Command {
             $occurredAt = \get_gmt_from_date($date . ' 12:00:00');
         }
 
+        $idem = 'cli:adjust:' . \wp_generate_uuid4();
+
+        // --cost: stash the entered øre under the movement's idempotency key
+        // BEFORE the ledger posts (the costing fold runs inside recordBatch).
+        if (isset($assoc['cost']) && $assoc['cost'] !== '') {
+            $costRaw = str_replace(',', '.', (string) $assoc['cost']);
+            if ($delta <= 0) {
+                \WP_CLI::error('--cost only applies when adding stock (positive delta).');
+            }
+            if (!\Kaupang\Stock\Costing\Costing::enabled()) {
+                \WP_CLI::error('--cost requires cost tracking (Lager → Innstillinger → Cost tracking).');
+            }
+            if (!is_numeric($costRaw) || (float) $costRaw < 0) {
+                \WP_CLI::error('--cost must be a non-negative kr amount, e.g. 101 or 88.50.');
+            }
+            \Kaupang\Stock\Costing\CostInputs::stash($idem, (int) round(((float) $costRaw) * 100));
+        }
+
         try {
             $movement = Ledger::adjust(
                 $productId,
                 $delta,
                 $note,
                 $occurredAt,
-                'cli:adjust:' . \wp_generate_uuid4()
+                $idem
             );
         } catch (LedgerException $e) {
             // Shadow-mode refusal surfaces here by design — do not swallow it.
@@ -383,7 +406,212 @@ final class Command {
         ));
     }
 
+    /**
+     * FIFO costing operations: verify invariants, rebuild the projection,
+     * COGS/valuation reports, opening-cost entry and cost corrections.
+     *
+     * ## OPTIONS
+     *
+     * <action>
+     * : One of: verify, rebuild, report, opening, correct.
+     *
+     * [--from=<date>]
+     * : report: period start (Y-m-d, site-local). Defaults to the 1st of this month.
+     *
+     * [--to=<date>]
+     * : report: period end (Y-m-d, site-local). Defaults to today.
+     *
+     * [--product=<id>]
+     * : opening: product id to save an opening cost for.
+     *
+     * [--cost=<kr>]
+     * : opening/correct: unit cost ex-VAT in kr.
+     *
+     * [--layer=<id>]
+     * : correct: the cost layer to correct.
+     *
+     * [--note=<note>]
+     * : correct: required correction note.
+     *
+     * [--yes]
+     * : rebuild: skip the confirmation prompt.
+     *
+     * ## EXAMPLES
+     *
+     *     wp kaupang-stock cost verify
+     *     wp kaupang-stock cost rebuild --yes
+     *     wp kaupang-stock cost report --from=2026-01-01 --to=2026-06-30
+     *     wp kaupang-stock cost opening                      # list pending
+     *     wp kaupang-stock cost opening --product=1814 --cost=42.50
+     *     wp kaupang-stock cost correct --layer=12 --cost=88.00 --note="Invoice showed 88"
+     *
+     * @param string[] $args
+     * @param array<string,string> $assoc
+     */
+    public function cost(array $args, array $assoc): void {
+        $action = (string) ($args[0] ?? '');
+        if (!\Kaupang\Stock\Costing\Costing::enabled() && $action !== 'verify') {
+            \WP_CLI::error('Cost tracking is not enabled (Lager → Innstillinger → Cost tracking).');
+        }
+
+        switch ($action) {
+            case 'verify':
+                \Kaupang\Stock\Costing\Sweeper::sweepAll();
+                $report = \Kaupang\Stock\Costing\Verify::run();
+                $this->renderCostVerify($report);
+                if (!empty($report['issues'])) {
+                    \WP_CLI::halt(1);
+                }
+                return;
+
+            case 'rebuild':
+                if (!isset($assoc['yes'])) {
+                    \WP_CLI::confirm('Rebuild deletes every derived cost row (consumptions + non-opening layers + cache) and re-folds from the movements. Continue?');
+                }
+                $before = \Kaupang\Stock\Costing\Valuation::totals();
+                $swept  = \Kaupang\Stock\Costing\Rebuild::run();
+                $after  = \Kaupang\Stock\Costing\Valuation::totals();
+                \WP_CLI::log(sprintf('Re-folded %d movement(s) across %d product(s).', $swept['movements'], $swept['products']));
+                \WP_CLI::log(sprintf('Valuation before: %s kr · after: %s kr', $this->kr($before['total_ore']), $this->kr($after['total_ore'])));
+                if ($before['total_ore'] === $after['total_ore'] && abs($before['open_qty'] - $after['open_qty']) < 1e-6) {
+                    \WP_CLI::success('Rebuild re-derived identical totals.');
+                } else {
+                    \WP_CLI::warning('Totals changed across rebuild — inputs were edited since the last fold, or this flags an engine bug. Run `cost verify`.');
+                }
+                return;
+
+            case 'report':
+                $from = $this->dateBoundary((string) ($assoc['from'] ?? \wp_date('Y-m-01')), false);
+                $to   = $this->dateBoundary((string) ($assoc['to'] ?? \wp_date('Y-m-d')), true);
+                \Kaupang\Stock\Costing\Sweeper::sweepAll();
+                $report = \Kaupang\Stock\Costing\Valuation::cogsReport($from, $to);
+                $this->renderCostReport($report);
+                return;
+
+            case 'opening':
+                if (isset($assoc['product'], $assoc['cost'])) {
+                    $productId = (int) $assoc['product'];
+                    $kr        = str_replace(',', '.', (string) $assoc['cost']);
+                    if (!is_numeric($kr) || (float) $kr < 0) {
+                        \WP_CLI::error('--cost must be a non-negative kr amount.');
+                    }
+                    try {
+                        $layerId = \Kaupang\Stock\Costing\Opening::save($productId, (int) round(((float) $kr) * 100));
+                    } catch (\Kaupang\Stock\Costing\CostingException $e) {
+                        \WP_CLI::error($e->getMessage());
+                        return;
+                    }
+                    \WP_CLI::success(sprintf('Opening layer #%d saved for %s at %s kr.', $layerId, ProductSearch::label($productId), $kr));
+                    return;
+                }
+                $pending = \Kaupang\Stock\Costing\Opening::pending();
+                if ($pending === []) {
+                    \WP_CLI::success('No products are waiting for an opening cost.');
+                    return;
+                }
+                $rows = [];
+                foreach ($pending as $productId => $info) {
+                    $rows[] = [
+                        'product' => sprintf('#%d %s', $productId, ProductSearch::label($productId)),
+                        'qty'     => $this->qty($info['qty']),
+                    ];
+                }
+                \WP_CLI\Utils\format_items('table', $rows, ['product', 'qty']);
+                \WP_CLI::log('Save with: wp kaupang-stock cost opening --product=<id> --cost=<kr>');
+                return;
+
+            case 'correct':
+                $layerId = (int) ($assoc['layer'] ?? 0);
+                $kr      = str_replace(',', '.', (string) ($assoc['cost'] ?? ''));
+                $note    = (string) ($assoc['note'] ?? '');
+                if ($layerId <= 0 || !is_numeric($kr) || trim($note) === '') {
+                    \WP_CLI::error('correct requires --layer=<id>, --cost=<kr> and --note=<note>.');
+                }
+                try {
+                    $newLayerId = \Kaupang\Stock\Costing\Rebuild::correctLayer($layerId, (int) round(((float) $kr) * 100), $note);
+                } catch (\Kaupang\Stock\Costing\CostingException $e) {
+                    \WP_CLI::error($e->getMessage());
+                    return;
+                }
+                \WP_CLI::success(sprintf('Layer #%d corrected → new layer #%d at %s kr (remaining qty re-entered today).', $layerId, $newLayerId, $kr));
+                return;
+
+            default:
+                \WP_CLI::error("Unknown action '$action'. Use: verify, rebuild, report, opening, correct.");
+        }
+    }
+
     /* ------------------------------ Internals ----------------------------- */
+
+    /** @param array<string,mixed> $report Costing\Verify::run() output */
+    private function renderCostVerify(array $report): void {
+        \WP_CLI::log(sprintf('Cost projection checked for %d product(s).', (int) $report['checked']));
+
+        if (!empty($report['issues'])) {
+            $rows = [];
+            foreach ((array) $report['issues'] as $issue) {
+                $rows[] = [
+                    'product' => sprintf('#%d %s', (int) $issue['product_id'], ProductSearch::label((int) $issue['product_id'])),
+                    'type'    => (string) $issue['type'],
+                    'detail'  => \wp_json_encode(array_diff_key($issue, ['product_id' => 1, 'type' => 1])),
+                ];
+            }
+            \WP_CLI\Utils\format_items('table', $rows, ['product', 'type', 'detail']);
+            \WP_CLI::warning(sprintf('%d cost issue(s).', count((array) $report['issues'])));
+        } else {
+            \WP_CLI::success('Cost projection consistent — cache, layers and balances agree.');
+        }
+
+        foreach ([
+            'lagging'         => 'lagging product(s) — run again to sweep',
+            'opening_pending' => 'product(s) waiting for an opening cost (`cost opening`)',
+            'uncosted'        => 'product(s) holding uncosted stock',
+            'provisional'     => 'product(s) with outstanding provisional COGS',
+        ] as $key => $label) {
+            if (!empty($report[$key])) {
+                \WP_CLI::log(sprintf('%d %s: %s', count((array) $report[$key]), $label, implode(', ', array_map(
+                    static fn ($id): string => '#' . $id,
+                    array_keys((array) $report[$key])
+                ))));
+            }
+        }
+    }
+
+    /** @param array<string,mixed> $report Costing\Valuation::cogsReport() output */
+    private function renderCostReport(array $report): void {
+        \WP_CLI::log(sprintf('COGS %s → %s (UTC)', (string) $report['from'], (string) $report['to']));
+        \WP_CLI::log('');
+        if (!empty($report['by_reason'])) {
+            $rows = [];
+            foreach ((array) $report['by_reason'] as $reason => $bucket) {
+                $rows[] = [
+                    'reason'   => $reason,
+                    'qty'      => $this->qty((float) $bucket['qty']),
+                    'cogs_kr'  => $this->kr((int) $bucket['cost_ore']),
+                    'uncosted' => $this->qty((float) $bucket['uncosted_qty']),
+                ];
+            }
+            \WP_CLI\Utils\format_items('table', $rows, ['reason', 'qty', 'cogs_kr', 'uncosted']);
+        } else {
+            \WP_CLI::log('No consumption in the period.');
+        }
+        \WP_CLI::log('');
+        \WP_CLI::log(sprintf('Opening value:   %s kr', $this->kr((int) $report['opening_ore'])));
+        \WP_CLI::log(sprintf('+ Inbound:       %s kr', $this->kr((int) $report['inbound_ore'])));
+        \WP_CLI::log(sprintf('− COGS:          %s kr', $this->kr((int) $report['cogs_ore'])));
+        \WP_CLI::log(sprintf('= Closing value: %s kr', $this->kr((int) $report['closing_ore'])));
+        $gap = (int) $report['identity_gap_ore'];
+        if ($gap === 0) {
+            \WP_CLI::success('Identity ties out to the øre.');
+        } else {
+            \WP_CLI::warning(sprintf('Identity gap: %s kr — expected with uncosted/estimate stock in the period; otherwise run `cost verify`.', $this->kr($gap)));
+        }
+    }
+
+    /** Integer øre → kr display string. */
+    private function kr(int $ore): string {
+        return number_format($ore / 100, 2, ',', ' ');
+    }
 
     /**
      * @param array{time:string,checked:int,issues:array,out_of_scope:array} $report

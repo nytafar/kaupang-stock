@@ -3,7 +3,7 @@
  * Plugin Name: Kaupang Stock
  * Plugin URI:  https://jellum.net/kaupang-stock
  * Description: Ledger-backed lagerføring for WooCommerce — append-only stock movement ledger with full attribution, audit UI, varetelling (counting) and innkjøp/receiving. Mirrors WooCommerce on the sale path (never fights it); every quantity is re-derivable from the ledger. Part of the Kaupang suite.
- * Version:     0.2.0
+ * Version:     0.3.0
  * Author:      Lasse Jellum
  * Author URI:  https://jellum.net
  * Text Domain: kaupang-stock
@@ -22,7 +22,7 @@ declare(strict_types=1);
 
 defined('ABSPATH') || exit;
 
-define('KAUPANG_STOCK_VERSION', '0.2.0');
+define('KAUPANG_STOCK_VERSION', '0.3.0');
 define('KAUPANG_STOCK_FILE', __FILE__);
 define('KAUPANG_STOCK_DIR', plugin_dir_path(__FILE__));
 define('KAUPANG_STOCK_URL', plugin_dir_url(__FILE__));

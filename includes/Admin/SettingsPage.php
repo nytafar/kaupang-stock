@@ -67,6 +67,13 @@ final class SettingsPage {
         // request (and the sweep below) see the value just written.
         Settings::flushCache();
 
+        // Costing enable transition: stamp the anchor (the movement id costing
+        // starts after) once, after the option write — same discipline as the
+        // seeding sweep below. Write-once: re-enables keep the original anchor.
+        if (empty($old['costing_enabled']) && !empty($new['costing_enabled'])) {
+            \Kaupang\Stock\Costing\Costing::stampAnchorIfMissing();
+        }
+
         if (!empty($old['stock_enabled']) || empty($new['stock_enabled'])) {
             return;
         }
@@ -106,8 +113,9 @@ final class SettingsPage {
         $mode      = (string) ($in['mode'] ?? Settings::MODE_SHADOW);
         $threshold = (int) ($in['variance_threshold_pct'] ?? 20);
 
-        // Pure value cleaning only — the enable-time seeding side effect lives
-        // in maybeSeed(), fired by watch() after the option is written.
+        // Pure value cleaning only — the enable-time side effects (seeding
+        // sweep, costing anchor) live in maybeSeed(), fired by watch() after
+        // the option is written.
         return [
             'stock_enabled'          => !empty($in['stock_enabled']),
             'mode'                   => $mode === Settings::MODE_ACTIVE ? Settings::MODE_ACTIVE : Settings::MODE_SHADOW,
@@ -115,6 +123,8 @@ final class SettingsPage {
             'counting_enabled'       => !empty($in['counting_enabled']),
             'variance_threshold_pct' => max(1, min(100, $threshold)),
             'negative_warning'       => !empty($in['negative_warning']),
+            'costing_enabled'        => !empty($in['costing_enabled']),
+            'cogs_order_meta_enabled' => !empty($in['cogs_order_meta_enabled']),
         ];
     }
 
@@ -191,6 +201,22 @@ final class SettingsPage {
                         <td>
                             <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[negative_warning]" value="1" <?php \checked(!empty($s['negative_warning'])); ?> />
                                 <?php \esc_html_e('Show a warning chip on Lagerstatus when on-hand is negative', 'kaupang-stock'); ?></label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php \esc_html_e('Cost tracking (FIFO)', 'kaupang-stock'); ?></th>
+                        <td>
+                            <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[costing_enabled]" value="1" <?php \checked(!empty($s['costing_enabled'])); ?> />
+                                <?php \esc_html_e('Track cost of goods with FIFO cost layers (Lagerverdi)', 'kaupang-stock'); ?></label>
+                            <p class="description"><?php \esc_html_e('Receipts and cost-entered adjustments create cost layers; sales consume them oldest-first. Enabling stamps a starting point — enter opening unit costs on the Lagerverdi screen afterwards. Works in shadow mode, but receipts (purchase orders) require active mode.', 'kaupang-stock'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php \esc_html_e('Order COGS', 'kaupang-stock'); ?></th>
+                        <td>
+                            <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[cogs_order_meta_enabled]" value="1" <?php \checked(!empty($s['cogs_order_meta_enabled'])); ?> />
+                                <?php \esc_html_e('Stamp each order line with its FIFO cost (for margin analytics)', 'kaupang-stock'); ?></label>
+                            <p class="description"><?php \esc_html_e('Writes the consumed cost onto the order line meta once stock is reduced. The WooCommerce “Cost of goods sold” feature must be enabled for the native COGS fields; the plugin’s own øre-exact meta is written regardless.', 'kaupang-stock'); ?></p>
                         </td>
                     </tr>
                 </table>
