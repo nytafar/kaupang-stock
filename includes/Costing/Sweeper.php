@@ -34,23 +34,38 @@ final class Sweeper {
             (int) Costing::anchorId()
         ), ARRAY_A);
 
-        $products  = 0;
+        $products  = [];
         $movements = 0;
-        foreach ($lagging as $row) {
-            try {
-                $movements += Engine::processProduct((int) $row['product_id'], (int) $row['location_id']);
-                $products++;
-            } catch (\Throwable $e) {
-                Logger::error('cost_sweep_failed', [
-                    'product' => (int) $row['product_id'],
-                    'error'   => $e->getMessage(),
-                ]);
+
+        // A destination with a lower location id can be encountered before its
+        // source and deliberately defer. Retry the same lagging set while a
+        // pass makes progress, so the source then destination both fold in one
+        // sweep without turning deferral into an exception/retry loop.
+        $remainingPasses = max(2, count($lagging) + 1);
+        do {
+            $passMovements = 0;
+            foreach ($lagging as $row) {
+                try {
+                    $count = Engine::processProduct((int) $row['product_id'], (int) $row['location_id']);
+                    if ($count > 0) {
+                        $key = (int) $row['product_id'] . ':' . (int) $row['location_id'];
+                        $products[$key] = true;
+                        $movements += $count;
+                        $passMovements += $count;
+                    }
+                } catch (\Throwable $e) {
+                    Logger::error('cost_sweep_failed', [
+                        'product' => (int) $row['product_id'],
+                        'error'   => $e->getMessage(),
+                    ]);
+                }
             }
-        }
+            $remainingPasses--;
+        } while ($passMovements > 0 && $remainingPasses > 0);
 
         if ($movements > 0) {
-            Logger::info('cost_sweep_caught_up', ['products' => $products, 'movements' => $movements]);
+            Logger::info('cost_sweep_caught_up', ['products' => count($products), 'movements' => $movements]);
         }
-        return ['products' => $products, 'movements' => $movements];
+        return ['products' => count($products), 'movements' => $movements];
     }
 }

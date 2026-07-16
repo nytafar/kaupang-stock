@@ -72,17 +72,31 @@ final class Engine {
                     return $processed;
                 }
 
-                $state = FoldState::load($productId, $locationId);
-                $lastId = $from;
+                $state        = FoldState::load($productId, $locationId);
+                $lastId       = $from;
+                $batchCount   = 0;
+                $wasDeferred  = false;
                 foreach ($movementRows as $movementRow) {
                     $movement = Movement::fromRow($movementRow);
-                    self::applyMovement($movement, $state);
+                    if (!self::applyMovement($movement, $state)) {
+                        // transfer_in may sort before transfer_out. Stop before
+                        // it and leave the location watermark in place; the
+                        // sweeper retries after the source location has folded.
+                        $wasDeferred = true;
+                        break;
+                    }
                     $lastId = $movement->id;
+                    $batchCount++;
                 }
 
-                ProductCost::recomputeAndUpdateLocked($productId, $locationId, $lastId);
+                if ($batchCount > 0) {
+                    ProductCost::recomputeAndUpdateLocked($productId, $locationId, $lastId);
+                }
                 ProductCost::commit();
-                $processed += count($movementRows);
+                $processed += $batchCount;
+                if ($wasDeferred) {
+                    return $processed;
+                }
             } catch (\Throwable $e) {
                 ProductCost::rollback();
                 if ($e instanceof CostingException) {
@@ -149,22 +163,34 @@ final class Engine {
 
     /* ------------------------------ The fold ------------------------------ */
 
-    private static function applyMovement(Movement $movement, FoldState $state): void {
+    /** False means deliberately deferred before this movement. */
+    private static function applyMovement(Movement $movement, FoldState $state): bool {
         if ($movement->delta > 0) {
-            self::applyInbound($movement, $state);
+            return self::applyInbound($movement, $state);
         } elseif ($movement->delta < 0) {
             self::applyOutbound($movement, $state);
         }
+        return true;
     }
 
-    private static function applyInbound(Movement $m, FoldState $state): void {
-        [$unitCostOre, $isEstimate] = self::resolveInboundCost($m, $state);
+    private static function applyInbound(Movement $m, FoldState $state): bool {
+        $origin = $m->reason;
+        if ($m->reason === Reasons::TRANSFER_IN) {
+            $basis = self::transferInboundCost($m);
+            if ($basis === null) {
+                return false;
+            }
+            [$unitCostOre, $isEstimate] = $basis;
+            $origin = 'transfer';
+        } else {
+            [$unitCostOre, $isEstimate] = self::resolveInboundCost($m, $state);
+        }
 
         $layerId = Layers::insert([
             'product_id'         => $m->productId,
             'location_id'        => $m->locationId,
             'source_movement_id' => $m->id,
-            'origin'             => $m->reason,
+            'origin'             => $origin,
             'ref_type'           => $m->refType,
             'ref_id'             => $m->refId,
             'ref_line'           => $m->refLine,
@@ -190,6 +216,7 @@ final class Engine {
             $state->settleProvisional($prov['movement_id'], $qty);
             $state->consumeLayer($layerId, $qty);
         }
+        return true;
     }
 
     private static function applyOutbound(Movement $m, FoldState $state): void {
@@ -209,7 +236,8 @@ final class Engine {
 
         while ($need > 1e-9 && ($layer = $state->oldestOpenLayer()) !== null) {
             $qty = min($need, $layer['remaining']);
-            self::writeConsumption($m, $layer['id'], $layer['unit_cost_ore'], $qty, Consumptions::KIND_FIFO);
+            $kind = $m->reason === Reasons::TRANSFER_OUT ? Consumptions::KIND_TRANSFER_OUT : Consumptions::KIND_FIFO;
+            self::writeConsumption($m, $layer['id'], $layer['unit_cost_ore'], $qty, $kind);
             $state->consumeLayer($layer['id'], $qty);
             $need -= $qty;
         }
@@ -272,6 +300,29 @@ final class Engine {
     /** @return array{0:?int,1:bool} */
     private static function estimateFallback(FoldState $state): array {
         return [$state->lastKnownCost(), true];
+    }
+
+    /**
+     * Resolve transfer_in from the completed transfer_out consumptions. Null is
+     * the deferral signal; [null, true] is a real uncosted source basis.
+     *
+     * @return array{0:?int,1:bool}|null
+     */
+    private static function transferInboundCost(Movement $m): ?array {
+        if ($m->batch === null) {
+            return null;
+        }
+        $basis = Consumptions::transferBasis($m->batch, $m->productId);
+        if ($basis === null || $basis['qty'] <= 1e-9) {
+            return null;
+        }
+        if (!$basis['all_costed'] || $basis['cost_ore'] === null) {
+            return [null, true];
+        }
+        return [
+            (int) round($basis['cost_ore'] / $basis['qty']),
+            $basis['is_estimate'],
+        ];
     }
 
     /**

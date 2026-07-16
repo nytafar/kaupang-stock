@@ -20,6 +20,7 @@ use Kaupang\Stock\Schema;
  *                  sums always net to the movement's true COGS)
  *  - correction    operator cost correction drain (movement_id NULL,
  *                  ref = the corrected layer via its layer_id)
+ *  - transfer_out  FIFO layer drawn by the source side of a transfer
  *
  * cost_ore is qty × unit_cost_ore, exact integer øre; NULL when the source
  * layer/estimate is uncosted.
@@ -31,6 +32,7 @@ final class Consumptions {
     public const KIND_PROV_REVERSAL = 'prov_reversal';
     public const KIND_BACKFILL      = 'backfill';
     public const KIND_CORRECTION    = 'correction';
+    public const KIND_TRANSFER_OUT  = 'transfer_out';
 
     /**
      * @param array<string,mixed> $data column => value; NULLs omitted
@@ -103,6 +105,60 @@ final class Consumptions {
             'qty'        => (float) ($row['qty'] ?? 0),
             'cost_ore'   => isset($row['cost_ore']) && $row['cost_ore'] !== null ? (int) $row['cost_ore'] : null,
             'all_costed' => (int) ($row['uncosted_rows'] ?? 0) === 0,
+        ];
+    }
+
+    /**
+     * Cost basis moved out by the matching side of a transfer.
+     *
+     * Null means the transfer_out movement has not been folded yet. A present
+     * result may still have a null unit cost: that is a real, fully folded but
+     * uncosted source, and transfer_in must preserve it as uncosted/estimated.
+     *
+     * @return array{qty:float,cost_ore:?int,all_costed:bool,is_estimate:bool}|null
+     */
+    public static function transferBasis(string $batch, int $productId): ?array {
+        global $wpdb;
+
+        $movement = $wpdb->get_row($wpdb->prepare(
+            'SELECT id, delta FROM ' . Schema::movements() . '
+             WHERE batch = %s AND product_id = %d AND reason = %s
+             ORDER BY id ASC LIMIT 1',
+            $batch,
+            $productId,
+            \Kaupang\Stock\Ledger\Reasons::TRANSFER_OUT
+        ), ARRAY_A);
+        if (!is_array($movement)) {
+            return null;
+        }
+
+        $row = $wpdb->get_row($wpdb->prepare(
+            'SELECT COUNT(*) AS row_count,
+                    COALESCE(SUM(c.qty), 0) AS qty,
+                    SUM(c.cost_ore) AS cost_ore,
+                    SUM(CASE WHEN c.cost_ore IS NULL THEN 1 ELSE 0 END) AS uncosted_rows,
+                    MAX(CASE
+                        WHEN c.kind = %s OR c.cost_ore IS NULL OR COALESCE(l.is_estimate, 0) = 1 THEN 1
+                        ELSE 0
+                    END) AS is_estimate
+             FROM ' . Schema::costConsumptions() . ' c
+             LEFT JOIN ' . Schema::costLayers() . ' l ON l.id = c.layer_id
+             WHERE c.movement_id = %d',
+            self::KIND_PROVISIONAL,
+            (int) $movement['id']
+        ), ARRAY_A);
+
+        $expected = abs((float) $movement['delta']);
+        $qty      = (float) ($row['qty'] ?? 0);
+        if ((int) ($row['row_count'] ?? 0) === 0 || abs($qty - $expected) > 1e-9) {
+            return null;
+        }
+
+        return [
+            'qty'         => $qty,
+            'cost_ore'    => isset($row['cost_ore']) && $row['cost_ore'] !== null ? (int) $row['cost_ore'] : null,
+            'all_costed'  => (int) ($row['uncosted_rows'] ?? 0) === 0,
+            'is_estimate' => (int) ($row['is_estimate'] ?? 0) === 1,
         ];
     }
 

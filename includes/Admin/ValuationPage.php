@@ -12,6 +12,7 @@ use Kaupang\Stock\Costing\Sweeper;
 use Kaupang\Stock\Costing\Valuation;
 use Kaupang\Stock\Costing\WcCogsBridge;
 use Kaupang\Stock\Ledger\Reasons;
+use Kaupang\Stock\Locations;
 use Kaupang\Stock\Schema;
 use Kaupang\Stock\Settings;
 use Kaupang\Stock\Support\ProductSearch;
@@ -55,13 +56,14 @@ final class ValuationPage {
         // phpcs:disable WordPress.Security.NonceVerification -- read-only GET filters.
         $view      = isset($_GET['view']) ? \sanitize_key((string) $_GET['view']) : '';
         $productId = isset($_GET['product']) ? (int) $_GET['product'] : 0;
+        $locationId = isset($_GET['location']) ? (int) $_GET['location'] : 0;
         // phpcs:enable
 
         echo '<div class="wrap ks-wrap">';
         self::notices();
 
         if ($view === 'product' && $productId > 0) {
-            self::renderDrilldown($productId);
+            self::renderDrilldown($productId, $locationId);
             echo '</div>';
             return;
         }
@@ -151,7 +153,8 @@ final class ValuationPage {
             $asOfRaw = '';
         }
 
-        $rows   = Valuation::rows($asOfUtc);
+        $multi  = Locations::isMulti();
+        $rows   = $multi ? Valuation::rowsByLocation($asOfUtc) : Valuation::rows($asOfUtc);
         $totals = Valuation::totals($asOfUtc);
         ?>
         <form method="get" class="ks-valuation-filter">
@@ -174,6 +177,7 @@ final class ValuationPage {
         <table class="wp-list-table widefat striped ks-valuation-table">
             <thead><tr>
                 <th><?php \esc_html_e('Product', 'kaupang-stock'); ?></th>
+                <?php if ($multi): ?><th><?php \esc_html_e('Location', 'kaupang-stock'); ?></th><?php endif; ?>
                 <th class="ks-num"><?php \esc_html_e('Qty', 'kaupang-stock'); ?></th>
                 <th class="ks-num"><?php \esc_html_e('Avg cost', 'kaupang-stock'); ?></th>
                 <th class="ks-num"><?php \esc_html_e('Value', 'kaupang-stock'); ?></th>
@@ -182,7 +186,7 @@ final class ValuationPage {
             </tr></thead>
             <tbody>
             <?php if ($rows === []): ?>
-                <tr><td colspan="6" class="ks-muted"><?php \esc_html_e('No cost layers yet — receive goods with a cost, add stock with “à kr”, or enter opening costs.', 'kaupang-stock'); ?></td></tr>
+                <tr><td colspan="<?php echo $multi ? 7 : 6; ?>" class="ks-muted"><?php \esc_html_e('No cost layers yet — receive goods with a cost, add stock with “à kr”, or enter opening costs.', 'kaupang-stock'); ?></td></tr>
             <?php endif; ?>
             <?php foreach ($rows as $row):
                 $costedQty = $row['open_qty'] - $row['uncosted_qty'];
@@ -190,6 +194,7 @@ final class ValuationPage {
                 ?>
                 <tr>
                     <td><?php echo \esc_html(ProductSearch::label($row['product_id'])); ?></td>
+                    <?php if ($multi): ?><td><?php echo \esc_html(Locations::name((int) $row['location_id'])); ?></td><?php endif; ?>
                     <td class="ks-num"><?php echo \esc_html(self::qty($row['open_qty'])); ?></td>
                     <td class="ks-num"><?php echo $avg !== null ? \esc_html(self::kr($avg)) : '—'; ?></td>
                     <td class="ks-num"><?php echo \esc_html(self::kr($row['value_ore'])); ?></td>
@@ -204,12 +209,13 @@ final class ValuationPage {
                             <span class="ks-chip ks-chip-warning"><?php echo \esc_html(sprintf(\__('Provisional %s', 'kaupang-stock'), self::qty($row['provisional_qty']))); ?></span>
                         <?php endif; ?>
                     </td>
-                    <td><a href="<?php echo \esc_url(self::url(['view' => 'product', 'product' => $row['product_id']])); ?>"><?php \esc_html_e('Details', 'kaupang-stock'); ?></a></td>
+                    <td><a href="<?php echo \esc_url(self::url(array_filter(['view' => 'product', 'product' => $row['product_id'], 'location' => $multi ? $row['location_id'] : 0]))); ?>"><?php \esc_html_e('Details', 'kaupang-stock'); ?></a></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
             <tfoot><tr>
                 <th><?php \esc_html_e('Total', 'kaupang-stock'); ?></th>
+                <?php if ($multi): ?><th></th><?php endif; ?>
                 <th class="ks-num"><?php echo \esc_html(self::qty($totals['open_qty'])); ?></th>
                 <th></th>
                 <th class="ks-num"><strong><?php echo \esc_html(self::kr($totals['total_ore'])); ?></strong></th>
@@ -314,13 +320,15 @@ final class ValuationPage {
 
     /* ----------------------------- Drill-down ----------------------------- */
 
-    private static function renderDrilldown(int $productId): void {
+    private static function renderDrilldown(int $productId, int $locationId = 0): void {
+        $locationId = Locations::isMulti() && Locations::exists($locationId) ? $locationId : 0;
         ?>
         <h1><?php echo \esc_html(sprintf(
             /* translators: %s: product label */
             \__('Cost layers — %s', 'kaupang-stock'),
             ProductSearch::label($productId)
         )); ?></h1>
+        <?php if ($locationId > 0): ?><p class="ks-muted"><?php echo \esc_html(Locations::name($locationId)); ?></p><?php endif; ?>
         <p><a href="<?php echo \esc_url(self::url([])); ?>">&larr; <?php \esc_html_e('Back to stock value', 'kaupang-stock'); ?></a></p>
 
         <h2><?php \esc_html_e('Layers', 'kaupang-stock'); ?></h2>
@@ -336,7 +344,7 @@ final class ValuationPage {
                 <th><?php \esc_html_e('Date', 'kaupang-stock'); ?></th>
             </tr></thead>
             <tbody>
-            <?php foreach (Layers::forProduct($productId, 0, 200) as $layer): ?>
+            <?php foreach (Layers::forProduct($productId, $locationId, 200) as $layer): ?>
                 <tr>
                     <td class="ks-muted">#<?php echo (int) $layer['id']; ?></td>
                     <td>
@@ -368,7 +376,7 @@ final class ValuationPage {
                 <th><?php \esc_html_e('Ref', 'kaupang-stock'); ?></th>
             </tr></thead>
             <tbody>
-            <?php foreach (Consumptions::forProduct($productId, 0, 200) as $c): ?>
+            <?php foreach (Consumptions::forProduct($productId, $locationId, 200) as $c): ?>
                 <tr>
                     <td class="ks-muted"><?php echo \esc_html(self::localTime((string) $c['occurred_at'])); ?></td>
                     <td><span class="ks-reason-chip"><?php echo \esc_html(self::kindLabel((string) $c['kind'])); ?></span></td>
@@ -421,7 +429,8 @@ final class ValuationPage {
         }
 
         Sweeper::sweepAll();
-        $rows   = Valuation::rows($asOfUtc);
+        $multi  = Locations::isMulti();
+        $rows   = $multi ? Valuation::rowsByLocation($asOfUtc) : Valuation::rows($asOfUtc);
         $totals = Valuation::totals($asOfUtc);
 
         $filename = 'lagerverdi-' . $asOfRaw . '.csv';
@@ -432,22 +441,39 @@ final class ValuationPage {
         $out = fopen('php://output', 'w');
         // BOM so Excel opens UTF-8 (æøå in product names) correctly.
         fwrite($out, "\xEF\xBB\xBF");
-        fputcsv($out, ['product_id', 'product', 'qty', 'uncosted_qty', 'estimate_qty', 'provisional_qty', 'avg_cost_kr', 'value_kr'], ';');
+        $headers = ['product_id', 'product'];
+        if ($multi) {
+            $headers = array_merge($headers, ['location_id', 'location']);
+        }
+        $headers = array_merge($headers, ['qty', 'uncosted_qty', 'estimate_qty', 'provisional_qty', 'avg_cost_kr', 'value_kr']);
+        fputcsv($out, $headers, ';');
         foreach ($rows as $row) {
             $costedQty = $row['open_qty'] - $row['uncosted_qty'];
             $avg       = $costedQty > 1e-9 ? round($row['value_ore'] / $costedQty) / 100 : null;
-            fputcsv($out, [
+            $csv = [
                 $row['product_id'],
                 ProductSearch::label($row['product_id']),
+            ];
+            if ($multi) {
+                $csv[] = (int) $row['location_id'];
+                $csv[] = Locations::name((int) $row['location_id']);
+            }
+            $csv = array_merge($csv, [
                 self::qty($row['open_qty']),
                 self::qty($row['uncosted_qty']),
                 self::qty($row['estimate_qty']),
                 self::qty($row['provisional_qty']),
                 $avg !== null ? number_format($avg, 2, ',', '') : '',
                 number_format($row['value_ore'] / 100, 2, ',', ''),
-            ], ';');
+            ]);
+            fputcsv($out, $csv, ';');
         }
-        fputcsv($out, ['', 'TOTAL', self::qty($totals['open_qty']), self::qty($totals['uncosted_qty']), self::qty($totals['estimate_qty']), self::qty($totals['provisional_qty']), '', number_format($totals['total_ore'] / 100, 2, ',', '')], ';');
+        $total = ['', 'TOTAL'];
+        if ($multi) {
+            $total = array_merge($total, ['', '']);
+        }
+        $total = array_merge($total, [self::qty($totals['open_qty']), self::qty($totals['uncosted_qty']), self::qty($totals['estimate_qty']), self::qty($totals['provisional_qty']), '', number_format($totals['total_ore'] / 100, 2, ',', '')]);
+        fputcsv($out, $total, ';');
         fclose($out);
         exit;
     }
@@ -489,6 +515,7 @@ final class ValuationPage {
             Consumptions::KIND_PROV_REVERSAL => \__('True-up (reversal)', 'kaupang-stock'),
             Consumptions::KIND_BACKFILL      => \__('True-up (backfill)', 'kaupang-stock'),
             Consumptions::KIND_CORRECTION    => \__('Correction', 'kaupang-stock'),
+            Consumptions::KIND_TRANSFER_OUT  => \__('Transfer out', 'kaupang-stock'),
         ];
         return $labels[$kind] ?? $kind;
     }

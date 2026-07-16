@@ -13,6 +13,7 @@ use Kaupang\Stock\Reconcile\Reconciler;
 use Kaupang\Stock\Schema;
 use Kaupang\Stock\Settings;
 use Kaupang\Stock\Support\ProductSearch;
+use Kaupang\Stock\Transfers;
 
 /**
  * Lagerstatus (§6.1) — one row per stock-managed product/variation, plus any
@@ -36,11 +37,13 @@ final class StatusPage {
 
     private const PER_PAGE      = 50;
     private const ACT_ADJUST    = 'kaupang_stock_quick_adjust';
+    public const ACT_TRANSFER   = 'kaupang_stock_quick_transfer';
     private const ACT_HEAL      = 'kaupang_stock_heal';
     private const ACT_RECONCILE = 'kaupang_stock_reconcile_now';
 
     public static function register(): void {
         \add_action('admin_post_' . self::ACT_ADJUST, [self::class, 'handleAdjust']);
+        \add_action('admin_post_' . self::ACT_TRANSFER, [self::class, 'handleTransfer']);
         \add_action('admin_post_' . self::ACT_HEAL, [self::class, 'handleHeal']);
         \add_action('admin_post_' . self::ACT_RECONCILE, [self::class, 'handleReconcile']);
     }
@@ -107,12 +110,15 @@ final class StatusPage {
                         <th scope="col" class="ks-num"><?php \esc_html_e('Incoming', 'kaupang-stock'); ?></th>
                         <th scope="col"><?php \esc_html_e('Last movement', 'kaupang-stock'); ?></th>
                         <th scope="col"><?php \esc_html_e('Status', 'kaupang-stock'); ?></th>
+                        <?php if ($multi): ?>
+                            <th scope="col" class="ks-col-transfer"><?php \esc_html_e('Quick transfer', 'kaupang-stock'); ?></th>
+                        <?php endif; ?>
                         <th scope="col" class="ks-col-adjust"><?php \esc_html_e('Quick adjust', 'kaupang-stock'); ?></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($slice)): ?>
-                        <tr><td colspan="<?php echo 8 + count($locations); ?>"><?php \esc_html_e('No stock-managed products yet.', 'kaupang-stock'); ?></td></tr>
+                        <tr><td colspan="<?php echo 8 + count($locations) + ($multi ? 1 : 0); ?>"><?php \esc_html_e('No stock-managed products yet.', 'kaupang-stock'); ?></td></tr>
                     <?php else: foreach ($slice as $productId):
                         $inScope  = isset($managed[$productId]);
                         $row      = $balances[$productId] ?? null;
@@ -151,6 +157,9 @@ final class StatusPage {
                             <td class="ks-num"><?php echo $inc > 0 ? \esc_html(self::qty($inc)) : '—'; ?></td>
                             <td><?php echo self::lastMovementCell($lastMoves[$productId] ?? null); // escaped inside ?></td>
                             <td><?php echo self::statusChips($onHand, $productId, $negWarn, $inScope, $hasNegativeLocation); // escaped inside ?></td>
+                            <?php if ($multi): ?>
+                                <td class="ks-col-transfer"><?php self::transferForm($productId, $canAdjust && $inScope, true); ?></td>
+                            <?php endif; ?>
                             <td class="ks-col-adjust"><?php self::quickAdjustForm($productId, $canAdjust, $inScope, $multi); ?></td>
                         </tr>
                     <?php endforeach; endif; ?>
@@ -228,6 +237,38 @@ final class StatusPage {
             self::redirect(['ks_msg' => 'adjusted']);
         } catch (LedgerException $e) {
             self::redirect(['ks_err' => 'ledger', 'ks_detail' => rawurlencode($e->getMessage())]);
+        }
+    }
+
+    public static function handleTransfer(): void {
+        self::guard(self::ACT_TRANSFER);
+
+        $productId = isset($_POST['product_id']) ? (int) $_POST['product_id'] : 0;
+        $quantity = isset($_POST['quantity']) ? (int) $_POST['quantity'] : 0;
+        $sourceLocationId = isset($_POST['source_location_id']) ? (int) $_POST['source_location_id'] : 0;
+        $destinationLocationId = isset($_POST['destination_location_id']) ? (int) $_POST['destination_location_id'] : 0;
+        $token = \sanitize_text_field(\wp_unslash((string) ($_POST['token'] ?? '')));
+        $note = \sanitize_text_field(\wp_unslash((string) ($_POST['note'] ?? '')));
+
+        if ($productId <= 0) {
+            self::redirect(['ks_err' => 'product']);
+        }
+        if ($quantity <= 0) {
+            self::redirect(['ks_err' => 'transfer_quantity']);
+        }
+
+        try {
+            Transfers::transfer(
+                $productId,
+                $quantity,
+                $sourceLocationId,
+                $destinationLocationId,
+                $token,
+                $note !== '' ? $note : null
+            );
+            self::redirect(['ks_msg' => 'transferred']);
+        } catch (\Throwable $e) {
+            self::redirect(['ks_err' => 'transfer', 'ks_detail' => rawurlencode($e->getMessage())]);
         }
     }
 
@@ -490,6 +531,59 @@ final class StatusPage {
         <?php
     }
 
+    /** Quick transfer form shared with the product-side panel. */
+    public static function transferForm(int $productId, bool $enabled, bool $compact = false): void {
+        if (!Locations::isMulti()) {
+            return;
+        }
+
+        $locations = Locations::all(true);
+        $sourceId = Balances::defaultLocationId();
+        $destinationId = 0;
+        foreach ($locations as $location) {
+            $candidate = (int) $location['id'];
+            if ($candidate !== $sourceId) {
+                $destinationId = $candidate;
+                break;
+            }
+        }
+        if ($destinationId <= 0) {
+            return;
+        }
+
+        $disabled = $enabled ? '' : ' disabled';
+        $title = $enabled ? '' : \esc_attr__('Switch to active mode in settings to transfer stock.', 'kaupang-stock');
+        ?>
+        <form method="post" action="<?php echo \esc_url(\admin_url('admin-post.php')); ?>" class="ks-quick-transfer<?php echo $compact ? ' ks-quick-transfer-compact' : ''; ?>"<?php echo $title !== '' ? ' title="' . $title . '"' : ''; ?>>
+            <?php \wp_nonce_field(self::ACT_TRANSFER); ?>
+            <input type="hidden" name="action" value="<?php echo \esc_attr(self::ACT_TRANSFER); ?>" />
+            <input type="hidden" name="product_id" value="<?php echo (int) $productId; ?>" />
+            <input type="hidden" name="token" value="<?php echo \esc_attr(\wp_generate_uuid4()); ?>" />
+            <label><span><?php \esc_html_e('From', 'kaupang-stock'); ?></span>
+                <select name="source_location_id"<?php echo $disabled; ?>>
+                    <?php foreach ($locations as $location): $id = (int) $location['id']; ?>
+                        <option value="<?php echo $id; ?>" <?php \selected($id, $sourceId); ?>><?php echo \esc_html((string) $location['name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label><span><?php \esc_html_e('To', 'kaupang-stock'); ?></span>
+                <select name="destination_location_id"<?php echo $disabled; ?>>
+                    <?php foreach ($locations as $location): $id = (int) $location['id']; ?>
+                        <option value="<?php echo $id; ?>" <?php \selected($id, $destinationId); ?>><?php echo \esc_html((string) $location['name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label><span><?php \esc_html_e('Qty', 'kaupang-stock'); ?></span>
+                <input type="number" name="quantity" step="1" min="1" class="small-text" required<?php echo $disabled; ?> />
+            </label>
+            <label class="ks-transfer-note"><span><?php \esc_html_e('Note', 'kaupang-stock'); ?></span>
+                <input type="text" name="note" maxlength="255" placeholder="<?php \esc_attr_e('Optional', 'kaupang-stock'); ?>"<?php echo $disabled; ?> />
+            </label>
+            <button type="submit" class="button button-small"<?php echo $disabled; ?>><?php \esc_html_e('Transfer', 'kaupang-stock'); ?></button>
+        </form>
+        <?php
+    }
+
     /* ------------------------- Reconcile banner --------------------------- */
 
     private static function reconcileBanner(): void {
@@ -572,6 +666,8 @@ final class StatusPage {
 
         if ($msg === 'adjusted') {
             self::flash('success', \__('Stock adjusted.', 'kaupang-stock'));
+        } elseif ($msg === 'transferred') {
+            self::flash('success', \__('Stock transferred.', 'kaupang-stock'));
         } elseif ($msg === 'healed') {
             self::flash('success', sprintf(
                 /* translators: %s: heal outcome */
@@ -595,6 +691,14 @@ final class StatusPage {
             self::flash('error', \__('Enter a non-zero quantity change.', 'kaupang-stock'));
         } elseif ($err === 'note') {
             self::flash('error', \__('A note is required for an adjustment.', 'kaupang-stock'));
+        } elseif ($err === 'transfer_quantity') {
+            self::flash('error', \__('Enter a positive whole transfer quantity.', 'kaupang-stock'));
+        } elseif ($err === 'transfer') {
+            self::flash('error', sprintf(
+                /* translators: %s: transfer error message */
+                \__('Could not transfer stock: %s', 'kaupang-stock'),
+                $detail !== '' ? $detail : \__('unknown error', 'kaupang-stock')
+            ));
         } elseif ($err === 'ledger') {
             self::flash('error', sprintf(
                 /* translators: %s: ledger error message */

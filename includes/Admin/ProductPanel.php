@@ -6,6 +6,7 @@ namespace Kaupang\Stock\Admin;
 use Kaupang\Stock\Ledger\Balances;
 use Kaupang\Stock\Ledger\Movements;
 use Kaupang\Stock\Ledger\Reasons;
+use Kaupang\Stock\Locations;
 use Kaupang\Stock\Settings;
 use Kaupang\Stock\Purchasing\SupplierProducts;
 use Kaupang\Stock\Support\ProductSearch;
@@ -80,6 +81,7 @@ final class ProductPanel {
         echo '</tbody></table>';
 
         self::supplierLinks([$managedId], false);
+        self::transfer($managedId);
         self::recentMovements($managedId);
         self::movementsLink($managedId);
     }
@@ -115,6 +117,14 @@ final class ProductPanel {
         }
         echo '</tbody></table>';
         self::supplierLinks(array_map('intval', array_keys($balances)), true);
+        if (Locations::isMulti()) {
+            echo '<h4 class="ks-panel-heading">' . \esc_html__('Quick transfer', 'kaupang-stock') . '</h4>';
+            foreach (array_keys($balances) as $childId) {
+                echo '<div class="ks-panel-transfer-product"><strong>' . \esc_html(ProductSearch::label((int) $childId)) . '</strong>';
+                StatusPage::transferForm((int) $childId, Settings::activeMode());
+                echo '</div>';
+            }
+        }
     }
 
     /** Read-only supplier identity links for this product (or its variations). */
@@ -173,6 +183,14 @@ final class ProductPanel {
             echo '</tr>';
         }
         echo '</tbody></table>';
+    }
+
+    private static function transfer(int $productId): void {
+        if (!Locations::isMulti()) {
+            return;
+        }
+        echo '<h4 class="ks-panel-heading">' . \esc_html__('Quick transfer', 'kaupang-stock') . '</h4>';
+        StatusPage::transferForm($productId, Settings::activeMode());
     }
 
     private static function movementsLink(int $productId): void {

@@ -25,6 +25,33 @@ final class Valuation {
      * }> keyed by product id and aggregated across locations
      */
     public static function rows(?string $asOfUtc = null): array {
+        $out = [];
+        foreach (self::rowsByLocation($asOfUtc) as $row) {
+            $productId = $row['product_id'];
+            if (!isset($out[$productId])) {
+                $out[$productId] = self::emptyRow($productId, 0);
+            }
+            foreach (['open_qty', 'uncosted_qty', 'estimate_qty', 'provisional_qty'] as $field) {
+                $out[$productId][$field] += (float) $row[$field];
+            }
+            foreach (['value_ore', 'provisional_cost_ore'] as $field) {
+                $out[$productId][$field] += (int) $row[$field];
+            }
+        }
+        ksort($out);
+        return $out;
+    }
+
+    /**
+     * Per-product, per-location rows for multi-location reporting.
+     *
+     * @return array<int,array{
+     *   product_id:int, location_id:int, open_qty:float, value_ore:int,
+     *   uncosted_qty:float, estimate_qty:float, provisional_qty:float,
+     *   provisional_cost_ore:int
+     * }> ordered by product and location
+     */
+    public static function rowsByLocation(?string $asOfUtc = null): array {
         global $wpdb;
         $timeFilterLayers       = $asOfUtc !== null ? $wpdb->prepare(' AND l.occurred_at <= %s', $asOfUtc) : '';
         $timeFilterConsumptions = $asOfUtc !== null ? $wpdb->prepare(' AND c.occurred_at <= %s', $asOfUtc) : '';
@@ -62,45 +89,46 @@ final class Valuation {
         $out = [];
         foreach ($layerRows as $row) {
             $productId = (int) $row['product_id'];
-            if (!isset($out[$productId])) {
-                $out[$productId] = [
-                    'product_id'           => $productId,
-                    'location_id'          => 0,
-                    'open_qty'             => 0.0,
-                    'value_ore'            => 0,
-                    'uncosted_qty'         => 0.0,
-                    'estimate_qty'         => 0.0,
-                    'provisional_qty'      => 0.0,
-                    'provisional_cost_ore' => 0,
-                ];
+            $locationId = (int) $row['location_id'];
+            $key = $productId . ':' . $locationId;
+            if (!isset($out[$key])) {
+                $out[$key] = self::emptyRow($productId, $locationId);
             }
-            $out[$productId]['open_qty'] += (float) $row['open_qty'];
-            $out[$productId]['value_ore'] += (int) $row['value_ore'];
-            $out[$productId]['uncosted_qty'] += (float) $row['uncosted_qty'];
-            $out[$productId]['estimate_qty'] += (float) $row['estimate_qty'];
+            $out[$key]['open_qty'] += (float) $row['open_qty'];
+            $out[$key]['value_ore'] += (int) $row['value_ore'];
+            $out[$key]['uncosted_qty'] += (float) $row['uncosted_qty'];
+            $out[$key]['estimate_qty'] += (float) $row['estimate_qty'];
         }
         foreach ($provRows as $row) {
             $productId = (int) $row['product_id'];
             if ((float) $row['prov_qty'] <= 1e-9) {
                 continue;
             }
-            if (!isset($out[$productId])) {
-                $out[$productId] = [
-                    'product_id'           => $productId,
-                    'location_id'          => 0,
-                    'open_qty'             => 0.0,
-                    'value_ore'            => 0,
-                    'uncosted_qty'         => 0.0,
-                    'estimate_qty'         => 0.0,
-                    'provisional_qty'      => 0.0,
-                    'provisional_cost_ore' => 0,
-                ];
+            $locationId = (int) $row['location_id'];
+            $key = $productId . ':' . $locationId;
+            if (!isset($out[$key])) {
+                $out[$key] = self::emptyRow($productId, $locationId);
             }
-            $out[$productId]['provisional_qty']      += (float) $row['prov_qty'];
-            $out[$productId]['provisional_cost_ore'] += (int) $row['prov_cost'];
+            $out[$key]['provisional_qty']      += (float) $row['prov_qty'];
+            $out[$key]['provisional_cost_ore'] += (int) $row['prov_cost'];
         }
-        ksort($out);
-        return $out;
+        $rows = array_values($out);
+        usort($rows, static fn (array $a, array $b): int => [$a['product_id'], $a['location_id']] <=> [$b['product_id'], $b['location_id']]);
+        return $rows;
+    }
+
+    /** @return array<string,int|float> */
+    private static function emptyRow(int $productId, int $locationId): array {
+        return [
+            'product_id'           => $productId,
+            'location_id'          => $locationId,
+            'open_qty'             => 0.0,
+            'value_ore'            => 0,
+            'uncosted_qty'         => 0.0,
+            'estimate_qty'         => 0.0,
+            'provisional_qty'      => 0.0,
+            'provisional_cost_ore' => 0,
+        ];
     }
 
     /**

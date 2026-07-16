@@ -148,6 +148,10 @@
 	min-width: 260px;
 }
 
+.ks-status-table .ks-col-transfer {
+	min-width: 560px;
+}
+
 .ks-neg {
 	color: var(--ks-neg);
 	font-weight: 600;
@@ -233,6 +237,52 @@
 
 .ks-quick-adjust[title] {
 	opacity: 0.75;
+}
+
+/* --- quick transfer ----------------------------------------------------- */
+.ks-quick-transfer {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 6px;
+	margin: 6px 0;
+}
+
+.ks-quick-transfer label span {
+	display: block;
+	font-size: 11px;
+	color: var(--ks-muted);
+}
+
+.ks-quick-transfer select,
+.ks-quick-transfer input[type="text"] {
+	width: 100%;
+}
+
+.ks-quick-transfer .ks-transfer-note {
+	grid-column: 1 / -1;
+}
+
+.ks-quick-transfer button {
+	align-self: end;
+}
+
+.ks-quick-transfer[title] {
+	opacity: .75;
+}
+
+.ks-quick-transfer-compact {
+	grid-template-columns: minmax(100px, 1fr) minmax(100px, 1fr) 62px minmax(100px, 1fr) auto;
+	align-items: end;
+	min-width: 560px;
+}
+
+.ks-quick-transfer-compact .ks-transfer-note {
+	grid-column: auto;
+}
+
+.ks-panel-transfer-product {
+	padding: 6px 0;
+	border-bottom: 1px solid #f0f0f1;
 }
 
 /* --- collapsible panel -------------------------------------------------- */
