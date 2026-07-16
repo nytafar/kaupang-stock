@@ -34,6 +34,10 @@ final class Settings {
             'variance_threshold_pct' => 20,
             // Surface negative on-hand as a warning chip on Lagerstatus.
             'negative_warning'       => true,
+            // Owned operations may take an individual location below zero.
+            'allow_negative_locations' => true,
+            // WC_Order::get_created_via() value => active location id.
+            'order_location_map'     => [],
             // FIFO cost layers: fold movements into cost basis + COGS (projection
             // only — works in shadow mode; receipts still require active mode).
             'costing_enabled'        => false,

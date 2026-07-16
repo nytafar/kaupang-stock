@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Kaupang\Stock\Ledger;
 
 use Kaupang\Stock\Logging\Logger;
+use Kaupang\Stock\Locations;
 use Kaupang\Stock\Schema;
 use Kaupang\Stock\Settings;
 
@@ -188,7 +189,7 @@ final class Ledger {
         self::begin();
         try {
             $row = Balances::lockRow($productId, $locationId);
-            if ((int) $row['last_movement_id'] > 0 || self::hasMovements($productId, $locationId)) {
+            if ((int) $row['last_movement_id'] > 0 || self::hasMovements($productId)) {
                 self::commit();
                 return false;
             }
@@ -224,21 +225,26 @@ final class Ledger {
      * Shutdown/reconcile true-up (§4 mechanics): lock the balance row FIRST,
      * then read _stock — the lock-then-read order is what makes concurrent
      * true-ups of the same product serialize instead of double-recording one
-     * residual. Records residual = _stock − on_hand with the best pending
+     * residual. Records residual = _stock − SUM(on_hand) with the best pending
      * claim's attribution, `initial` on first sight (path c), else `external`.
      *
-     * @param array<string,mixed>|null $claim {reason, ref_type, ref_id, ref_line, via}
+     * @param array<string,mixed>|null $claim {reason, ref_type, ref_id, ref_line, via, location_id}
      */
     public static function absorbResidual(int $productId, int $locationId = 0, ?array $claim = null, ?string $note = null): ?Movement {
+        if (is_array($claim) && !empty($claim['location_id'])) {
+            $locationId = (int) $claim['location_id'];
+        }
         $locationId = Balances::resolveLocation($locationId);
         self::begin();
         try {
-            $row      = Balances::lockRow($productId, $locationId);
+            $rows     = Balances::lockProductRows($productId, $locationId);
+            $row      = $rows[$locationId];
             $fresh    = self::readStockDirect($productId);
             $onHand   = (float) $row['on_hand'];
-            $residual = $fresh - $onHand;
+            $aggregate = array_sum(array_map(static fn (array $r): float => (float) $r['on_hand'], $rows));
+            $residual = $fresh - $aggregate;
 
-            $unseeded = (int) $row['last_movement_id'] === 0 && !self::hasMovements($productId, $locationId);
+            $unseeded = !self::hasMovements($productId);
 
             if (abs($residual) < 1e-9) {
                 self::commit();
@@ -262,7 +268,7 @@ final class Ledger {
                     'occurred_at'     => $now,
                     'created_at'      => $now,
                 ]);
-                Balances::updateLocked($productId, $locationId, $residual, $movementId, $movementId);
+                Balances::updateLocked($productId, $locationId, $onHand + $residual, $movementId, $movementId);
                 self::commit();
                 return self::find($movementId);
             }
@@ -378,7 +384,7 @@ final class Ledger {
         // so the opening balance is fresh − delta; for owned intents it is
         // fresh as-is (the write-through has not run yet).
         if ($lastMovement === 0 && $intent->reason !== Reasons::INITIAL
-            && !self::hasMovements($intent->productId, $locationId)
+            && !self::hasMovements($intent->productId)
         ) {
             $fresh    = self::readStockDirect($intent->productId);
             $seedBase = $fresh - (Reasons::isOwned($intent->reason) ? 0.0 : $intent->delta);
@@ -404,7 +410,10 @@ final class Ledger {
         }
 
         $balanceAfter = $onHand + $intent->delta;
-        if ($balanceAfter < 0 && !\apply_filters('kaupang/stock/allow_negative', true, $intent, $row)) {
+        $allowNegative = (bool) Settings::get('allow_negative_locations', true);
+        if (Reasons::isOwned($intent->reason) && $balanceAfter < 0
+            && !\apply_filters('kaupang/stock/allow_negative', $allowNegative, $intent, $row)
+        ) {
             throw new LedgerException(sprintf(
                 'Negative stock refused for product %d (on hand %s, delta %s)',
                 $intent->productId,
@@ -447,6 +456,9 @@ final class Ledger {
     private static function validate(MovementIntent $intent): void {
         if ($intent->productId <= 0) {
             throw new LedgerException('Movement requires a product id');
+        }
+        if ($intent->locationId > 0 && !Locations::isActive($intent->locationId)) {
+            throw new LedgerException("Unknown or inactive location {$intent->locationId}");
         }
         if (abs($intent->delta) < 1e-9) {
             throw new LedgerException('Movement delta must not be 0');
@@ -496,13 +508,20 @@ final class Ledger {
         }
     }
 
-    private static function hasMovements(int $productId, int $locationId): bool {
+    private static function hasMovements(int $productId, ?int $locationId = null): bool {
         global $wpdb;
-        $id = $wpdb->get_var($wpdb->prepare(
-            'SELECT id FROM ' . Schema::movements() . ' WHERE product_id = %d AND location_id = %d LIMIT 1',
-            $productId,
-            $locationId
-        ));
+        if ($locationId === null) {
+            $id = $wpdb->get_var($wpdb->prepare(
+                'SELECT id FROM ' . Schema::movements() . ' WHERE product_id = %d LIMIT 1',
+                $productId
+            ));
+        } else {
+            $id = $wpdb->get_var($wpdb->prepare(
+                'SELECT id FROM ' . Schema::movements() . ' WHERE product_id = %d AND location_id = %d LIMIT 1',
+                $productId,
+                $locationId
+            ));
+        }
         return $id !== null;
     }
 

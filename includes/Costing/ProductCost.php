@@ -127,14 +127,14 @@ final class ProductCost {
         return is_array($row) ? $row : null;
     }
 
-    /** All cache rows keyed by product_id (single-location v1). @return array<int,array<string,mixed>> */
+    /** All cache rows; one product may have one row per location. */
     public static function rows(): array {
         global $wpdb;
-        $out = [];
-        foreach ((array) $wpdb->get_results('SELECT * FROM ' . Schema::productCost(), ARRAY_A) as $row) {
-            $out[(int) $row['product_id']] = $row;
-        }
-        return $out;
+        $rows = $wpdb->get_results(
+            'SELECT * FROM ' . Schema::productCost() . ' ORDER BY product_id, location_id',
+            ARRAY_A
+        );
+        return is_array($rows) ? $rows : [];
     }
 
     /* ---------------------- Transaction helpers --------------------------- */

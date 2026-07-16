@@ -50,12 +50,13 @@ final class Verify {
         $cached   = ProductCost::rows();
         $openingPending = Opening::pending();
 
-        foreach ($cached as $productId => $cache) {
+        foreach ($cached as $cache) {
+            $productId = (int) $cache['product_id'];
             $locationId = (int) $cache['location_id'];
             $report['checked']++;
 
             // 1) Watermark lag (sweep should normally have drained this).
-            $balanceRow = $balances[$productId] ?? null;
+            $balanceRow = $balances[$productId][$locationId] ?? null;
             $bLast      = $balanceRow !== null ? (int) $balanceRow['last_movement_id'] : 0;
             $pcLast     = (int) $cache['last_movement_id'];
             if ($bLast > max($pcLast, $anchorId)) {

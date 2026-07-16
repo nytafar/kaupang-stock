@@ -15,7 +15,7 @@ final class Movements {
 
     /**
      * @param array<string,mixed> $filters product_id, reason (string|string[]),
-     *        ref_type, ref_id, batch, actor_id, via, occurred_from, occurred_to
+     *        location_id, ref_type, ref_id, batch, actor_id, via, occurred_from, occurred_to
      *        (UTC 'Y-m-d H:i:s'), id_after
      * @return array{rows: array<int,array<string,mixed>>, total: int}
      */
@@ -106,19 +106,62 @@ final class Movements {
         return $out;
     }
 
-    /** SUM(delta) per product — reconciler/audit only, never a hot path. */
-    public static function sumPerProduct(int $locationId = 0): array {
+    /** SUM(delta) per product across all locations, or one explicit location. */
+    public static function sumPerProduct(?int $locationId = null): array {
         global $wpdb;
-        $rows = $wpdb->get_results($wpdb->prepare(
-            'SELECT product_id, COALESCE(SUM(delta), 0) AS total FROM ' . Schema::movements()
-            . ' WHERE location_id = %d GROUP BY product_id',
-            Balances::resolveLocation($locationId)
-        ), ARRAY_A);
+        $sql = 'SELECT product_id, COALESCE(SUM(delta), 0) AS total FROM ' . Schema::movements();
+        if ($locationId !== null) {
+            $sql = $wpdb->prepare($sql . ' WHERE location_id = %d', Balances::resolveLocation($locationId));
+        }
+        $rows = $wpdb->get_results($sql . ' GROUP BY product_id', ARRAY_A);
         $out = [];
         foreach ((array) $rows as $row) {
             $out[(int) $row['product_id']] = (float) $row['total'];
         }
         return $out;
+    }
+
+    /** @return array<int,array<int,float>> product id => location id => total */
+    public static function sumPerProductLocation(): array {
+        global $wpdb;
+        $rows = $wpdb->get_results(
+            'SELECT product_id, location_id, COALESCE(SUM(delta), 0) AS total FROM '
+            . Schema::movements() . ' GROUP BY product_id, location_id',
+            ARRAY_A
+        );
+        $out = [];
+        foreach ((array) $rows as $row) {
+            $out[(int) $row['product_id']][(int) $row['location_id']] = (float) $row['total'];
+        }
+        return $out;
+    }
+
+    /** Original sale location for deterministic restores/refunds. */
+    public static function saleLocation(int $orderId, ?int $itemId, int $productId): ?int {
+        global $wpdb;
+        if ($orderId <= 0 || $productId <= 0) {
+            return null;
+        }
+        $table = Schema::movements();
+        if ($itemId !== null && $itemId > 0) {
+            $id = $wpdb->get_var($wpdb->prepare(
+                "SELECT location_id FROM $table WHERE reason = %s AND ref_type = 'order' AND ref_id = %d AND ref_line = %d AND product_id = %d ORDER BY id ASC LIMIT 1",
+                Reasons::SALE,
+                $orderId,
+                $itemId,
+                $productId
+            ));
+            if ($id !== null) {
+                return (int) $id;
+            }
+        }
+        $id = $wpdb->get_var($wpdb->prepare(
+            "SELECT location_id FROM $table WHERE reason = %s AND ref_type = 'order' AND ref_id = %d AND product_id = %d ORDER BY id ASC LIMIT 1",
+            Reasons::SALE,
+            $orderId,
+            $productId
+        ));
+        return $id !== null ? (int) $id : null;
     }
 
     /** @return array{0:string,1:array<int,mixed>} */
@@ -129,6 +172,10 @@ final class Movements {
         if (!empty($filters['product_id'])) {
             $clauses[] = 'product_id = %d';
             $args[]    = (int) $filters['product_id'];
+        }
+        if (!empty($filters['location_id'])) {
+            $clauses[] = 'location_id = %d';
+            $args[]    = Balances::resolveLocation((int) $filters['location_id']);
         }
         if (!empty($filters['reason'])) {
             $reasons = array_values(array_filter(array_map('strval', (array) $filters['reason'])));

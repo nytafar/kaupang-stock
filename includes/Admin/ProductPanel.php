@@ -68,7 +68,7 @@ final class ProductPanel {
     }
 
     private static function renderSingle(int $managedId): void {
-        $row      = Balances::row($managedId);
+        $row      = Balances::aggregateRows([$managedId])[$managedId] ?? null;
         $onHand   = $row !== null ? (float) $row['on_hand'] : 0.0;
         $reserved = self::reserved($managedId);
         $avail    = $onHand - $reserved;
@@ -92,7 +92,7 @@ final class ProductPanel {
         }
 
         // One balances read for all children; only those that own _stock appear.
-        $balances = Balances::rows(array_map('intval', $childIds));
+        $balances = Balances::aggregateRows(array_map('intval', $childIds));
         if (empty($balances)) {
             echo '<p>' . \esc_html__('No stock-managed variations.', 'kaupang-stock') . '</p>';
             return;

@@ -7,6 +7,7 @@ use Kaupang\Stock\Ledger\Ledger;
 use Kaupang\Stock\Ledger\LedgerException;
 use Kaupang\Stock\Ledger\Movements;
 use Kaupang\Stock\Ledger\Reasons;
+use Kaupang\Stock\Locations;
 use Kaupang\Stock\Observe\Seeder;
 use Kaupang\Stock\Reconcile\Reconciler;
 use Kaupang\Stock\Schema;
@@ -190,6 +191,9 @@ final class Command {
      * [--date=<date>]
      * : Effective date as Y-m-d (occurred_at). Defaults to now.
      *
+     * [--location=<id>]
+     * : Multi-location only. Record the adjustment at this active location.
+     *
      * [--cost=<kr>]
      * : Unit cost ex-VAT in kr for a positive adjustment ("add 20 @ 101") —
      *   prices the FIFO cost layer exactly. Requires cost tracking enabled.
@@ -234,6 +238,13 @@ final class Command {
         }
 
         $idem = 'cli:adjust:' . \wp_generate_uuid4();
+        $locationId = 0;
+        if (Locations::isMulti() && isset($assoc['location']) && (int) $assoc['location'] > 0) {
+            $locationId = (int) $assoc['location'];
+            if (!Locations::isActive($locationId)) {
+                \WP_CLI::error('--location must name an active stock location.');
+            }
+        }
 
         // --cost: stash the entered øre under the movement's idempotency key
         // BEFORE the ledger posts (the costing fold runs inside recordBatch).
@@ -257,7 +268,8 @@ final class Command {
                 $delta,
                 $note,
                 $occurredAt,
-                $idem
+                $idem,
+                $locationId
             );
         } catch (LedgerException $e) {
             // Shadow-mode refusal surfaces here by design — do not swallow it.
@@ -289,6 +301,9 @@ final class Command {
      * [--reason=<reason>]
      * : Restrict to one reason (sale, receipt, adjust, count, external, …).
      *
+     * [--location=<id>]
+     * : Multi-location only. Restrict to one active stock location.
+     *
      * [--from=<date>]
      * : Only movements with occurred_at on/after this Y-m-d (site-local midnight).
      *
@@ -319,6 +334,13 @@ final class Command {
             }
             $filters['reason'] = $reason;
         }
+        if (Locations::isMulti() && isset($assoc['location']) && (int) $assoc['location'] > 0) {
+            $locationId = (int) $assoc['location'];
+            if (!Locations::isActive($locationId)) {
+                \WP_CLI::error('--location must name an active stock location.');
+            }
+            $filters['location_id'] = $locationId;
+        }
         if (isset($assoc['from']) && $assoc['from'] !== '') {
             $filters['occurred_from'] = $this->dateBoundary((string) $assoc['from'], false);
         }
@@ -326,11 +348,18 @@ final class Command {
             $filters['occurred_to'] = $this->dateBoundary((string) $assoc['to'], true);
         }
 
+        $multi = Locations::isMulti();
         $columns = [
             'id', 'occurred_at', 'created_at', 'product_id', 'product',
+        ];
+        if ($multi) {
+            $columns[] = 'location_id';
+            $columns[] = 'location';
+        }
+        $columns = array_merge($columns, [
             'delta', 'balance_after', 'reason', 'ref_type', 'ref_id', 'ref_line',
             'batch', 'actor_id', 'via', 'note',
-        ];
+        ]);
 
         $file   = isset($assoc['file']) && $assoc['file'] !== '' ? (string) $assoc['file'] : null;
         $handle = $file !== null ? fopen($file, 'wb') : fopen('php://stdout', 'wb');
@@ -352,12 +381,18 @@ final class Command {
                 if (!isset($labels[$productId])) {
                     $labels[$productId] = ProductSearch::label($productId);
                 }
-                fputcsv($handle, [
+                $csv = [
                     (int) $row['id'],
                     (string) $row['occurred_at'],
                     (string) $row['created_at'],
                     $productId,
                     $labels[$productId],
+                ];
+                if ($multi) {
+                    $csv[] = (int) $row['location_id'];
+                    $csv[] = Locations::name((int) $row['location_id']);
+                }
+                $csv = array_merge($csv, [
                     $this->qty((float) $row['delta']),
                     $this->qty((float) $row['balance_after']),
                     (string) $row['reason'],
@@ -369,6 +404,7 @@ final class Command {
                     (string) ($row['via'] ?? ''),
                     (string) ($row['note'] ?? ''),
                 ]);
+                fputcsv($handle, $csv);
                 $written++;
             }
             $page++;
@@ -625,16 +661,22 @@ final class Command {
             \WP_CLI::log(sprintf('%d issue(s):', count($issues)));
             $rows = [];
             foreach ($issues as $issue) {
+                $type = isset($issue['type']) ? (string) $issue['type'] : 'unknown';
+                $location = isset($issue['location_id'])
+                    ? sprintf('#%d %s', (int) $issue['location_id'], (string) ($issue['location'] ?? Locations::name((int) $issue['location_id'])))
+                    : '—';
                 $rows[] = [
                     'product'  => sprintf('#%d %s', (int) $issue['product_id'], ProductSearch::label((int) $issue['product_id'])),
-                    'sum'      => $this->qty((float) $issue['sum']),
-                    'on_hand'  => $this->qty((float) $issue['on_hand']),
-                    '_stock'   => $this->qty((float) $issue['stock']),
-                    'lookup'   => $issue['lookup'] === null ? 'NULL' : $this->qty((float) $issue['lookup']),
+                    'type'     => $type,
+                    'location' => $location,
+                    'sum'      => $this->qty((float) ($issue['sum'] ?? 0)),
+                    'on_hand'  => $this->qty((float) ($issue['on_hand'] ?? 0)),
+                    '_stock'   => $this->qty((float) ($issue['stock'] ?? 0)),
+                    'lookup'   => !isset($issue['lookup']) ? 'NULL' : $this->qty((float) $issue['lookup']),
                     'has_tail' => !empty($issue['has_tail']) ? 'yes' : 'no',
                 ];
             }
-            \WP_CLI\Utils\format_items('table', $rows, ['product', 'sum', 'on_hand', '_stock', 'lookup', 'has_tail']);
+            \WP_CLI\Utils\format_items('table', $rows, ['product', 'type', 'location', 'sum', 'on_hand', '_stock', 'lookup', 'has_tail']);
         }
 
         $outOfScope = $report['out_of_scope'] ?? [];

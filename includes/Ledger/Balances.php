@@ -28,8 +28,12 @@ final class Balances {
             return self::$defaultLocation;
         }
         global $wpdb;
-        $id = $wpdb->get_var('SELECT id FROM ' . Schema::locations() . ' WHERE is_default = 1 ORDER BY id ASC LIMIT 1');
+        $id = $wpdb->get_var('SELECT id FROM ' . Schema::locations() . ' WHERE is_default = 1 AND active = 1 ORDER BY id ASC LIMIT 1');
         return self::$defaultLocation = ($id !== null ? (int) $id : self::DEFAULT_LOCATION);
+    }
+
+    public static function flushDefaultLocationCache(): void {
+        self::$defaultLocation = null;
     }
 
     /** Resolve a 0/unspecified location to the default. */
@@ -54,10 +58,10 @@ final class Balances {
     }
 
     /**
-     * All balance rows keyed by product_id (single-location v1 collapses cleanly).
+     * All balance rows keyed by product_id, then location_id.
      *
      * @param int[] $productIds optional filter
-     * @return array<int,array<string,mixed>>
+     * @return array<int,array<int,array<string,mixed>>>
      */
     public static function rows(array $productIds = []): array {
         global $wpdb;
@@ -68,7 +72,59 @@ final class Balances {
         }
         $out = [];
         foreach ((array) $wpdb->get_results($sql, ARRAY_A) as $row) {
+            $out[(int) $row['product_id']][(int) $row['location_id']] = $row;
+        }
+        return $out;
+    }
+
+    /** Aggregate balance rows for Woo-facing and other product-level readers. */
+    public static function aggregateRows(array $productIds = []): array {
+        global $wpdb;
+        $sql = 'SELECT product_id, COALESCE(SUM(on_hand), 0) AS on_hand, MAX(last_movement_id) AS last_movement_id FROM ' . Schema::balances();
+        $ids = array_values(array_filter(array_map('intval', $productIds)));
+        if ($ids !== []) {
+            $sql .= ' WHERE product_id IN (' . implode(',', $ids) . ')';
+        }
+        $sql .= ' GROUP BY product_id';
+        $out = [];
+        foreach ((array) $wpdb->get_results($sql, ARRAY_A) as $row) {
             $out[(int) $row['product_id']] = $row;
+        }
+        return $out;
+    }
+
+    public static function totalOnHand(int $productId): float {
+        global $wpdb;
+        return (float) $wpdb->get_var($wpdb->prepare(
+            'SELECT COALESCE(SUM(on_hand), 0) FROM ' . Schema::balances() . ' WHERE product_id = %d',
+            $productId
+        ));
+    }
+
+    /** Ensure the target exists, then lock every location row for one product. */
+    public static function lockProductRows(int $productId, int $targetLocationId = 0): array {
+        global $wpdb;
+        $targetLocationId = self::resolveLocation($targetLocationId);
+        $table = Schema::balances();
+        $inserted = $wpdb->query($wpdb->prepare(
+            "INSERT IGNORE INTO $table (product_id, location_id, on_hand, last_movement_id, last_written_id, updated_at) VALUES (%d, %d, 0, 0, 0, %s)",
+            $productId,
+            $targetLocationId,
+            gmdate('Y-m-d H:i:s')
+        ));
+        if ($inserted === false) {
+            throw new LedgerException("Balance row ensure failed for product $productId: " . $wpdb->last_error);
+        }
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $table WHERE product_id = %d ORDER BY location_id ASC FOR UPDATE",
+            $productId
+        ), ARRAY_A);
+        if (!is_array($rows)) {
+            throw new LedgerException("Could not lock balance rows for product $productId: " . $wpdb->last_error);
+        }
+        $out = [];
+        foreach ($rows as $row) {
+            $out[(int) $row['location_id']] = $row;
         }
         return $out;
     }

@@ -31,7 +31,7 @@ final class DirtyRegistry {
     }
 
     /**
-     * @param array<string,mixed> $claim {reason, ref_type?, ref_id?, ref_line?, via?, actor_id?}
+     * @param array<string,mixed> $claim {reason, ref_type?, ref_id?, ref_line?, via?, actor_id?, location_id?}
      */
     public static function claim(int $managedId, array $claim): void {
         if ($managedId <= 0 || WriteThrough::guardActive()) {

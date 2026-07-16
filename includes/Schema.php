@@ -24,7 +24,8 @@ final class Schema {
     //     cost inputs, which are operator input) re-derive from movements.
     // v4: supplier_products — supplier-specific product identity/catalog used
     //     by the purchase-order editor and printable ordering list.
-    public const VERSION        = 4;
+    // v5: locations.active — soft-deactivation for multi-location routing.
+    public const VERSION        = 5;
     public const VERSION_OPTION = 'kaupang_stock_schema_version';
 
     public static function movements(): string {
@@ -137,6 +138,7 @@ final class Schema {
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   name VARCHAR(100) NOT NULL,
   is_default TINYINT(1) NOT NULL DEFAULT 0,
+  active TINYINT(1) NOT NULL DEFAULT 1,
   PRIMARY KEY  (id)
 ) $collate;");
 
@@ -281,7 +283,8 @@ final class Schema {
                 'id'         => 1,
                 'name'       => 'Hovedlager',
                 'is_default' => 1,
-            ], ['%d', '%s', '%d']);
+                'active'     => 1,
+            ], ['%d', '%s', '%d', '%d']);
         }
 
         \update_option(self::VERSION_OPTION, self::VERSION, true);

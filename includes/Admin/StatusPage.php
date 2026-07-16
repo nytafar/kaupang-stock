@@ -7,6 +7,7 @@ use Kaupang\Stock\Ledger\Balances;
 use Kaupang\Stock\Ledger\Ledger;
 use Kaupang\Stock\Ledger\LedgerException;
 use Kaupang\Stock\Ledger\Reasons;
+use Kaupang\Stock\Locations;
 use Kaupang\Stock\Observe\Seeder;
 use Kaupang\Stock\Reconcile\Reconciler;
 use Kaupang\Stock\Schema;
@@ -66,7 +67,10 @@ final class StatusPage {
         $paged = min($paged, $pages);
         $slice = array_slice($ids, ($paged - 1) * self::PER_PAGE, self::PER_PAGE);
 
-        $balances  = Balances::rows($slice);
+        $balanceRows = Balances::rows($slice);
+        $balances  = Balances::aggregateRows($slice);
+        $multi     = Locations::isMulti();
+        $locations = $multi ? Locations::all(true) : [];
         $lastMoves = self::lastMovementMap($slice);
         $incoming  = self::incomingMap();
         $managed   = array_fill_keys(Seeder::stockManagedProductIds(), true);
@@ -95,6 +99,9 @@ final class StatusPage {
                     <tr>
                         <th scope="col" class="ks-col-product"><?php \esc_html_e('Product', 'kaupang-stock'); ?></th>
                         <th scope="col" class="ks-num"><?php \esc_html_e('On hand', 'kaupang-stock'); ?></th>
+                        <?php foreach ($locations as $location): ?>
+                            <th scope="col" class="ks-num ks-col-location"><?php echo \esc_html((string) $location['name']); ?></th>
+                        <?php endforeach; ?>
                         <th scope="col" class="ks-num"><?php \esc_html_e('Reserved', 'kaupang-stock'); ?></th>
                         <th scope="col" class="ks-num"><?php \esc_html_e('Available', 'kaupang-stock'); ?></th>
                         <th scope="col" class="ks-num"><?php \esc_html_e('Incoming', 'kaupang-stock'); ?></th>
@@ -105,11 +112,19 @@ final class StatusPage {
                 </thead>
                 <tbody>
                     <?php if (empty($slice)): ?>
-                        <tr><td colspan="8"><?php \esc_html_e('No stock-managed products yet.', 'kaupang-stock'); ?></td></tr>
+                        <tr><td colspan="<?php echo 8 + count($locations); ?>"><?php \esc_html_e('No stock-managed products yet.', 'kaupang-stock'); ?></td></tr>
                     <?php else: foreach ($slice as $productId):
                         $inScope  = isset($managed[$productId]);
                         $row      = $balances[$productId] ?? null;
                         $onHand   = $row !== null ? (float) $row['on_hand'] : 0.0;
+                        $perLocation = $balanceRows[$productId] ?? [];
+                        $hasNegativeLocation = false;
+                        foreach ($perLocation as $locationRow) {
+                            if ((float) $locationRow['on_hand'] < 0) {
+                                $hasNegativeLocation = true;
+                                break;
+                            }
+                        }
                         $reserved = self::reserved($productId);
                         $avail    = $onHand - $reserved;
                         $inc      = $incoming[$productId] ?? 0.0;
@@ -126,12 +141,17 @@ final class StatusPage {
                                 <?php endif; ?>
                             </td>
                             <td class="ks-num<?php echo $onHand < 0 ? ' ks-neg' : ''; ?>"><?php echo \esc_html(self::qty($onHand)); ?></td>
+                            <?php foreach ($locations as $location):
+                                $locationOnHand = (float) ($perLocation[(int) $location['id']]['on_hand'] ?? 0);
+                            ?>
+                                <td class="ks-num<?php echo $locationOnHand < 0 ? ' ks-neg' : ''; ?>"><?php echo \esc_html(self::qty($locationOnHand)); ?></td>
+                            <?php endforeach; ?>
                             <td class="ks-num"><?php echo \esc_html(self::qty($reserved)); ?></td>
                             <td class="ks-num"><?php echo \esc_html(self::qty($avail)); ?></td>
                             <td class="ks-num"><?php echo $inc > 0 ? \esc_html(self::qty($inc)) : '—'; ?></td>
                             <td><?php echo self::lastMovementCell($lastMoves[$productId] ?? null); // escaped inside ?></td>
-                            <td><?php echo self::statusChips($onHand, $productId, $negWarn, $inScope); // escaped inside ?></td>
-                            <td class="ks-col-adjust"><?php self::quickAdjustForm($productId, $canAdjust, $inScope); ?></td>
+                            <td><?php echo self::statusChips($onHand, $productId, $negWarn, $inScope, $hasNegativeLocation); // escaped inside ?></td>
+                            <td class="ks-col-adjust"><?php self::quickAdjustForm($productId, $canAdjust, $inScope, $multi); ?></td>
                         </tr>
                     <?php endforeach; endif; ?>
                 </tbody>
@@ -167,6 +187,11 @@ final class StatusPage {
         $delta     = self::parseDelta((string) ($_POST['delta'] ?? ''));
         $note      = \sanitize_text_field(\wp_unslash((string) ($_POST['note'] ?? '')));
         $key       = \sanitize_text_field((string) ($_POST['idem'] ?? ''));
+        $locationId = 0;
+        if (Locations::isMulti()) {
+            $postedLocation = isset($_POST['location_id']) ? (int) $_POST['location_id'] : 0;
+            $locationId = Locations::isActive($postedLocation) ? $postedLocation : 0;
+        }
 
         if ($productId <= 0) {
             self::redirect(['ks_err' => 'product']);
@@ -199,7 +224,7 @@ final class StatusPage {
         }
 
         try {
-            Ledger::adjust($productId, (float) $delta, $note, null, $idem);
+            Ledger::adjust($productId, (float) $delta, $note, null, $idem, $locationId);
             self::redirect(['ks_msg' => 'adjusted']);
         } catch (LedgerException $e) {
             self::redirect(['ks_err' => 'ledger', 'ks_detail' => rawurlencode($e->getMessage())]);
@@ -397,9 +422,9 @@ final class StatusPage {
         );
     }
 
-    private static function statusChips(float $onHand, int $productId, bool $negWarn, bool $inScope): string {
+    private static function statusChips(float $onHand, int $productId, bool $negWarn, bool $inScope, bool $hasNegativeLocation = false): string {
         $chips = [];
-        if ($inScope && $negWarn && $onHand < 0) {
+        if ($inScope && $negWarn && ($onHand < 0 || $hasNegativeLocation)) {
             $chips[] = '<span class="ks-chip ks-chip-danger">' . \esc_html__('Negative', 'kaupang-stock') . '</span>';
         }
         if ($inScope && self::isLowStock($productId, $onHand)) {
@@ -432,7 +457,7 @@ final class StatusPage {
         return ' <span class="ks-chip ks-chip-muted">' . \esc_html__('not stock managed', 'kaupang-stock') . '</span>';
     }
 
-    private static function quickAdjustForm(int $productId, bool $canAdjust, bool $inScope): void {
+    private static function quickAdjustForm(int $productId, bool $canAdjust, bool $inScope, bool $multi): void {
         if (!$inScope) {
             echo '<span class="ks-muted">—</span>';
             return;
@@ -448,6 +473,13 @@ final class StatusPage {
             <input type="hidden" name="action" value="<?php echo \esc_attr(self::ACT_ADJUST); ?>" />
             <input type="hidden" name="product_id" value="<?php echo \esc_attr((string) $productId); ?>" />
             <input type="hidden" name="idem" value="<?php echo \esc_attr($idem); ?>" />
+            <?php if ($multi): ?>
+                <select name="location_id" aria-label="<?php \esc_attr_e('Location', 'kaupang-stock'); ?>"<?php echo $disabled; ?>>
+                    <?php foreach (Locations::all(true) as $location): ?>
+                        <option value="<?php echo (int) $location['id']; ?>"><?php echo \esc_html((string) $location['name']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            <?php endif; ?>
             <input type="number" name="delta" step="1" class="ks-adjust-delta" placeholder="±0" aria-label="<?php \esc_attr_e('Quantity change', 'kaupang-stock'); ?>"<?php echo $disabled; ?> />
             <?php if (\Kaupang\Stock\Costing\Costing::enabled()): ?>
                 <input type="number" name="unit_cost" step="0.01" min="0" class="ks-adjust-cost" placeholder="<?php \esc_attr_e('à kr', 'kaupang-stock'); ?>" title="<?php \esc_attr_e('Unit cost ex-VAT (kr) — prices the cost layer when adding stock', 'kaupang-stock'); ?>" aria-label="<?php \esc_attr_e('Unit cost ex-VAT (kr)', 'kaupang-stock'); ?>"<?php echo $disabled; ?> />

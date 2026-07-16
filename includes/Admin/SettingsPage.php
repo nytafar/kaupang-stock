@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Kaupang\Stock\Admin;
 
+use Kaupang\Stock\Locations;
 use Kaupang\Stock\Observe\Seeder;
 use Kaupang\Stock\Settings;
 
@@ -27,9 +28,17 @@ use Kaupang\Stock\Settings;
 final class SettingsPage {
 
     private const GROUP = 'kaupang_stock_settings_group';
+    private const ACT_LOCATION_CREATE = 'kaupang_stock_location_create';
+    private const ACT_LOCATION_RENAME = 'kaupang_stock_location_rename';
+    private const ACT_LOCATION_DEFAULT = 'kaupang_stock_location_default';
+    private const ACT_LOCATION_ACTIVE = 'kaupang_stock_location_active';
 
     public static function register(): void {
         \add_action('admin_init', [self::class, 'settings']);
+        \add_action('admin_post_' . self::ACT_LOCATION_CREATE, [self::class, 'handleLocationCreate']);
+        \add_action('admin_post_' . self::ACT_LOCATION_RENAME, [self::class, 'handleLocationRename']);
+        \add_action('admin_post_' . self::ACT_LOCATION_DEFAULT, [self::class, 'handleLocationDefault']);
+        \add_action('admin_post_' . self::ACT_LOCATION_ACTIVE, [self::class, 'handleLocationActive']);
     }
 
     /**
@@ -116,6 +125,17 @@ final class SettingsPage {
         // Pure value cleaning only — the enable-time side effects (seeding
         // sweep, costing anchor) live in maybeSeed(), fired by watch() after
         // the option is written.
+        $locationMap = [];
+        $vias = is_array($in['order_location_via'] ?? null) ? $in['order_location_via'] : [];
+        $locationIds = is_array($in['order_location_id'] ?? null) ? $in['order_location_id'] : [];
+        foreach ($vias as $index => $rawVia) {
+            $via = mb_substr(\sanitize_text_field(\wp_unslash((string) $rawVia)), 0, 100);
+            $locationId = isset($locationIds[$index]) ? (int) $locationIds[$index] : 0;
+            if ($via !== '' && Locations::isActive($locationId)) {
+                $locationMap[$via] = $locationId;
+            }
+        }
+
         return [
             'stock_enabled'          => !empty($in['stock_enabled']),
             'mode'                   => $mode === Settings::MODE_ACTIVE ? Settings::MODE_ACTIVE : Settings::MODE_SHADOW,
@@ -123,6 +143,8 @@ final class SettingsPage {
             'counting_enabled'       => !empty($in['counting_enabled']),
             'variance_threshold_pct' => max(1, min(100, $threshold)),
             'negative_warning'       => !empty($in['negative_warning']),
+            'allow_negative_locations' => !empty($in['allow_negative_locations']),
+            'order_location_map'     => $locationMap,
             'costing_enabled'        => !empty($in['costing_enabled']),
             'cogs_order_meta_enabled' => !empty($in['cogs_order_meta_enabled']),
         ];
@@ -136,6 +158,7 @@ final class SettingsPage {
         $opt      = Settings::OPTION_KEY;
         $enabled  = !empty($s['stock_enabled']);
         $isActive = $enabled && ($s['mode'] ?? '') === Settings::MODE_ACTIVE;
+        $locations = Locations::all();
         ?>
         <div class="wrap ks-wrap">
             <h1><?php \esc_html_e('Stock — settings', 'kaupang-stock'); ?></h1>
@@ -201,8 +224,42 @@ final class SettingsPage {
                         <td>
                             <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[negative_warning]" value="1" <?php \checked(!empty($s['negative_warning'])); ?> />
                                 <?php \esc_html_e('Show a warning chip on Lagerstatus when on-hand is negative', 'kaupang-stock'); ?></label>
+                            <?php if (Locations::isMulti()): ?>
+                            <br />
+                            <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[allow_negative_locations]" value="1" <?php \checked(!empty($s['allow_negative_locations'])); ?> />
+                                <?php \esc_html_e('Allow owned operations to take an individual location below zero', 'kaupang-stock'); ?></label>
+                            <p class="description"><?php \esc_html_e('Observed sales are always recorded. This setting controls adjustments and other operations owned by Kaupang Stock; site filters may override it.', 'kaupang-stock'); ?></p>
+                            <?php else: ?>
+                                <input type="hidden" name="<?php echo \esc_attr($opt); ?>[allow_negative_locations]" value="1" />
+                            <?php endif; ?>
                         </td>
                     </tr>
+                    <?php if (Locations::isMulti()): ?>
+                    <tr>
+                        <th scope="row"><?php \esc_html_e('Order routing', 'kaupang-stock'); ?></th>
+                        <td>
+                            <p class="description"><?php \esc_html_e('Map WooCommerce created_via values to a stock location. Order overrides and the order_location filter still take priority.', 'kaupang-stock'); ?></p>
+                            <table class="widefat striped ks-settings-map"><thead><tr>
+                                <th><?php \esc_html_e('created_via', 'kaupang-stock'); ?></th>
+                                <th><?php \esc_html_e('Location', 'kaupang-stock'); ?></th>
+                            </tr></thead><tbody>
+                            <?php
+                            $mapRows = is_array($s['order_location_map'] ?? null) ? $s['order_location_map'] : [];
+                            $mapRows += array_fill_keys(['', ' ', '  '], 0);
+                            foreach ($mapRows as $via => $locationId):
+                                $via = trim((string) $via);
+                            ?>
+                                <tr><td><input type="text" name="<?php echo \esc_attr($opt); ?>[order_location_via][]" value="<?php echo \esc_attr($via); ?>" placeholder="zettle" /></td>
+                                <td><select name="<?php echo \esc_attr($opt); ?>[order_location_id][]"><option value="">—</option>
+                                    <?php foreach (Locations::all(true) as $location): ?>
+                                        <option value="<?php echo (int) $location['id']; ?>" <?php \selected((int) $locationId, (int) $location['id']); ?>><?php echo \esc_html((string) $location['name']); ?></option>
+                                    <?php endforeach; ?>
+                                </select></td></tr>
+                            <?php endforeach; ?>
+                            </tbody></table>
+                        </td>
+                    </tr>
+                    <?php endif; ?>
                     <tr>
                         <th scope="row"><?php \esc_html_e('Cost tracking (FIFO)', 'kaupang-stock'); ?></th>
                         <td>
@@ -222,7 +279,116 @@ final class SettingsPage {
                 </table>
                 <?php \submit_button(); ?>
             </form>
+
+            <hr />
+            <h2><?php \esc_html_e('Stock locations', 'kaupang-stock'); ?></h2>
+            <p class="description"><?php \esc_html_e('Locations are deactivated rather than deleted so historical ledger references remain intact.', 'kaupang-stock'); ?></p>
+            <div class="ks-tablewrap"><table class="wp-list-table widefat striped ks-table ks-location-table"><thead><tr>
+                <th><?php \esc_html_e('Name', 'kaupang-stock'); ?></th>
+                <th><?php \esc_html_e('Default', 'kaupang-stock'); ?></th>
+                <th><?php \esc_html_e('Status', 'kaupang-stock'); ?></th>
+                <th><?php \esc_html_e('Actions', 'kaupang-stock'); ?></th>
+            </tr></thead><tbody>
+            <?php foreach ($locations as $location): $locationId = (int) $location['id']; ?>
+                <tr><td>
+                    <form method="post" action="<?php echo \esc_url(\admin_url('admin-post.php')); ?>" class="ks-inline-form">
+                        <?php \wp_nonce_field(self::ACT_LOCATION_RENAME); ?>
+                        <input type="hidden" name="action" value="<?php echo \esc_attr(self::ACT_LOCATION_RENAME); ?>" />
+                        <input type="hidden" name="location_id" value="<?php echo $locationId; ?>" />
+                        <input type="text" name="name" value="<?php echo \esc_attr((string) $location['name']); ?>" maxlength="100" required />
+                        <button class="button button-small" type="submit"><?php \esc_html_e('Rename', 'kaupang-stock'); ?></button>
+                    </form>
+                </td><td><?php echo !empty($location['is_default']) ? \esc_html__('Yes', 'kaupang-stock') : '—'; ?></td>
+                <td><?php echo !empty($location['active']) ? \esc_html__('Active', 'kaupang-stock') : \esc_html__('Inactive', 'kaupang-stock'); ?></td>
+                <td>
+                    <?php if (empty($location['is_default']) && !empty($location['active'])): ?>
+                    <?php self::locationActionForm(self::ACT_LOCATION_DEFAULT, $locationId, \__('Set default', 'kaupang-stock')); ?>
+                    <?php endif; ?>
+                    <?php self::locationActionForm(self::ACT_LOCATION_ACTIVE, $locationId, !empty($location['active']) ? \__('Deactivate', 'kaupang-stock') : \__('Activate', 'kaupang-stock'), ['active' => empty($location['active']) ? '1' : '0']); ?>
+                </td></tr>
+            <?php endforeach; ?>
+            </tbody></table></div>
+
+            <h3><?php \esc_html_e('Add location', 'kaupang-stock'); ?></h3>
+            <form method="post" action="<?php echo \esc_url(\admin_url('admin-post.php')); ?>" class="ks-location-create">
+                <?php \wp_nonce_field(self::ACT_LOCATION_CREATE); ?>
+                <input type="hidden" name="action" value="<?php echo \esc_attr(self::ACT_LOCATION_CREATE); ?>" />
+                <input type="text" name="name" maxlength="100" required placeholder="<?php \esc_attr_e('Location name', 'kaupang-stock'); ?>" />
+                <label><input type="checkbox" name="make_default" value="1" /> <?php \esc_html_e('Make default', 'kaupang-stock'); ?></label>
+                <button type="submit" class="button button-secondary"><?php \esc_html_e('Add location', 'kaupang-stock'); ?></button>
+            </form>
         </div>
         <?php
+    }
+
+    public static function handleLocationCreate(): void {
+        self::guardLocation(self::ACT_LOCATION_CREATE);
+        try {
+            Locations::create((string) ($_POST['name'] ?? ''), !empty($_POST['make_default']));
+            self::locationRedirect('created');
+        } catch (\Throwable $e) {
+            self::locationRedirect('', $e->getMessage());
+        }
+    }
+
+    public static function handleLocationRename(): void {
+        self::guardLocation(self::ACT_LOCATION_RENAME);
+        try {
+            Locations::rename((int) ($_POST['location_id'] ?? 0), (string) ($_POST['name'] ?? ''));
+            self::locationRedirect('renamed');
+        } catch (\Throwable $e) {
+            self::locationRedirect('', $e->getMessage());
+        }
+    }
+
+    public static function handleLocationDefault(): void {
+        self::guardLocation(self::ACT_LOCATION_DEFAULT);
+        try {
+            Locations::setDefault((int) ($_POST['location_id'] ?? 0));
+            self::locationRedirect('default');
+        } catch (\Throwable $e) {
+            self::locationRedirect('', $e->getMessage());
+        }
+    }
+
+    public static function handleLocationActive(): void {
+        self::guardLocation(self::ACT_LOCATION_ACTIVE);
+        try {
+            Locations::setActive((int) ($_POST['location_id'] ?? 0), !empty($_POST['active']));
+            self::locationRedirect('active');
+        } catch (\Throwable $e) {
+            self::locationRedirect('', $e->getMessage());
+        }
+    }
+
+    private static function guardLocation(string $action): void {
+        if (!\current_user_can(Settings::capability())) {
+            \wp_die(\esc_html__('You do not have permission to do this.', 'kaupang-stock'), '', ['response' => 403]);
+        }
+        \check_admin_referer($action);
+    }
+
+    /** @param array<string,string> $extra */
+    private static function locationActionForm(string $action, int $locationId, string $label, array $extra = []): void {
+        echo '<form method="post" action="' . \esc_url(\admin_url('admin-post.php')) . '" class="ks-inline-form">';
+        \wp_nonce_field($action);
+        echo '<input type="hidden" name="action" value="' . \esc_attr($action) . '" />';
+        echo '<input type="hidden" name="location_id" value="' . $locationId . '" />';
+        foreach ($extra as $key => $value) {
+            echo '<input type="hidden" name="' . \esc_attr($key) . '" value="' . \esc_attr($value) . '" />';
+        }
+        echo '<button type="submit" class="button button-small">' . \esc_html($label) . '</button></form> ';
+    }
+
+    private static function locationRedirect(string $message = '', string $error = ''): void {
+        $args = ['page' => Menu::SLUG_SETTINGS];
+        if ($message !== '') {
+            $args['ks_location_msg'] = $message;
+        }
+        if ($error !== '') {
+            $args['ks_location_err'] = mb_substr($error, 0, 180);
+        }
+        \wp_safe_redirect(\add_query_arg($args, \admin_url('admin.php')));
+        exit;
     }
 }

@@ -104,42 +104,47 @@ final class WriteThrough {
 
         $wpdb->query('START TRANSACTION');
         try {
-            $row          = Balances::lockRow($productId, $locationId);
-            $lastMovement = (int) $row['last_movement_id'];
-            $lastWritten  = (int) $row['last_written_id'];
-
-            if ($lastWritten >= $lastMovement) {
-                $wpdb->query('COMMIT');
-                return 'clean';
+            $rows = Balances::lockProductRows($productId, $locationId);
+            $owned = "'" . implode("','", array_map('esc_sql', Reasons::owned())) . "'";
+            $targets = [];
+            foreach ($rows as $locId => $row) {
+                $lastMovement = (int) $row['last_movement_id'];
+                $lastWritten = (int) $row['last_written_id'];
+                if ($lastWritten >= $lastMovement) {
+                    continue;
+                }
+                $tailCount = (int) $wpdb->get_var($wpdb->prepare(
+                    'SELECT COUNT(*) FROM ' . \Kaupang\Stock\Schema::movements()
+                    . " WHERE product_id = %d AND location_id = %d AND id > %d AND reason IN ($owned)",
+                    $productId,
+                    $locId,
+                    $lastWritten
+                ));
+                if ($tailCount > 0) {
+                    $targets[$locId] = $lastMovement;
+                }
             }
 
-            $owned     = Reasons::owned();
-            $in        = "'" . implode("','", array_map('esc_sql', $owned)) . "'";
-            $tailCount = (int) $wpdb->get_var($wpdb->prepare(
-                'SELECT COUNT(*) FROM ' . \Kaupang\Stock\Schema::movements()
-                . " WHERE product_id = %d AND location_id = %d AND id > %d AND reason IN ($in)",
-                $productId,
-                $locationId,
-                $lastWritten
-            ));
-
-            if ($tailCount === 0) {
+            if ($targets === []) {
                 $wpdb->query('COMMIT');
-                return 'no_tail';
+                $pending = array_filter($rows, static fn (array $row): bool => (int) $row['last_written_id'] < (int) $row['last_movement_id']);
+                return $pending === [] ? 'clean' : 'no_tail';
             }
 
             $fresh  = Ledger::readStockDirect($productId);
-            $onHand = (float) $row['on_hand'];
+            $onHand = array_sum(array_map(static fn (array $row): float => (float) $row['on_hand'], $rows));
             $gap    = $onHand - $fresh;
 
             if (abs($gap) < 1e-9) {
                 // Tail was actually written; only the watermark update crashed.
-                Balances::updateLocked($productId, $locationId, $onHand, $lastMovement, $lastMovement);
+                foreach ($targets as $locId => $target) {
+                    $row = $rows[$locId];
+                    Balances::updateLocked($productId, $locId, (float) $row['on_hand'], (int) $row['last_movement_id'], $target);
+                }
                 $wpdb->query('COMMIT');
                 return 'aligned';
             }
 
-            $target = $lastMovement;
             $wpdb->query('COMMIT');
         } catch (\Throwable $e) {
             $wpdb->query('ROLLBACK');
@@ -162,8 +167,10 @@ final class WriteThrough {
             return 'failed';
         }
 
-        Balances::advanceWritten($productId, $locationId, $target);
-        Logger::notice('heal_replayed', ['product' => $productId, 'gap' => $gap, 'watermark' => $target]);
+        foreach ($targets as $locId => $target) {
+            Balances::advanceWritten($productId, (int) $locId, (int) $target);
+        }
+        Logger::notice('heal_replayed', ['product' => $productId, 'gap' => $gap, 'locations' => array_keys($targets)]);
         return 'replayed';
     }
 

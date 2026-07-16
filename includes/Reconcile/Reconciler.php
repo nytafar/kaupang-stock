@@ -17,7 +17,8 @@ use Kaupang\Stock\Settings;
  * §5: the drift detector that makes every projection provably re-derivable.
  * Per product the invariant is
  *
- *   SUM(movements.delta) == balances.on_hand == _stock == lookup.stock_quantity
+ *   SUM(movements.delta across locations) == SUM(balances.on_hand)
+ *     == _stock == lookup.stock_quantity
  *
  * The scheduled run REPORTS only (option + log); healing is operator-initiated
  * (report screen button / `wp kaupang-stock verify --heal`) and direction-aware:
@@ -95,8 +96,10 @@ final class Reconciler {
 
         $managedIds = Seeder::stockManagedProductIds();
         $managedSet = array_fill_keys($managedIds, true);
-        $balances   = Balances::rows();
+        $balanceRows = Balances::rows();
+        $balances   = Balances::aggregateRows();
         $sums       = Movements::sumPerProduct();
+        $locationSums = Movements::sumPerProductLocation();
 
         $stocks = [];
         $lookup = [];
@@ -132,6 +135,7 @@ final class Reconciler {
                 continue;
             }
             $issues[] = [
+                'type'       => 'aggregate_drift',
                 'product_id' => $productId,
                 'name'       => \get_the_title($productId),
                 'sum'        => $sum,
@@ -141,6 +145,36 @@ final class Reconciler {
                 'seeded'     => $seeded,
                 'has_tail'   => self::hasOwnedTail($productId),
             ];
+        }
+
+        // A compensating drift in two locations can leave the aggregate green;
+        // verify each immutable-ledger sum against its own balance row as well.
+        foreach ($managedIds as $productId) {
+            $locations = array_unique(array_merge(
+                array_keys($balanceRows[$productId] ?? []),
+                array_keys($locationSums[$productId] ?? [])
+            ));
+            foreach ($locations as $locationId) {
+                $sum = (float) ($locationSums[$productId][$locationId] ?? 0.0);
+                $row = $balanceRows[$productId][$locationId] ?? null;
+                $onHand = $row !== null ? (float) $row['on_hand'] : 0.0;
+                if (abs($sum - $onHand) < 1e-9) {
+                    continue;
+                }
+                $issues[] = [
+                    'type'        => 'location_drift',
+                    'product_id'  => $productId,
+                    'name'        => \get_the_title($productId),
+                    'location_id' => (int) $locationId,
+                    'location'    => \Kaupang\Stock\Locations::name((int) $locationId),
+                    'sum'         => $sum,
+                    'on_hand'     => $onHand,
+                    'stock'       => $stocks[$productId] ?? 0.0,
+                    'lookup'      => $lookup[$productId] ?? null,
+                    'seeded'      => $row !== null,
+                    'has_tail'    => self::hasOwnedTail($productId, (int) $locationId),
+                ];
+            }
         }
 
         // Balance rows whose product left scope (manage_stock off / deleted):
@@ -192,20 +226,29 @@ final class Reconciler {
         return $writeOutcome;
     }
 
-    private static function hasOwnedTail(int $productId): bool {
+    private static function hasOwnedTail(int $productId, ?int $onlyLocation = null): bool {
         global $wpdb;
-        $row = Balances::row($productId);
-        if ($row === null || (int) $row['last_written_id'] >= (int) $row['last_movement_id']) {
-            return false;
-        }
         $in = "'" . implode("','", array_map('esc_sql', Reasons::owned())) . "'";
-        return (int) $wpdb->get_var($wpdb->prepare(
-            'SELECT COUNT(*) FROM ' . Schema::movements()
-            . " WHERE product_id = %d AND location_id = %d AND id > %d AND reason IN ($in)",
-            $productId,
-            Balances::resolveLocation((int) $row['location_id']),
-            (int) $row['last_written_id']
-        )) > 0;
+        $rows = Balances::rows([$productId])[$productId] ?? [];
+        foreach ($rows as $locationId => $row) {
+            if ($onlyLocation !== null && $locationId !== $onlyLocation) {
+                continue;
+            }
+            if ((int) $row['last_written_id'] >= (int) $row['last_movement_id']) {
+                continue;
+            }
+            $count = (int) $wpdb->get_var($wpdb->prepare(
+                'SELECT COUNT(*) FROM ' . Schema::movements()
+                . " WHERE product_id = %d AND location_id = %d AND id > %d AND reason IN ($in)",
+                $productId,
+                $locationId,
+                (int) $row['last_written_id']
+            ));
+            if ($count > 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

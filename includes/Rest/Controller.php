@@ -7,6 +7,7 @@ use Kaupang\Stock\Counting\Apply;
 use Kaupang\Stock\Counting\CountLines;
 use Kaupang\Stock\Counting\Counts;
 use Kaupang\Stock\Ledger\Movements;
+use Kaupang\Stock\Locations;
 use Kaupang\Stock\Purchasing\Suppliers;
 use Kaupang\Stock\Settings;
 use Kaupang\Stock\Support\ProductSearch;
@@ -43,6 +44,7 @@ final class Controller {
             'permission_callback' => [self::class, 'can'],
             'args'                => [
                 'product_id' => ['type' => 'integer', 'required' => false],
+                'location_id' => ['type' => 'integer', 'required' => false],
                 'ref_type'   => ['type' => 'string', 'required' => false],
                 'ref_id'     => ['type' => 'integer', 'required' => false],
                 'batch'      => ['type' => 'string', 'required' => false],
@@ -160,6 +162,10 @@ final class Controller {
         $productId = (int) $req->get_param('product_id');
         if ($productId > 0) {
             $filters['product_id'] = $productId;
+        }
+        $locationId = (int) $req->get_param('location_id');
+        if (Locations::isMulti() && Locations::isActive($locationId)) {
+            $filters['location_id'] = $locationId;
         }
         $refType = \sanitize_key((string) $req->get_param('ref_type'));
         if ($refType !== '') {

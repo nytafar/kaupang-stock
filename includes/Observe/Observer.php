@@ -5,8 +5,11 @@ namespace Kaupang\Stock\Observe;
 
 use Kaupang\Stock\Ledger\Ledger;
 use Kaupang\Stock\Ledger\MovementIntent;
+use Kaupang\Stock\Ledger\Movements;
 use Kaupang\Stock\Ledger\Reasons;
+use Kaupang\Stock\Locations;
 use Kaupang\Stock\Logging\Logger;
+use Kaupang\Stock\Settings;
 
 /**
  * The shadow side (§4): WooCommerce executes every sale-path stock write —
@@ -27,7 +30,7 @@ use Kaupang\Stock\Logging\Logger;
  */
 final class Observer {
 
-    /** @var array<int,array<int,float[]>> refund id → managed id → restock qtys */
+    /** @var array<int,array<int,array<int,array{qty:float,item_id:int}>>> */
     private static array $refundQtyQueues = [];
 
     public static function register(): void {
@@ -90,6 +93,7 @@ final class Observer {
                 'ref_line' => isset($claim['ref_line']) ? (int) $claim['ref_line'] : null,
                 'via'      => isset($claim['via']) ? mb_substr((string) $claim['via'], 0, 40) : 'seam',
                 'actor_id' => isset($claim['actor_id']) ? (int) $claim['actor_id'] : null,
+                'location_id' => self::validatedLocation(isset($claim['location_id']) ? (int) $claim['location_id'] : 0, 'claim'),
             ]);
         } catch (\Throwable $e) {
             Logger::error('claim_seam_failed', ['error' => $e->getMessage()]);
@@ -117,14 +121,21 @@ final class Observer {
             if (abs($delta) < 1e-9) {
                 return;
             }
+            $locationId = self::resolveOrderLocation($order, $item, Reasons::SALE, $product->get_stock_managed_by_id());
             Ledger::record(new MovementIntent(
                 $product->get_stock_managed_by_id(),
                 $delta,
                 Reasons::SALE,
                 'order',
                 $order instanceof \WC_Order ? $order->get_id() : 0,
-                $item instanceof \WC_Order_Item ? $item->get_id() : null
+                $item instanceof \WC_Order_Item ? $item->get_id() : null,
+                null, null, '', null, null, null,
+                $locationId
             ));
+            if ($order instanceof \WC_Order && (int) $order->get_meta('_kaupang_stock_location_id', true) <= 0) {
+                $order->update_meta_data('_kaupang_stock_location_id', $locationId);
+                $order->save_meta_data();
+            }
         }, 'observe_reduce');
     }
 
@@ -148,13 +159,17 @@ final class Observer {
             if (abs($delta) < 1e-9) {
                 return;
             }
+            $managedId = $product->get_stock_managed_by_id();
+            $locationId = self::resolveOrderLocation($order, $item, Reasons::SALE_RESTORE, $managedId);
             Ledger::record(new MovementIntent(
-                $product->get_stock_managed_by_id(),
+                $managedId,
                 $delta,
                 Reasons::SALE_RESTORE,
                 'order',
                 $order instanceof \WC_Order ? $order->get_id() : 0,
-                $item instanceof \WC_Order_Item ? $item->get_id() : null
+                $item instanceof \WC_Order_Item ? $item->get_id() : null,
+                null, null, '', null, null, null,
+                $locationId
             ));
         }, 'observe_restore');
     }
@@ -180,7 +195,10 @@ final class Observer {
             $managedId = $product->get_stock_managed_by_id();
             $fallback  = (float) $newStock - (float) $oldStock;
             $refundId  = 0;
-            $delta     = self::refundRestockQty($order, $managedId, $fallback, $refundId);
+            $orderItemId = 0;
+            $delta     = self::refundRestockQty($order, $managedId, $fallback, $refundId, $orderItemId);
+            $orderItem = $orderItemId > 0 ? $order->get_item($orderItemId) : null;
+            $locationId = self::resolveOrderLocation($order, $orderItem, Reasons::REFUND_RESTOCK, $managedId);
 
             if ($delta <= 1e-9) {
                 // Concurrency artefact — leave it to the absorber, attributed.
@@ -189,6 +207,7 @@ final class Observer {
                     'ref_type' => 'order',
                     'ref_id'   => $order->get_id(),
                     'ref_line' => $refundId > 0 ? $refundId : null,
+                    'location_id' => $locationId,
                 ]);
                 Logger::warning('refund_restock_no_delta', ['product' => $managedId, 'order' => $order->get_id()]);
                 return;
@@ -199,7 +218,9 @@ final class Observer {
                 Reasons::REFUND_RESTOCK,
                 'order',
                 $order->get_id(),
-                $refundId > 0 ? $refundId : null
+                $orderItemId > 0 ? $orderItemId : null,
+                null, null, '', null, null, null,
+                $locationId
             ));
         }, 'observe_refund_restock');
     }
@@ -230,6 +251,7 @@ final class Observer {
                 'ref_id'   => $item->get_order_id(),
                 'ref_line' => $item->get_id(),
                 'via'      => Ledger::currentVia(),
+                'location_id' => self::resolveOrderLocation(\wc_get_order($item->get_order_id()), $item, Reasons::ORDER_EDIT, $product->get_stock_managed_by_id()),
             ]);
         }, 'claim_order_edit');
         return $prevent;
@@ -286,7 +308,7 @@ final class Observer {
      * Per-line restock qty from the just-saved refund, matched positionally per
      * product (two order lines sharing a product each consume one queue entry).
      */
-    private static function refundRestockQty(\WC_Order $order, int $managedId, float $fallback, int &$refundId): float {
+    private static function refundRestockQty(\WC_Order $order, int $managedId, float $fallback, int &$refundId, int &$orderItemId): float {
         $refunds = $order->get_refunds(); // newest first
         $refund  = !empty($refunds) ? $refunds[0] : null;
         if (!$refund instanceof \WC_Order_Refund) {
@@ -307,14 +329,56 @@ final class Observer {
                 if ($qty <= 1e-9) {
                     continue;
                 }
-                $queues[$refProduct->get_stock_managed_by_id()][] = $qty;
+                $queues[$refProduct->get_stock_managed_by_id()][] = [
+                    'qty' => $qty,
+                    'item_id' => (int) $refundItem->get_meta('_refunded_item_id', true),
+                ];
             }
             self::$refundQtyQueues[$refundId] = $queues;
         }
         if (!empty(self::$refundQtyQueues[$refundId][$managedId])) {
-            return (float) array_shift(self::$refundQtyQueues[$refundId][$managedId]);
+            $entry = array_shift(self::$refundQtyQueues[$refundId][$managedId]);
+            $orderItemId = (int) ($entry['item_id'] ?? 0);
+            return (float) ($entry['qty'] ?? $fallback);
         }
         return $fallback;
+    }
+
+    /** Deterministic order routing: sale location, meta, mapping→filter, default. */
+    private static function resolveOrderLocation($order, $item, string $reason, int $productId): int {
+        if (!$order instanceof \WC_Order) {
+            return \Kaupang\Stock\Ledger\Balances::defaultLocationId();
+        }
+
+        if ($reason === Reasons::SALE_RESTORE || $reason === Reasons::REFUND_RESTOCK) {
+            $itemId = $item instanceof \WC_Order_Item ? (int) $item->get_id() : null;
+            $saleLocation = Movements::saleLocation((int) $order->get_id(), $itemId, $productId);
+            if ($saleLocation !== null) {
+                return self::validatedLocation($saleLocation, 'sale_restore');
+            }
+        }
+
+        $meta = (int) $order->get_meta('_kaupang_stock_location_id', true);
+        if ($meta > 0) {
+            return self::validatedLocation($meta, 'order_meta');
+        }
+
+        $map = Settings::get('order_location_map', []);
+        $via = method_exists($order, 'get_created_via') ? (string) $order->get_created_via() : '';
+        $mapped = is_array($map) && isset($map[$via]) ? (int) $map[$via] : 0;
+        $filtered = \apply_filters('kaupang/stock/order_location', $mapped, $order, $item);
+        return self::validatedLocation(is_numeric($filtered) ? (int) $filtered : 0, 'order_route');
+    }
+
+    private static function validatedLocation(int $locationId, string $context): int {
+        if ($locationId <= 0) {
+            return \Kaupang\Stock\Ledger\Balances::defaultLocationId();
+        }
+        if (Locations::isActive($locationId)) {
+            return $locationId;
+        }
+        Logger::warning('unknown_order_location', ['location' => $locationId, 'context' => $context]);
+        return \Kaupang\Stock\Ledger\Balances::defaultLocationId();
     }
 
     /** Observer code never throws into core's flow. */

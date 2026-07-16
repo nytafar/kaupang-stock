@@ -35,6 +35,8 @@ final class Absorber {
         foreach (DirtyRegistry::takeDirty() as $managedId) {
             try {
                 $claim = DirtyRegistry::consumeClaim($managedId);
+                // Ledger reads the optional claim.location_id and computes the
+                // residual against the aggregate across every location.
                 Ledger::absorbResidual($managedId, 0, $claim);
             } catch (\Throwable $e) {
                 Logger::error('absorber_failed', ['product' => $managedId, 'error' => $e->getMessage()]);

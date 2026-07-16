@@ -5,6 +5,7 @@ namespace Kaupang\Stock\Admin;
 
 use Kaupang\Stock\Ledger\Movements;
 use Kaupang\Stock\Ledger\Reasons;
+use Kaupang\Stock\Locations;
 use Kaupang\Stock\Settings;
 use Kaupang\Stock\Support\ProductSearch;
 
@@ -18,6 +19,10 @@ use Kaupang\Stock\Support\ProductSearch;
  */
 final class OrderMetaBox {
 
+    private const NONCE_ACTION = 'kaupang_stock_order_location';
+    private const NONCE_NAME = '_kaupang_stock_location_nonce';
+    private static bool $saving = false;
+
     public static function register(): void {
         // HPOS: the screen-specific add_meta_boxes_{screen_id} action fires on
         // the orders screen with the WC_Order passed to the box callback.
@@ -29,6 +34,8 @@ final class OrderMetaBox {
         }
         // Classic post-based orders fallback.
         \add_action('add_meta_boxes', [self::class, 'addClassic'], 30, 2);
+        \add_action('woocommerce_process_shop_order_meta', [self::class, 'save'], 20, 2);
+        \add_action('save_post_shop_order', [self::class, 'save'], 20, 2);
     }
 
     public static function addHpos(): void {
@@ -74,6 +81,7 @@ final class OrderMetaBox {
 
         $rows = Movements::forRef('order', $orderId);
         echo '<div class="ks-order-box">';
+        self::locationSelector($orderId);
         if (empty($rows)) {
             echo '<p class="ks-muted">' . \esc_html__('No stock movements for this order.', 'kaupang-stock') . '</p>';
             echo '</div>';
@@ -104,6 +112,66 @@ final class OrderMetaBox {
         echo '</tbody></table>';
         self::cogsSection($orderId);
         echo '</div>';
+    }
+
+    private static function locationSelector(int $orderId): void {
+        if (!Locations::isMulti()) {
+            return;
+        }
+        $order = \wc_get_order($orderId);
+        if (!$order instanceof \WC_Order) {
+            return;
+        }
+        $selected = (int) $order->get_meta('_kaupang_stock_location_id', true);
+        \wp_nonce_field(self::NONCE_ACTION, self::NONCE_NAME);
+        echo '<p class="ks-order-location"><label for="kaupang-stock-order-location"><strong>'
+            . \esc_html__('Stock location', 'kaupang-stock') . '</strong></label><br />';
+        echo '<select id="kaupang-stock-order-location" name="_kaupang_stock_location_id">';
+        echo '<option value="">' . \esc_html__('Automatic routing (until first withdrawal)', 'kaupang-stock') . '</option>';
+        foreach (Locations::all(true) as $location) {
+            $id = (int) $location['id'];
+            echo '<option value="' . $id . '" ' . \selected($selected, $id, false) . '>'
+                . \esc_html((string) $location['name']) . '</option>';
+        }
+        echo '</select><span class="description">'
+            . \esc_html__('Changes apply only to future stock withdrawals. Moving an existing withdrawal is handled as a transfer.', 'kaupang-stock')
+            . '</span></p>';
+    }
+
+    /** @param mixed $postOrOrder */
+    public static function save($postId, $postOrOrder = null): void {
+        if (self::$saving || !Locations::isMulti()) {
+            return;
+        }
+        $nonce = isset($_POST[self::NONCE_NAME]) ? \sanitize_text_field(\wp_unslash((string) $_POST[self::NONCE_NAME])) : '';
+        if ($nonce === '' || !\wp_verify_nonce($nonce, self::NONCE_ACTION)
+            || !\current_user_can(Settings::capability())
+        ) {
+            return;
+        }
+        $orderId = self::resolveOrderId($postOrOrder);
+        if ($orderId <= 0) {
+            $orderId = (int) $postId;
+        }
+        $order = \wc_get_order($orderId);
+        if (!$order instanceof \WC_Order) {
+            return;
+        }
+        $locationId = isset($_POST['_kaupang_stock_location_id']) ? (int) $_POST['_kaupang_stock_location_id'] : 0;
+        if ($locationId > 0 && !Locations::isActive($locationId)) {
+            return;
+        }
+        self::$saving = true;
+        try {
+            if ($locationId > 0) {
+                $order->update_meta_data('_kaupang_stock_location_id', $locationId);
+            } else {
+                $order->delete_meta_data('_kaupang_stock_location_id');
+            }
+            $order->save_meta_data();
+        } finally {
+            self::$saving = false;
+        }
     }
 
     /**

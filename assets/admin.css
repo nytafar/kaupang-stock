@@ -189,6 +189,32 @@
 	margin: 1em 0 0.5em;
 }
 
+.ks-settings-map {
+	max-width: 44em;
+	margin-top: 8px;
+}
+
+.ks-settings-map input,
+.ks-settings-map select {
+	width: 100%;
+}
+
+.ks-location-table .ks-inline-form,
+.ks-location-create {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.ks-order-location select {
+	width: 100%;
+	margin: 4px 0;
+}
+
+.ks-order-location .description {
+	display: block;
+}
+
 /* --- quick adjust (inline row form) ------------------------------------- */
 .ks-quick-adjust {
 	display: flex;

@@ -7,6 +7,7 @@ use Kaupang\Stock\Ledger\Ledger;
 use Kaupang\Stock\Ledger\LedgerException;
 use Kaupang\Stock\Ledger\Movements;
 use Kaupang\Stock\Ledger\Reasons;
+use Kaupang\Stock\Locations;
 use Kaupang\Stock\Settings;
 use Kaupang\Stock\Support\ProductSearch;
 
@@ -95,6 +96,7 @@ final class MovementsPage {
     /** Per-batch "document" view (a receiving session / count apply). */
     private static function renderBatch(string $batch): void {
         $rows = Movements::forBatch($batch);
+        $multi = Locations::isMulti();
         $back = \add_query_arg('page', Menu::SLUG_MOVES, \admin_url('admin.php'));
         ?>
         <p><a href="<?php echo \esc_url($back); ?>">&larr; <?php \esc_html_e('Back to movements', 'kaupang-stock'); ?></a></p>
@@ -108,6 +110,7 @@ final class MovementsPage {
                     <tr>
                         <th><?php \esc_html_e('Time', 'kaupang-stock'); ?></th>
                         <th><?php \esc_html_e('Product', 'kaupang-stock'); ?></th>
+                        <?php if ($multi): ?><th><?php \esc_html_e('Location', 'kaupang-stock'); ?></th><?php endif; ?>
                         <th class="ks-num">Δ</th>
                         <th class="ks-num"><?php \esc_html_e('Balance after', 'kaupang-stock'); ?></th>
                         <th><?php \esc_html_e('Reason', 'kaupang-stock'); ?></th>
@@ -120,6 +123,7 @@ final class MovementsPage {
                         <tr>
                             <td><?php echo \esc_html(self::localTime((string) $row['occurred_at'])); ?></td>
                             <td><?php echo \esc_html(ProductSearch::label((int) $row['product_id'])); ?></td>
+                            <?php if ($multi): ?><td><?php echo \esc_html(Locations::name((int) $row['location_id'])); ?></td><?php endif; ?>
                             <td class="ks-num"><?php echo self::deltaHtml((float) $row['delta']); // escaped inside ?></td>
                             <td class="ks-num"><?php echo \esc_html(self::qty((float) $row['balance_after'])); ?></td>
                             <td><span class="ks-reason-chip"><?php echo \esc_html(Reasons::label((string) $row['reason'])); ?></span></td>
@@ -159,6 +163,14 @@ final class MovementsPage {
                             <input type="text" name="product" class="regular-text ks-product-input" required<?php \disabled(!$canAdjust); ?> />
                         </label>
                     </p>
+                    <?php if (Locations::isMulti()): ?>
+                    <p>
+                        <label>
+                            <span class="ks-field-label"><?php \esc_html_e('Location', 'kaupang-stock'); ?></span>
+                            <?php self::locationSelect('location_id', 0, false, !$canAdjust); ?>
+                        </label>
+                    </p>
+                    <?php endif; ?>
                     <p>
                         <label>
                             <span class="ks-field-label"><?php \esc_html_e('Quantity change', 'kaupang-stock'); ?></span>
@@ -195,6 +207,7 @@ final class MovementsPage {
         $reason     = isset($_GET['reason']) ? \sanitize_key((string) $_GET['reason']) : '';
         $refType    = isset($_GET['ref_type']) ? \sanitize_key((string) $_GET['ref_type']) : '';
         $actor      = isset($_GET['actor_id']) && $_GET['actor_id'] !== '' ? (int) $_GET['actor_id'] : null;
+        $locationId = isset($_GET['location_id']) ? (int) $_GET['location_id'] : 0;
         $from       = isset($_GET['from']) ? \sanitize_text_field((string) $_GET['from']) : '';
         $to         = isset($_GET['to']) ? \sanitize_text_field((string) $_GET['to']) : '';
         // phpcs:enable WordPress.Security.NonceVerification.Recommended
@@ -214,6 +227,7 @@ final class MovementsPage {
             'reason'          => $reason !== '' && Reasons::isValid($reason) ? $reason : '',
             'ref_type'        => $refType,
             'actor_id'        => $actor,
+            'location_id'     => Locations::isMulti() && Locations::isActive($locationId) ? $locationId : 0,
             'from'            => $from,
             'to'              => $to,
         ];
@@ -235,6 +249,7 @@ final class MovementsPage {
         ?>
         <input type="hidden" name="page" value="<?php echo \esc_attr(Menu::SLUG_MOVES); ?>" />
         <input type="search" name="product" value="<?php echo \esc_attr((string) ($filters['product_display'] ?? '')); ?>" placeholder="<?php \esc_attr_e('Product title, SKU or ID', 'kaupang-stock'); ?>" />
+        <?php if (Locations::isMulti()): self::locationSelect('location_id', (int) ($filters['location_id'] ?? 0), true); endif; ?>
         <select name="reason">
             <option value="">— <?php \esc_html_e('Reason', 'kaupang-stock'); ?> —</option>
             <?php foreach ($reasons as $reason): ?>
@@ -268,6 +283,9 @@ final class MovementsPage {
         if (($filters['reason'] ?? '') !== '') {
             $args['reason'] = (string) $filters['reason'];
         }
+        if (!empty($filters['location_id'])) {
+            $args['location_id'] = (string) (int) $filters['location_id'];
+        }
         if (($filters['ref_type'] ?? '') !== '') {
             $args['ref_type'] = (string) $filters['ref_type'];
         }
@@ -293,6 +311,7 @@ final class MovementsPage {
         $note       = \sanitize_text_field(\wp_unslash((string) ($_POST['note'] ?? '')));
         $dateRaw    = \sanitize_text_field((string) ($_POST['occurred_date'] ?? ''));
         $key        = \sanitize_text_field((string) ($_POST['idem'] ?? ''));
+        $locationId = self::postedLocation();
 
         $productId = self::resolveProduct($productRaw);
         if ($productId <= 0) {
@@ -312,7 +331,7 @@ final class MovementsPage {
 
         $idem = $key !== '' ? 'adjust:' . $key : null;
         try {
-            Ledger::adjust($productId, (float) $delta, $note, $occurredAt, $idem);
+            Ledger::adjust($productId, (float) $delta, $note, $occurredAt, $idem, $locationId);
             self::redirect(['ks_msg' => 'adjusted']);
         } catch (LedgerException $e) {
             self::redirect(['ks_err' => 'ledger', 'ks_detail' => rawurlencode($e->getMessage())]);
@@ -356,23 +375,37 @@ final class MovementsPage {
         }
         // BOM so Excel reads UTF-8 (Norwegian characters) correctly.
         fwrite($out, "\xEF\xBB\xBF");
-        fputcsv($out, [
+        $multi = Locations::isMulti();
+        $columns = [
             'id', 'occurred_at', 'created_at', 'product_id', 'product',
+        ];
+        if ($multi) {
+            $columns[] = 'location_id';
+            $columns[] = 'location';
+        }
+        $columns = array_merge($columns, [
             'delta', 'balance_after', 'reason', 'ref_type', 'ref_id', 'ref_line',
             'batch', 'actor_id', 'via', 'note',
         ]);
+        fputcsv($out, $columns);
 
         $page = 1;
         do {
             $result = Movements::query($filters, $page, 500, 'ASC');
             $rows   = $result['rows'];
             foreach ($rows as $row) {
-                fputcsv($out, [
+                $csv = [
                     (int) $row['id'],
                     (string) $row['occurred_at'],
                     (string) $row['created_at'],
                     (int) $row['product_id'],
                     ProductSearch::label((int) $row['product_id']),
+                ];
+                if ($multi) {
+                    $csv[] = (int) $row['location_id'];
+                    $csv[] = Locations::name((int) $row['location_id']);
+                }
+                $csv = array_merge($csv, [
                     self::qty((float) $row['delta']),
                     self::qty((float) $row['balance_after']),
                     (string) $row['reason'],
@@ -384,6 +417,7 @@ final class MovementsPage {
                     (string) ($row['via'] ?? ''),
                     (string) ($row['note'] ?? ''),
                 ]);
+                fputcsv($out, $csv);
             }
             $page++;
         } while (count($rows) === 500);
@@ -401,6 +435,26 @@ final class MovementsPage {
             $delta >= 0 ? 'ks-delta-pos' : 'ks-delta-neg',
             \esc_html(self::signed($delta))
         );
+    }
+
+    private static function locationSelect(string $name, int $selected, bool $allowAll, bool $disabled = false): void {
+        echo '<select name="' . \esc_attr($name) . '"' . ($disabled ? ' disabled' : '') . '>';
+        if ($allowAll) {
+            echo '<option value="">— ' . \esc_html__('Location', 'kaupang-stock') . ' —</option>';
+        }
+        foreach (Locations::all(true) as $location) {
+            $id = (int) $location['id'];
+            echo '<option value="' . $id . '" ' . \selected($selected, $id, false) . '>' . \esc_html((string) $location['name']) . '</option>';
+        }
+        echo '</select>';
+    }
+
+    private static function postedLocation(): int {
+        if (!Locations::isMulti()) {
+            return 0;
+        }
+        $locationId = isset($_POST['location_id']) ? (int) $_POST['location_id'] : 0;
+        return Locations::isActive($locationId) ? $locationId : 0;
     }
 
     /** Deep link to the causing document. @param array<string,mixed> $row */
@@ -636,9 +690,14 @@ final class MovementsListTable extends \WP_List_Table {
 
     /** @return array<string,string> */
     public function get_columns(): array {
-        return [
+        $columns = [
             'occurred'      => \__('Time', 'kaupang-stock'),
             'product'       => \__('Product', 'kaupang-stock'),
+        ];
+        if (Locations::isMulti()) {
+            $columns['location'] = \__('Location', 'kaupang-stock');
+        }
+        return array_merge($columns, [
             'delta'         => 'Δ',
             'balance_after' => \__('Balance after', 'kaupang-stock'),
             'reason'        => \__('Reason', 'kaupang-stock'),
@@ -646,7 +705,7 @@ final class MovementsListTable extends \WP_List_Table {
             'actor'         => \__('Actor', 'kaupang-stock'),
             'via'           => \__('Via', 'kaupang-stock'),
             'note'          => \__('Note', 'kaupang-stock'),
-        ];
+        ]);
     }
 
     public function prepare_items(): void {
@@ -718,6 +777,9 @@ final class MovementsListTable extends \WP_List_Table {
                 $url   = \add_query_arg(['page' => Menu::SLUG_MOVES, 'product' => $pid], \admin_url('admin.php'));
                 $label = ProductSearch::label($pid);
                 return sprintf('<a href="%s">%s</a>', \esc_url($url), \esc_html($label));
+
+            case 'location':
+                return \esc_html(Locations::name((int) $item['location_id']));
 
             case 'delta':
                 return MovementsPage::deltaHtml((float) $item['delta']);

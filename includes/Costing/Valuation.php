@@ -22,7 +22,7 @@ final class Valuation {
      *   open_qty:float, value_ore:int, uncosted_qty:float,
      *   provisional_qty:float, provisional_cost_ore:int,
      *   estimate_qty:float
-     * }> keyed by product id
+     * }> keyed by product id and aggregated across locations
      */
     public static function rows(?string $asOfUtc = null): array {
         global $wpdb;
@@ -62,16 +62,22 @@ final class Valuation {
         $out = [];
         foreach ($layerRows as $row) {
             $productId = (int) $row['product_id'];
-            $out[$productId] = [
-                'product_id'           => $productId,
-                'location_id'          => (int) $row['location_id'],
-                'open_qty'             => (float) $row['open_qty'],
-                'value_ore'            => (int) $row['value_ore'],
-                'uncosted_qty'         => (float) $row['uncosted_qty'],
-                'estimate_qty'         => (float) $row['estimate_qty'],
-                'provisional_qty'      => 0.0,
-                'provisional_cost_ore' => 0,
-            ];
+            if (!isset($out[$productId])) {
+                $out[$productId] = [
+                    'product_id'           => $productId,
+                    'location_id'          => 0,
+                    'open_qty'             => 0.0,
+                    'value_ore'            => 0,
+                    'uncosted_qty'         => 0.0,
+                    'estimate_qty'         => 0.0,
+                    'provisional_qty'      => 0.0,
+                    'provisional_cost_ore' => 0,
+                ];
+            }
+            $out[$productId]['open_qty'] += (float) $row['open_qty'];
+            $out[$productId]['value_ore'] += (int) $row['value_ore'];
+            $out[$productId]['uncosted_qty'] += (float) $row['uncosted_qty'];
+            $out[$productId]['estimate_qty'] += (float) $row['estimate_qty'];
         }
         foreach ($provRows as $row) {
             $productId = (int) $row['product_id'];
@@ -81,7 +87,7 @@ final class Valuation {
             if (!isset($out[$productId])) {
                 $out[$productId] = [
                     'product_id'           => $productId,
-                    'location_id'          => (int) $row['location_id'],
+                    'location_id'          => 0,
                     'open_qty'             => 0.0,
                     'value_ore'            => 0,
                     'uncosted_qty'         => 0.0,
@@ -90,8 +96,8 @@ final class Valuation {
                     'provisional_cost_ore' => 0,
                 ];
             }
-            $out[$productId]['provisional_qty']      = (float) $row['prov_qty'];
-            $out[$productId]['provisional_cost_ore'] = (int) $row['prov_cost'];
+            $out[$productId]['provisional_qty']      += (float) $row['prov_qty'];
+            $out[$productId]['provisional_cost_ore'] += (int) $row['prov_cost'];
         }
         ksort($out);
         return $out;
