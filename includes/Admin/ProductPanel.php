@@ -7,6 +7,7 @@ use Kaupang\Stock\Ledger\Balances;
 use Kaupang\Stock\Ledger\Movements;
 use Kaupang\Stock\Ledger\Reasons;
 use Kaupang\Stock\Settings;
+use Kaupang\Stock\Purchasing\SupplierProducts;
 use Kaupang\Stock\Support\ProductSearch;
 
 /**
@@ -78,6 +79,7 @@ final class ProductPanel {
         self::figureRow(\__('Available', 'kaupang-stock'), $avail);
         echo '</tbody></table>';
 
+        self::supplierLinks([$managedId], false);
         self::recentMovements($managedId);
         self::movementsLink($managedId);
     }
@@ -109,6 +111,42 @@ final class ProductPanel {
                 \esc_html(ProductSearch::label((int) $childId))
             );
             echo '<td class="ks-num">' . \esc_html(self::qty((float) $row['on_hand'])) . '</td>';
+            echo '</tr>';
+        }
+        echo '</tbody></table>';
+        self::supplierLinks(array_map('intval', array_keys($balances)), true);
+    }
+
+    /** Read-only supplier identity links for this product (or its variations). */
+    private static function supplierLinks(array $productIds, bool $showProduct): void {
+        $rows = SupplierProducts::forProducts($productIds);
+        if ($rows === []) {
+            return;
+        }
+        echo '<h4 class="ks-panel-heading">' . \esc_html__('Supplier products', 'kaupang-stock') . '</h4>';
+        echo '<table class="ks-panel-suppliers"><thead><tr>';
+        if ($showProduct) {
+            echo '<th>' . \esc_html__('Product', 'kaupang-stock') . '</th>';
+        }
+        echo '<th>' . \esc_html__('Supplier', 'kaupang-stock') . '</th>';
+        echo '<th>' . \esc_html__('Supplier identity', 'kaupang-stock') . '</th>';
+        echo '</tr></thead><tbody>';
+        foreach ($rows as $row) {
+            $url = \add_query_arg([
+                'page'     => Menu::SLUG_PURCHASE,
+                'view'     => 'suppliers',
+                'supplier' => (int) $row['supplier_id'],
+            ], \admin_url('admin.php'));
+            echo '<tr>';
+            if ($showProduct) {
+                echo '<td>' . \esc_html(ProductSearch::label((int) $row['product_id'])) . '</td>';
+            }
+            printf('<td><a href="%s">%s</a></td>', \esc_url($url), \esc_html((string) $row['supplier_label']));
+            $identity = array_filter([
+                (string) ($row['supplier_name'] ?? ''),
+                (string) ($row['supplier_sku'] ?? ''),
+            ], static fn (string $value): bool => $value !== '');
+            echo '<td>' . \esc_html($identity !== [] ? implode(' · ', $identity) : '—') . '</td>';
             echo '</tr>';
         }
         echo '</tbody></table>';

@@ -22,7 +22,9 @@ final class Schema {
     //     durable operator-entered cost inputs. Pure projection tables: only the
     //     Costing engine writes them, and all of them (except opening layers /
     //     cost inputs, which are operator input) re-derive from movements.
-    public const VERSION        = 3;
+    // v4: supplier_products — supplier-specific product identity/catalog used
+    //     by the purchase-order editor and printable ordering list.
+    public const VERSION        = 4;
     public const VERSION_OPTION = 'kaupang_stock_schema_version';
 
     public static function movements(): string {
@@ -53,6 +55,11 @@ final class Schema {
     public static function purchaseOrderLines(): string {
         global $wpdb;
         return $wpdb->prefix . 'kaupang_stock_purchase_order_lines';
+    }
+
+    public static function supplierProducts(): string {
+        global $wpdb;
+        return $wpdb->prefix . 'kaupang_stock_supplier_products';
     }
 
     public static function counts(): string {
@@ -169,6 +176,17 @@ final class Schema {
   note VARCHAR(255) NULL,
   PRIMARY KEY  (id),
   UNIQUE KEY po_product (po_id, product_id)
+) $collate;");
+
+        \dbDelta("CREATE TABLE " . self::supplierProducts() . " (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  supplier_id BIGINT UNSIGNED NOT NULL,
+  product_id BIGINT UNSIGNED NOT NULL,
+  supplier_sku VARCHAR(100) NULL,
+  supplier_name VARCHAR(200) NULL,
+  PRIMARY KEY  (id),
+  UNIQUE KEY supplier_product (supplier_id, product_id),
+  KEY product (product_id)
 ) $collate;");
 
         \dbDelta("CREATE TABLE " . self::counts() . " (

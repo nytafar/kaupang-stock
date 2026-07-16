@@ -4,8 +4,10 @@ declare(strict_types=1);
 namespace Kaupang\Stock\Admin;
 
 use Kaupang\Stock\Ledger\Movements;
+use Kaupang\Stock\Ledger\Balances;
 use Kaupang\Stock\Purchasing\Lines;
 use Kaupang\Stock\Purchasing\PurchaseOrders;
+use Kaupang\Stock\Purchasing\SupplierProducts;
 use Kaupang\Stock\Purchasing\Suppliers;
 use Kaupang\Stock\Settings;
 use Kaupang\Stock\Support\Assets;
@@ -122,6 +124,9 @@ final class PurchasingPage {
             case 'suppliers':
                 self::renderSuppliers();
                 break;
+            case 'print':
+                self::renderPrint();
+                break;
             default:
                 self::renderList();
         }
@@ -207,12 +212,16 @@ final class PurchasingPage {
         $locked   = $po !== null && $status !== PurchaseOrders::STATUS_DRAFT && $status !== PurchaseOrders::STATUS_CANCELLED;
         $isDraft  = $status === PurchaseOrders::STATUS_DRAFT;
         $isClosed = $status === PurchaseOrders::STATUS_CANCELLED || $status === PurchaseOrders::STATUS_RECEIVED;
+        $supplierId = (int) ($po['supplier_id'] ?? 0);
         ?>
         <h1 class="wp-heading-inline">
             <?php echo $po === null ? \esc_html__('New purchase order', 'kaupang-stock') : \esc_html(sprintf('Innkjøp #%d', $poId)); ?>
         </h1>
         <?php if ($po !== null): ?>
             <span class="ks-inline-status"><?php self::statusChip($status); ?></span>
+            <?php if ($lines !== []): ?>
+                <a href="<?php echo \esc_url(self::url(['view' => 'print', 'po' => $poId])); ?>" class="page-title-action" target="_blank" rel="noopener"><?php \esc_html_e('Ordering list', 'kaupang-stock'); ?></a>
+            <?php endif; ?>
         <?php endif; ?>
         <a href="<?php echo \esc_url(self::url(['view' => 'list'])); ?>" class="page-title-action"><?php \esc_html_e('Back to list', 'kaupang-stock'); ?></a>
         <hr class="wp-header-end" />
@@ -279,11 +288,12 @@ final class PurchasingPage {
             <?php if ($po !== null): ?>
                 <div class="ks-po-lines">
                     <h2><?php \esc_html_e('Lines', 'kaupang-stock'); ?></h2>
-                    <?php self::renderLinesTable($poId, $lines, $isDraft); ?>
+                    <?php self::renderLinesTable($poId, $supplierId, $lines, $isDraft); ?>
 
                     <?php if ($isDraft): ?>
+                        <?php self::renderSupplierCatalog($supplierId); ?>
                         <h3><?php \esc_html_e('Add product', 'kaupang-stock'); ?></h3>
-                        <?php self::renderProductPicker($poId); ?>
+                        <?php self::renderProductPicker($poId, $supplierId); ?>
                         <p class="description"><?php \esc_html_e('Adding a product already on the order merges into that line (its quantity is increased).', 'kaupang-stock'); ?></p>
                     <?php endif; ?>
                 </div>
@@ -303,13 +313,15 @@ final class PurchasingPage {
     /**
      * @param array<int,array<string,mixed>> $lines Lines::forPoWithReceived()
      */
-    private static function renderLinesTable(int $poId, array $lines, bool $editable): void {
+    private static function renderLinesTable(int $poId, int $supplierId, array $lines, bool $editable): void {
         ?>
         <div class="ks-tablewrap">
         <table class="wp-list-table widefat striped ks-lines">
             <thead>
                 <tr>
                     <th><?php \esc_html_e('Product', 'kaupang-stock'); ?></th>
+                    <th><?php \esc_html_e('Supplier product', 'kaupang-stock'); ?></th>
+                    <th><?php \esc_html_e('Supplier SKU', 'kaupang-stock'); ?></th>
                     <th class="ks-num"><?php \esc_html_e('Ordered', 'kaupang-stock'); ?></th>
                     <th class="ks-num"><?php \esc_html_e('Received', 'kaupang-stock'); ?></th>
                     <th class="ks-num"><?php \esc_html_e('Remaining', 'kaupang-stock'); ?></th>
@@ -319,13 +331,18 @@ final class PurchasingPage {
             </thead>
             <tbody>
                 <?php if ($lines === []): ?>
-                    <tr><td colspan="<?php echo $editable ? 6 : 5; ?>"><?php \esc_html_e('No lines yet.', 'kaupang-stock'); ?></td></tr>
+                    <tr><td colspan="<?php echo $editable ? 8 : 7; ?>"><?php \esc_html_e('No lines yet.', 'kaupang-stock'); ?></td></tr>
                 <?php else: foreach ($lines as $line):
                     $lineId = (int) $line['id'];
                     $cost   = isset($line['unit_cost_ore']) && $line['unit_cost_ore'] !== null ? (int) $line['unit_cost_ore'] : null;
+                    $supplierProduct = SupplierProducts::find($supplierId, (int) $line['product_id']);
+                    $supplierSku = (string) ($supplierProduct['supplier_sku'] ?? '');
+                    $supplierName = (string) ($supplierProduct['supplier_name'] ?? '');
                     ?>
                     <tr>
                         <td><?php echo \esc_html((string) $line['product_label']); ?></td>
+                        <td><?php echo $supplierName !== '' ? \esc_html($supplierName) : '—'; ?></td>
+                        <td><code><?php echo $supplierSku !== '' ? \esc_html($supplierSku) : '—'; ?></code></td>
                         <td class="ks-num"><?php echo \esc_html(self::qty((float) $line['qty_ordered'])); ?></td>
                         <td class="ks-num"><?php echo \esc_html(self::qty((float) $line['received'])); ?></td>
                         <td class="ks-num"><?php echo \esc_html(self::qty((float) $line['remaining'])); ?></td>
@@ -335,7 +352,9 @@ final class PurchasingPage {
                                 <button type="button" class="button-link ks-edit-line"
                                         data-line="<?php echo (int) $lineId; ?>"
                                         data-qty="<?php echo \esc_attr((string) (float) $line['qty_ordered']); ?>"
-                                        data-cost="<?php echo \esc_attr($cost !== null ? number_format($cost / 100, 2, '.', '') : ''); ?>">
+                                        data-cost="<?php echo \esc_attr($cost !== null ? number_format($cost / 100, 2, '.', '') : ''); ?>"
+                                        data-supplier-sku="<?php echo \esc_attr($supplierSku); ?>"
+                                        data-supplier-name="<?php echo \esc_attr($supplierName); ?>">
                                     <?php \esc_html_e('Edit', 'kaupang-stock'); ?>
                                 </button>
                                 &nbsp;|&nbsp;
@@ -360,11 +379,68 @@ final class PurchasingPage {
                     <input type="number" name="qty" step="1" min="1" class="small-text" data-ks-edit-qty required /></label>
                 <label><?php \esc_html_e('Unit cost ex-VAT (kr)', 'kaupang-stock'); ?>
                     <input type="number" name="unit_cost" step="0.01" min="0" class="small-text" data-ks-edit-cost placeholder="—" /></label>
+                <label><?php \esc_html_e('Supplier SKU', 'kaupang-stock'); ?>
+                    <input type="text" name="supplier_sku" maxlength="100" data-ks-edit-supplier-sku /></label>
+                <label><?php \esc_html_e('Supplier product name', 'kaupang-stock'); ?>
+                    <input type="text" name="supplier_name" maxlength="200" class="regular-text" data-ks-edit-supplier-name /></label>
+                <input type="hidden" name="supplier_identity_force" value="1" />
                 <?php \submit_button(\__('Save line', 'kaupang-stock'), 'secondary', 'submit', false); ?>
                 <button type="button" class="button-link" data-ks-edit-cancel><?php \esc_html_e('Cancel', 'kaupang-stock'); ?></button>
             </form>
         <?php endif; ?>
         <?php
+    }
+
+    /** Existing products for this PO's supplier, with stock context. */
+    private static function renderSupplierCatalog(int $supplierId): void {
+        if ($supplierId <= 0) {
+            echo '<p class="description">' . \esc_html__('Choose a supplier to use its product catalog.', 'kaupang-stock') . '</p>';
+            return;
+        }
+        $catalog  = SupplierProducts::forSupplier($supplierId);
+        $incoming = PurchaseOrders::incomingPerProduct();
+        ?>
+        <h3><?php \esc_html_e('Add from supplier catalog', 'kaupang-stock'); ?></h3>
+        <?php if ($catalog === []): ?>
+            <p class="description"><?php \esc_html_e('The supplier catalog is empty. Add a product below and enter the supplier identity to start it.', 'kaupang-stock'); ?></p>
+        <?php else: ?>
+            <div class="ks-tablewrap">
+            <table class="wp-list-table widefat striped ks-supplier-catalog">
+                <thead><tr>
+                    <th><?php \esc_html_e('Supplier product', 'kaupang-stock'); ?></th>
+                    <th><?php \esc_html_e('Supplier SKU', 'kaupang-stock'); ?></th>
+                    <th><?php \esc_html_e('Our product', 'kaupang-stock'); ?></th>
+                    <th class="ks-num"><?php \esc_html_e('On hand', 'kaupang-stock'); ?></th>
+                    <th class="ks-num"><?php \esc_html_e('Incoming', 'kaupang-stock'); ?></th>
+                    <th></th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ($catalog as $row):
+                    $productId = (int) $row['product_id'];
+                    $balance   = Balances::row($productId);
+                    $label     = ProductSearch::label($productId);
+                    ?>
+                    <tr>
+                        <td><?php echo \esc_html((string) ($row['supplier_name'] ?: $label)); ?></td>
+                        <td><code><?php echo \esc_html((string) ($row['supplier_sku'] ?? '')); ?></code></td>
+                        <td><?php echo \esc_html($label); ?></td>
+                        <td class="ks-num"><?php echo \esc_html(self::qty((float) ($balance['on_hand'] ?? 0))); ?></td>
+                        <td class="ks-num"><?php echo \esc_html(self::qty((float) ($incoming[$productId] ?? 0))); ?></td>
+                        <td class="ks-num">
+                            <button type="button" class="button button-small ks-pick-product"
+                                    data-id="<?php echo $productId; ?>"
+                                    data-label="<?php echo \esc_attr($label); ?>"
+                                    data-supplier-sku="<?php echo \esc_attr((string) ($row['supplier_sku'] ?? '')); ?>"
+                                    data-supplier-name="<?php echo \esc_attr((string) ($row['supplier_name'] ?? '')); ?>">
+                                <?php \esc_html_e('Add', 'kaupang-stock'); ?>
+                            </button>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            </div>
+        <?php endif;
     }
 
     /**
@@ -374,7 +450,7 @@ final class PurchasingPage {
      * on click. The box also accepts a raw SKU or numeric id resolved on submit,
      * so it works with JS off too.
      */
-    private static function renderProductPicker(int $poId): void {
+    private static function renderProductPicker(int $poId, int $supplierId): void {
         $term    = isset($_GET['pline_q']) ? \sanitize_text_field(\wp_unslash((string) $_GET['pline_q'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification
         $results = $term !== '' ? ProductSearch::search($term, 20) : [];
         ?>
@@ -397,12 +473,15 @@ final class PurchasingPage {
         <table class="wp-list-table widefat striped ks-picker-results" <?php echo $results === [] ? 'hidden' : ''; ?>>
             <tbody data-ks-picker-results>
                 <?php foreach ($results as $r): ?>
+                    <?php $identity = SupplierProducts::find($supplierId, (int) $r['id']); ?>
                     <tr>
                         <td><?php echo \esc_html((string) $r['title']); ?></td>
                         <td><code><?php echo \esc_html((string) $r['sku']); ?></code></td>
                         <td class="ks-num">
                             <button type="button" class="button button-small ks-pick-product"
                                     data-id="<?php echo (int) $r['id']; ?>"
+                                    data-supplier-sku="<?php echo \esc_attr((string) ($identity['supplier_sku'] ?? '')); ?>"
+                                    data-supplier-name="<?php echo \esc_attr((string) ($identity['supplier_name'] ?? '')); ?>"
                                     data-label="<?php echo \esc_attr(($r['sku'] !== '' ? $r['title'] . ' (' . $r['sku'] . ')' : $r['title'])); ?>">
                                 <?php \esc_html_e('Add', 'kaupang-stock'); ?>
                             </button>
@@ -425,8 +504,73 @@ final class PurchasingPage {
                 <input type="number" name="qty" step="1" min="1" value="1" class="small-text" required /></label>
             <label><?php \esc_html_e('Unit cost ex-VAT (kr)', 'kaupang-stock'); ?>
                 <input type="number" name="unit_cost" step="0.01" min="0" class="small-text" placeholder="—" /></label>
+            <label><?php \esc_html_e('Supplier SKU', 'kaupang-stock'); ?>
+                <input type="text" name="supplier_sku" maxlength="100" data-ks-add-supplier-sku /></label>
+            <label><?php \esc_html_e('Supplier product name', 'kaupang-stock'); ?>
+                <input type="text" name="supplier_name" maxlength="200" class="regular-text" data-ks-add-supplier-name /></label>
             <?php \submit_button(\__('Add line', 'kaupang-stock'), 'primary', 'submit', false); ?>
         </form>
+        <?php
+    }
+
+    /* ------------------------------- Print PO ------------------------------- */
+
+    private static function renderPrint(): void {
+        $poId = (int) ($_GET['po'] ?? 0); // phpcs:ignore WordPress.Security.NonceVerification
+        $po   = $poId > 0 ? PurchaseOrders::find($poId) : null;
+        if ($po === null) {
+            echo '<div class="notice notice-error"><p>' . \esc_html__('Purchase order not found.', 'kaupang-stock') . '</p></div>';
+            return;
+        }
+        $supplierId = (int) ($po['supplier_id'] ?? 0);
+        $supplier   = Suppliers::find($supplierId);
+        $lines      = Lines::forPoWithReceived($poId);
+        $dateUtc    = (string) (($po['ordered_at'] ?? '') ?: ($po['created_at'] ?? ''));
+        $date       = $dateUtc !== '' ? \get_date_from_gmt($dateUtc, (string) \get_option('date_format')) : '—';
+        ?>
+        <div class="ks-print-actions">
+            <a class="button" href="<?php echo \esc_url(self::url(['view' => 'edit', 'po' => $poId])); ?>"><?php \esc_html_e('Back to order', 'kaupang-stock'); ?></a>
+            <button type="button" class="button button-primary" onclick="window.print()"><?php \esc_html_e('Print / Save as PDF', 'kaupang-stock'); ?></button>
+        </div>
+        <article class="ks-po-print">
+            <header>
+                <p class="ks-print-kicker"><?php \esc_html_e('Ordering list', 'kaupang-stock'); ?></p>
+                <h1><?php echo \esc_html((string) ($supplier['name'] ?? Suppliers::name($supplierId))); ?></h1>
+                <dl>
+                    <div><dt><?php \esc_html_e('PO', 'kaupang-stock'); ?></dt><dd>#<?php echo $poId; ?></dd></div>
+                    <div><dt><?php \esc_html_e('Date', 'kaupang-stock'); ?></dt><dd><?php echo \esc_html($date); ?></dd></div>
+                    <?php if (!empty($po['supplier_ref'])): ?>
+                        <div><dt><?php \esc_html_e('Supplier reference', 'kaupang-stock'); ?></dt><dd><?php echo \esc_html((string) $po['supplier_ref']); ?></dd></div>
+                    <?php endif; ?>
+                </dl>
+            </header>
+            <table>
+                <thead><tr>
+                    <th><?php \esc_html_e('Supplier product name', 'kaupang-stock'); ?></th>
+                    <th><?php \esc_html_e('Supplier SKU', 'kaupang-stock'); ?></th>
+                    <th><?php \esc_html_e('Our product name', 'kaupang-stock'); ?></th>
+                    <th><?php \esc_html_e('Our SKU', 'kaupang-stock'); ?></th>
+                    <th class="ks-num"><?php \esc_html_e('Qty ordered', 'kaupang-stock'); ?></th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ($lines as $line):
+                    $productId = (int) $line['product_id'];
+                    $identity  = SupplierProducts::find($supplierId, $productId);
+                    $product   = \wc_get_product($productId);
+                    $ourName   = $product instanceof \WC_Product ? $product->get_name() : ProductSearch::label($productId);
+                    $ourSku    = $product instanceof \WC_Product ? $product->get_sku() : '';
+                    ?>
+                    <tr>
+                        <td><?php echo \esc_html((string) ($identity['supplier_name'] ?? '')); ?></td>
+                        <td><?php echo \esc_html((string) ($identity['supplier_sku'] ?? '')); ?></td>
+                        <td><?php echo \esc_html($ourName); ?></td>
+                        <td><?php echo \esc_html($ourSku); ?></td>
+                        <td class="ks-num"><?php echo \esc_html(self::qty((float) $line['qty_ordered'])); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </article>
         <?php
     }
 
@@ -901,6 +1045,11 @@ final class PurchasingPage {
                     self::redirect(['view' => 'edit', 'po' => $poId, 'ks_err' => 'line']);
                 }
                 Lines::edit($lineId, $qty, $cost, null);
+                self::saveSupplierIdentity(
+                    (int) ($po['supplier_id'] ?? 0),
+                    (int) $line['product_id'],
+                    !empty($_POST['supplier_identity_force'])
+                );
                 self::redirect(['view' => 'edit', 'po' => $poId, 'ks_msg' => 'line_saved']);
             }
             $productId = self::resolveProductId(
@@ -911,6 +1060,7 @@ final class PurchasingPage {
                 self::redirect(['view' => 'edit', 'po' => $poId, 'ks_err' => 'noproduct']);
             }
             [, $merged] = Lines::add($poId, $productId, $qty, $cost, null);
+            self::saveSupplierIdentity((int) ($po['supplier_id'] ?? 0), $productId, false);
             self::redirect(['view' => 'edit', 'po' => $poId, 'ks_msg' => $merged ? 'line_merged' : 'line_added']);
         } catch (\Throwable $e) {
             self::redirect(['view' => 'edit', 'po' => $poId, 'ks_err' => 'line']);
@@ -1111,6 +1261,19 @@ final class PurchasingPage {
         }
         $bySku = ProductSearch::bySku($raw);
         return $bySku !== null ? $bySku : 0;
+    }
+
+    /** Persist inline supplier identity without letting a blank generic pick erase an existing mapping. */
+    private static function saveSupplierIdentity(int $supplierId, int $productId, bool $force): void {
+        if ($supplierId <= 0 || $productId <= 0) {
+            return;
+        }
+        $sku  = (string) \wp_unslash($_POST['supplier_sku'] ?? '');
+        $name = (string) \wp_unslash($_POST['supplier_name'] ?? '');
+        if (!$force && trim($sku) === '' && trim($name) === '' && SupplierProducts::find($supplierId, $productId) !== null) {
+            return;
+        }
+        SupplierProducts::save($supplierId, $productId, $sku, $name);
     }
 
     /** True when the id is a (non-trashed) product or variation post. */

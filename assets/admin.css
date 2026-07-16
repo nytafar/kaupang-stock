@@ -309,6 +309,20 @@
 	font-size: 12px;
 }
 
+.ks-panel-suppliers {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 12px;
+}
+
+.ks-panel-suppliers th,
+.ks-panel-suppliers td {
+	padding: 3px 4px;
+	border-bottom: 1px solid #f0f0f1;
+	text-align: left;
+	vertical-align: top;
+}
+
 .ks-panel-moves td,
 .ks-panel-moves th {
 	padding: 3px 4px;

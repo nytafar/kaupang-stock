@@ -45,6 +45,8 @@
 		}
 		var idField = form.querySelector('[data-ks-add-product-id]');
 		var skuField = form.querySelector('[data-ks-add-product-sku]');
+		var supplierSkuField = form.querySelector('[data-ks-add-supplier-sku]');
+		var supplierNameField = form.querySelector('[data-ks-add-supplier-name]');
 
 		// Pick handler via event DELEGATION on the document so BOTH the
 		// server-rendered rows and any async-fetched rows work with one binding.
@@ -61,6 +63,12 @@
 			if (skuField) {
 				skuField.value = label;
 				skuField.setAttribute('readonly', 'readonly');
+			}
+			if (supplierSkuField) {
+				supplierSkuField.value = btn.getAttribute('data-supplier-sku') || '';
+			}
+			if (supplierNameField) {
+				supplierNameField.value = btn.getAttribute('data-supplier-name') || '';
 			}
 			form.classList.add('ks-has-product');
 			try {
@@ -442,6 +450,8 @@
 		var lineField = editForm.querySelector('[data-ks-edit-line]');
 		var qtyField = editForm.querySelector('[data-ks-edit-qty]');
 		var costField = editForm.querySelector('[data-ks-edit-cost]');
+		var supplierSkuField = editForm.querySelector('[data-ks-edit-supplier-sku]');
+		var supplierNameField = editForm.querySelector('[data-ks-edit-supplier-name]');
 		var cancelBtn = editForm.querySelector('[data-ks-edit-cancel]');
 
 		document.querySelectorAll('.ks-edit-line').forEach(function (btn) {
@@ -454,6 +464,12 @@
 				}
 				if (costField) {
 					costField.value = btn.getAttribute('data-cost') || '';
+				}
+				if (supplierSkuField) {
+					supplierSkuField.value = btn.getAttribute('data-supplier-sku') || '';
+				}
+				if (supplierNameField) {
+					supplierNameField.value = btn.getAttribute('data-supplier-name') || '';
 				}
 				editForm.hidden = false;
 				try {

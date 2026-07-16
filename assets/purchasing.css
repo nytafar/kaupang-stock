@@ -202,6 +202,11 @@ a.ks-danger {
 	max-width: 46em;
 }
 
+.ks-supplier-catalog {
+	margin: 0.5em 0 1em;
+	max-width: 70em;
+}
+
 /* Async-picker status line (fetch progress / no-results). */
 .ks-picker-status {
 	margin: 0.5em 0;
@@ -386,4 +391,118 @@ a.ks-danger {
 	font-size: 0.9em;
 	color: #50575e;
 	margin: 0.5em 0 1em;
+}
+
+/* --- printable ordering list ------------------------------------------- */
+
+.ks-print-actions {
+	display: flex;
+	gap: 0.5em;
+	justify-content: flex-end;
+	max-width: 72em;
+	margin: 0 0 1em;
+}
+
+.ks-po-print {
+	box-sizing: border-box;
+	max-width: 72em;
+	padding: 2.5em;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	color: #1d2327;
+}
+
+.ks-po-print header {
+	margin-bottom: 2em;
+	border-bottom: 2px solid #1d2327;
+	padding-bottom: 1em;
+}
+
+.ks-po-print h1 {
+	margin: 0.15em 0 0.6em;
+	font-size: 2em;
+}
+
+.ks-print-kicker {
+	margin: 0;
+	font-size: 0.8em;
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+}
+
+.ks-po-print dl {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1em 3em;
+	margin: 0;
+}
+
+.ks-po-print dl div {
+	display: grid;
+	grid-template-columns: auto auto;
+	gap: 0.4em;
+}
+
+.ks-po-print dt {
+	font-weight: 700;
+}
+
+.ks-po-print dd {
+	margin: 0;
+}
+
+.ks-po-print table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.ks-po-print th,
+.ks-po-print td {
+	padding: 0.65em 0.5em;
+	border-bottom: 1px solid #c3c4c7;
+	text-align: left;
+	vertical-align: top;
+}
+
+.ks-po-print th {
+	font-size: 0.85em;
+	border-bottom: 2px solid #1d2327;
+}
+
+.ks-po-print .ks-num {
+	text-align: right;
+}
+
+@media print {
+	@page {
+		margin: 15mm;
+	}
+
+	body.wp-admin * {
+		visibility: hidden;
+	}
+
+	.ks-po-print,
+	.ks-po-print * {
+		visibility: visible;
+	}
+
+	.ks-print-actions {
+		display: none !important;
+	}
+
+	.ks-po-print {
+		position: absolute;
+		inset: 0 auto auto 0;
+		width: 100%;
+		max-width: none;
+		padding: 0;
+		border: 0;
+		font-size: 10pt;
+	}
+
+	.ks-po-print tr {
+		break-inside: avoid;
+	}
 }
