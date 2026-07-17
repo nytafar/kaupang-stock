@@ -256,6 +256,19 @@ a.ks-danger {
 	color: #b32d2e;
 }
 
+.ks-line-feedback {
+	margin-left: 0.8em;
+	font-weight: 600;
+}
+
+.ks-line-feedback.ks-ok {
+	color: #14663a;
+}
+
+.ks-line-feedback.ks-error {
+	color: #b32d2e;
+}
+
 /* --- confirm dialog ------------------------------------------------------ */
 
 .ks-confirm {

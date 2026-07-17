@@ -117,6 +117,28 @@ final class Controller {
                 'costs'       => ['type' => 'object', 'required' => false],
             ],
         ]);
+
+        // Async draft-PO line editing. Callbacks live in the admin PurchasingPage
+        // (they share its line helpers + row rendering); registered here because
+        // that page only boots under is_admin() and REST is not admin context.
+        $page = '\\Kaupang\\Stock\\Admin\\PurchasingPage';
+        \register_rest_route(self::NS, '/po/(?P<po>\d+)/lines', [
+            'methods'             => 'POST',
+            'callback'            => [$page, 'restAddLine'],
+            'permission_callback' => [self::class, 'can'],
+        ]);
+        \register_rest_route(self::NS, '/po/(?P<po>\d+)/lines/(?P<line>\d+)', [
+            [
+                'methods'             => 'POST',
+                'callback'            => [$page, 'restEditLine'],
+                'permission_callback' => [self::class, 'can'],
+            ],
+            [
+                'methods'             => 'DELETE',
+                'callback'            => [$page, 'restDeleteLine'],
+                'permission_callback' => [self::class, 'can'],
+            ],
+        ]);
     }
 
     /** Uniform permission gate for every route. */

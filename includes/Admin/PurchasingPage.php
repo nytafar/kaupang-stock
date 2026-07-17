@@ -316,7 +316,7 @@ final class PurchasingPage {
     private static function renderLinesTable(int $poId, int $supplierId, array $lines, bool $editable): void {
         ?>
         <div class="ks-tablewrap">
-        <table class="wp-list-table widefat striped ks-lines">
+        <table class="wp-list-table widefat striped ks-lines" data-ks-lines-table data-po="<?php echo (int) $poId; ?>">
             <thead>
                 <tr>
                     <th><?php \esc_html_e('Product', 'kaupang-stock'); ?></th>
@@ -329,46 +329,11 @@ final class PurchasingPage {
                     <?php if ($editable): ?><th class="ks-line-actions"></th><?php endif; ?>
                 </tr>
             </thead>
-            <tbody>
-                <?php if ($lines === []): ?>
-                    <tr><td colspan="<?php echo $editable ? 8 : 7; ?>"><?php \esc_html_e('No lines yet.', 'kaupang-stock'); ?></td></tr>
-                <?php else: foreach ($lines as $line):
-                    $lineId = (int) $line['id'];
-                    $cost   = isset($line['unit_cost_ore']) && $line['unit_cost_ore'] !== null ? (int) $line['unit_cost_ore'] : null;
-                    $supplierProduct = SupplierProducts::find($supplierId, (int) $line['product_id']);
-                    $supplierSku = (string) ($supplierProduct['supplier_sku'] ?? '');
-                    $supplierName = (string) ($supplierProduct['supplier_name'] ?? '');
-                    ?>
-                    <tr>
-                        <td><?php echo \esc_html((string) $line['product_label']); ?></td>
-                        <td><?php echo $supplierName !== '' ? \esc_html($supplierName) : '—'; ?></td>
-                        <td><code><?php echo $supplierSku !== '' ? \esc_html($supplierSku) : '—'; ?></code></td>
-                        <td class="ks-num"><?php echo \esc_html(self::qty((float) $line['qty_ordered'])); ?></td>
-                        <td class="ks-num"><?php echo \esc_html(self::qty((float) $line['received'])); ?></td>
-                        <td class="ks-num"><?php echo \esc_html(self::qty((float) $line['remaining'])); ?></td>
-                        <td class="ks-num"><?php echo $cost !== null ? \esc_html(self::money($cost) . ' kr') : '—'; ?></td>
-                        <?php if ($editable): ?>
-                            <td class="ks-line-actions">
-                                <button type="button" class="button-link ks-edit-line"
-                                        data-line="<?php echo (int) $lineId; ?>"
-                                        data-qty="<?php echo \esc_attr((string) (float) $line['qty_ordered']); ?>"
-                                        data-cost="<?php echo \esc_attr($cost !== null ? number_format($cost / 100, 2, '.', '') : ''); ?>"
-                                        data-supplier-sku="<?php echo \esc_attr($supplierSku); ?>"
-                                        data-supplier-name="<?php echo \esc_attr($supplierName); ?>">
-                                    <?php \esc_html_e('Edit', 'kaupang-stock'); ?>
-                                </button>
-                                &nbsp;|&nbsp;
-                                <a href="<?php echo \esc_url(self::deleteLineUrl($poId, $lineId)); ?>" class="ks-danger"
-                                   onclick="return confirm('<?php echo \esc_js(__('Remove this line?', 'kaupang-stock')); ?>');"><?php \esc_html_e('Remove', 'kaupang-stock'); ?></a>
-                            </td>
-                        <?php endif; ?>
-                    </tr>
-                <?php endforeach; endif; ?>
-            </tbody>
+            <tbody data-ks-lines-body><?php self::lineRows($poId, $supplierId, $lines, $editable); ?></tbody>
         </table>
         </div>
 
-        <?php if ($editable && $lines !== []): ?>
+        <?php if ($editable): ?>
             <!-- Inline edit form, revealed by the Edit buttons (progressive enhancement). -->
             <form method="post" action="<?php echo \esc_url(\admin_url('admin-post.php')); ?>" class="ks-line-edit" data-ks-line-edit hidden>
                 <input type="hidden" name="action" value="<?php echo \esc_attr(self::SAVE_LINE); ?>" />
@@ -389,6 +354,63 @@ final class PurchasingPage {
             </form>
         <?php endif; ?>
         <?php
+    }
+
+    /**
+     * The lines table's <tbody> rows (or the empty-state row). Extracted so the
+     * async add/edit/remove REST routes can repaint the body in place with the same
+     * markup the server renders — one source of truth for row formatting, supplier
+     * identity lookups and the Edit/Remove affordances.
+     *
+     * @param array<int,array<string,mixed>> $lines Lines::forPoWithReceived()
+     */
+    private static function lineRows(int $poId, int $supplierId, array $lines, bool $editable): void {
+        if ($lines === []) {
+            ?>
+            <tr><td colspan="<?php echo $editable ? 8 : 7; ?>"><?php \esc_html_e('No lines yet.', 'kaupang-stock'); ?></td></tr>
+            <?php
+            return;
+        }
+        foreach ($lines as $line):
+            $lineId = (int) $line['id'];
+            $cost   = isset($line['unit_cost_ore']) && $line['unit_cost_ore'] !== null ? (int) $line['unit_cost_ore'] : null;
+            $supplierProduct = SupplierProducts::find($supplierId, (int) $line['product_id']);
+            $supplierSku = (string) ($supplierProduct['supplier_sku'] ?? '');
+            $supplierName = (string) ($supplierProduct['supplier_name'] ?? '');
+            ?>
+            <tr>
+                <td><?php echo \esc_html((string) $line['product_label']); ?></td>
+                <td><?php echo $supplierName !== '' ? \esc_html($supplierName) : '—'; ?></td>
+                <td><code><?php echo $supplierSku !== '' ? \esc_html($supplierSku) : '—'; ?></code></td>
+                <td class="ks-num"><?php echo \esc_html(self::qty((float) $line['qty_ordered'])); ?></td>
+                <td class="ks-num"><?php echo \esc_html(self::qty((float) $line['received'])); ?></td>
+                <td class="ks-num"><?php echo \esc_html(self::qty((float) $line['remaining'])); ?></td>
+                <td class="ks-num"><?php echo $cost !== null ? \esc_html(self::money($cost) . ' kr') : '—'; ?></td>
+                <?php if ($editable): ?>
+                    <td class="ks-line-actions">
+                        <button type="button" class="button-link ks-edit-line"
+                                data-line="<?php echo (int) $lineId; ?>"
+                                data-qty="<?php echo \esc_attr((string) (float) $line['qty_ordered']); ?>"
+                                data-cost="<?php echo \esc_attr($cost !== null ? number_format($cost / 100, 2, '.', '') : ''); ?>"
+                                data-supplier-sku="<?php echo \esc_attr($supplierSku); ?>"
+                                data-supplier-name="<?php echo \esc_attr($supplierName); ?>">
+                            <?php \esc_html_e('Edit', 'kaupang-stock'); ?>
+                        </button>
+                        &nbsp;|&nbsp;
+                        <a href="<?php echo \esc_url(self::deleteLineUrl($poId, $lineId)); ?>" class="ks-danger ks-remove-line"
+                           data-line="<?php echo (int) $lineId; ?>"
+                           onclick="return confirm('<?php echo \esc_js(__('Remove this line?', 'kaupang-stock')); ?>');"><?php \esc_html_e('Remove', 'kaupang-stock'); ?></a>
+                    </td>
+                <?php endif; ?>
+            </tr>
+        <?php endforeach;
+    }
+
+    /** The lines <tbody> rows as a string (for the async REST repaint). */
+    private static function lineRowsHtml(int $poId, int $supplierId, array $lines, bool $editable): string {
+        ob_start();
+        self::lineRows($poId, $supplierId, $lines, $editable);
+        return (string) ob_get_clean();
     }
 
     /** Existing products for this PO's supplier, with stock context. */
@@ -509,6 +531,7 @@ final class PurchasingPage {
             <label><?php \esc_html_e('Supplier product name', 'kaupang-stock'); ?>
                 <input type="text" name="supplier_name" maxlength="200" class="regular-text" data-ks-add-supplier-name /></label>
             <?php \submit_button(\__('Add line', 'kaupang-stock'), 'primary', 'submit', false); ?>
+            <span class="ks-line-feedback" role="status" aria-live="polite" data-ks-line-feedback></span>
         </form>
         <?php
     }
@@ -1081,6 +1104,139 @@ final class PurchasingPage {
         self::redirect(['view' => 'edit', 'po' => $poId, 'ks_err' => 'line']);
     }
 
+    /* ------------------------------ REST: lines ------------------------------ */
+
+    /**
+     * Async line editing for the draft PO — the JS path that repaints the lines
+     * table in place instead of a full POST+redirect. The admin-post handlers above
+     * stay as the no-JS fallback; both share the same Lines / SupplierProducts logic
+     * and the same lineRows() markup. Draft-only: locked POs return 409 (lines are
+     * immutable once ordered — the note trail is the audit path there).
+     *
+     * The routes themselves are registered from Rest\Controller (which is always
+     * booted) — this page's register() runs only under is_admin(), and REST is not
+     * admin context. These callbacks live here because they lean on the private line
+     * helpers and lineRows() rendering.
+     */
+    public static function restAddLine(\WP_REST_Request $req): \WP_REST_Response|\WP_Error {
+        $poId = (int) $req['po'];
+        $po   = self::draftForRest($poId);
+        if ($po instanceof \WP_Error) {
+            return $po;
+        }
+        $body      = self::restBody($req);
+        $qty       = (float) \str_replace(',', '.', (string) ($body['qty'] ?? '0'));
+        $cost      = self::parseCostOre((string) ($body['unit_cost'] ?? ''));
+        $productId = self::resolveProductId((int) ($body['product_id'] ?? 0), (string) ($body['product_sku'] ?? ''));
+        if ($productId <= 0) {
+            return self::restLineError(\__('Pick a product, or enter a valid SKU / product id.', 'kaupang-stock'));
+        }
+        try {
+            [, $merged] = Lines::add($poId, $productId, $qty, $cost, null);
+            self::saveSupplierIdentityValues(
+                (int) ($po['supplier_id'] ?? 0),
+                $productId,
+                (string) ($body['supplier_sku'] ?? ''),
+                (string) ($body['supplier_name'] ?? ''),
+                false
+            );
+        } catch (\InvalidArgumentException $e) {
+            return self::restLineError(\__('Enter a quantity of at least 1.', 'kaupang-stock'));
+        } catch (\Throwable $e) {
+            return self::restLineError(\__('The line could not be saved.', 'kaupang-stock'));
+        }
+        return self::restLinesResponse(
+            $poId,
+            $merged ? \__('Merged into the existing line.', 'kaupang-stock') : \__('Line added.', 'kaupang-stock'),
+            $merged
+        );
+    }
+
+    public static function restEditLine(\WP_REST_Request $req): \WP_REST_Response|\WP_Error {
+        $poId = (int) $req['po'];
+        $po   = self::draftForRest($poId);
+        if ($po instanceof \WP_Error) {
+            return $po;
+        }
+        $lineId = (int) $req['line'];
+        $line   = Lines::find($lineId);
+        if ($line === null || (int) $line['po_id'] !== $poId) {
+            return self::restLineError(\__('That line was not found on this order.', 'kaupang-stock'), 404);
+        }
+        $body = self::restBody($req);
+        $qty  = (float) \str_replace(',', '.', (string) ($body['qty'] ?? '0'));
+        $cost = self::parseCostOre((string) ($body['unit_cost'] ?? ''));
+        try {
+            Lines::edit($lineId, $qty, $cost, null);
+            // Edit form always forces identity (the operator sees and owns both fields).
+            self::saveSupplierIdentityValues(
+                (int) ($po['supplier_id'] ?? 0),
+                (int) $line['product_id'],
+                (string) ($body['supplier_sku'] ?? ''),
+                (string) ($body['supplier_name'] ?? ''),
+                true
+            );
+        } catch (\InvalidArgumentException $e) {
+            return self::restLineError(\__('Enter a quantity of at least 1.', 'kaupang-stock'));
+        } catch (\Throwable $e) {
+            return self::restLineError(\__('The line could not be saved.', 'kaupang-stock'));
+        }
+        return self::restLinesResponse($poId, \__('Line saved.', 'kaupang-stock'), false);
+    }
+
+    public static function restDeleteLine(\WP_REST_Request $req): \WP_REST_Response|\WP_Error {
+        $poId = (int) $req['po'];
+        $po   = self::draftForRest($poId);
+        if ($po instanceof \WP_Error) {
+            return $po;
+        }
+        $lineId = (int) $req['line'];
+        $line   = Lines::find($lineId);
+        if ($line === null || (int) $line['po_id'] !== $poId) {
+            return self::restLineError(\__('That line was not found on this order.', 'kaupang-stock'), 404);
+        }
+        Lines::delete($lineId);
+        return self::restLinesResponse($poId, \__('Line removed.', 'kaupang-stock'), false);
+    }
+
+    /** PO must exist and still be a draft, with purchasing enabled. */
+    private static function draftForRest(int $poId): array|\WP_Error {
+        if (!Settings::get('po_enabled')) {
+            return new \WP_Error('po_disabled', \__('Purchasing is not enabled.', 'kaupang-stock'), ['status' => 403]);
+        }
+        $po = $poId > 0 ? PurchaseOrders::find($poId) : null;
+        if ($po === null) {
+            return new \WP_Error('po_notfound', \__('Purchase order not found.', 'kaupang-stock'), ['status' => 404]);
+        }
+        if (!PurchaseOrders::isDraft($poId)) {
+            return new \WP_Error('po_locked', \__('This order is placed — its lines are locked.', 'kaupang-stock'), ['status' => 409]);
+        }
+        return $po;
+    }
+
+    /** @return array<string,mixed> */
+    private static function restBody(\WP_REST_Request $req): array {
+        $body = $req->get_json_params();
+        return is_array($body) ? $body : [];
+    }
+
+    private static function restLineError(string $message, int $status = 400): \WP_REST_Response {
+        return new \WP_REST_Response(['status' => 'error', 'message' => $message], $status);
+    }
+
+    /** Success envelope: the repainted <tbody> rows for the whole PO plus a message. */
+    private static function restLinesResponse(int $poId, string $message, bool $merged): \WP_REST_Response {
+        $po    = PurchaseOrders::find($poId);
+        $supId = (int) ($po['supplier_id'] ?? 0);
+        $lines = Lines::forPoWithReceived($poId);
+        return new \WP_REST_Response([
+            'status'     => 'ok',
+            'merged'     => $merged,
+            'message'    => $message,
+            'lines_html' => self::lineRowsHtml($poId, $supId, $lines, true),
+        ], 200);
+    }
+
     public static function handleSaveSupplier(): void {
         self::guard(self::SAVE_SUPPLIER);
         $sid  = (int) ($_POST['supplier'] ?? 0);
@@ -1265,11 +1421,20 @@ final class PurchasingPage {
 
     /** Persist inline supplier identity without letting a blank generic pick erase an existing mapping. */
     private static function saveSupplierIdentity(int $supplierId, int $productId, bool $force): void {
+        self::saveSupplierIdentityValues(
+            $supplierId,
+            $productId,
+            (string) \wp_unslash($_POST['supplier_sku'] ?? ''),
+            (string) \wp_unslash($_POST['supplier_name'] ?? ''),
+            $force
+        );
+    }
+
+    /** Same guard, but with the SKU/name passed explicitly (the REST path has no $_POST). */
+    private static function saveSupplierIdentityValues(int $supplierId, int $productId, string $sku, string $name, bool $force): void {
         if ($supplierId <= 0 || $productId <= 0) {
             return;
         }
-        $sku  = (string) \wp_unslash($_POST['supplier_sku'] ?? '');
-        $name = (string) \wp_unslash($_POST['supplier_name'] ?? '');
         if (!$force && trim($sku) === '' && trim($name) === '' && SupplierProducts::find($supplierId, $productId) !== null) {
             return;
         }

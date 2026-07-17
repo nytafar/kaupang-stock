@@ -26,6 +26,59 @@
 		return I18N[key] || fallback || key;
 	}
 
+	/* --------------------- Async line ops (shared plumbing) ------------------ */
+
+	function linesBody() {
+		return document.querySelector('[data-ks-lines-body]');
+	}
+
+	function poId() {
+		var table = document.querySelector('[data-ks-lines-table]');
+		return table ? (parseInt(table.getAttribute('data-po'), 10) || 0) : 0;
+	}
+
+	// Async line editing needs the REST base, a repaintable <tbody> and a PO id;
+	// without any of them the server-rendered forms/links stay the fallback.
+	function canAsyncLines() {
+		return !!(ROOT.restUrl && linesBody() && poId());
+	}
+
+	function swapLines(html) {
+		var body = linesBody();
+		if (body) {
+			body.innerHTML = html || '';
+		}
+	}
+
+	/**
+	 * POST/DELETE a line op; resolves {ok, data}. Same envelope as the receive
+	 * flow: HTTP failures carry {message}, app outcomes carry {status:'ok'|'error'}.
+	 */
+	function lineFetch(method, path, body) {
+		var opts = {
+			method: method,
+			credentials: 'same-origin',
+			headers: { 'X-WP-Nonce': ROOT.nonce || '' }
+		};
+		if (body) {
+			opts.headers['Content-Type'] = 'application/json';
+			opts.body = JSON.stringify(body);
+		}
+		return fetch(ROOT.restUrl + path, opts).then(function (res) {
+			return res.json().then(function (data) {
+				return { ok: res.ok, data: data || {} };
+			});
+		});
+	}
+
+	function setLineFeedback(el, msg, isError) {
+		if (!el) {
+			return;
+		}
+		el.textContent = msg || '';
+		el.className = 'ks-line-feedback' + (msg ? (isError ? ' ks-error' : ' ks-ok') : '');
+	}
+
 	document.addEventListener('DOMContentLoaded', function () {
 		wireProductPicker();
 		wireLineEdit();
@@ -92,7 +145,75 @@
 			});
 		}
 
+		// Async add: post the line, repaint the table, clear the form, keep adding.
+		if (canAsyncLines()) {
+			var feedback = form.querySelector('[data-ks-line-feedback]');
+			var submitBtn = form.querySelector('[type="submit"]');
+			form.addEventListener('submit', function (ev) {
+				ev.preventDefault();
+				var body = {
+					product_id: idField ? idField.value : '0',
+					product_sku: skuField ? skuField.value : '',
+					qty: fieldValue(form, 'qty'),
+					unit_cost: fieldValue(form, 'unit_cost'),
+					supplier_sku: supplierSkuField ? supplierSkuField.value : '',
+					supplier_name: supplierNameField ? supplierNameField.value : ''
+				};
+				setLineFeedback(feedback, '', false);
+				if (submitBtn) {
+					submitBtn.disabled = true;
+				}
+				lineFetch('POST', 'po/' + poId() + '/lines', body).then(function (out) {
+					if (submitBtn) {
+						submitBtn.disabled = false;
+					}
+					if (!out.ok || out.data.status !== 'ok') {
+						setLineFeedback(feedback, out.data.message || t('genericError', 'Something went wrong.'), true);
+						return;
+					}
+					swapLines(out.data.lines_html);
+					resetAddForm(form);
+					setLineFeedback(feedback, out.data.message || '', false);
+				}).catch(function () {
+					if (submitBtn) {
+						submitBtn.disabled = false;
+					}
+					setLineFeedback(feedback, t('genericError', 'Something went wrong.'), true);
+				});
+			});
+		}
+
 		wireAsyncSearch();
+	}
+
+	function fieldValue(form, name) {
+		var el = form.querySelector('[name="' + name + '"]');
+		return el ? el.value : '';
+	}
+
+	// Clear the add form after a successful add so the next product starts fresh.
+	function resetAddForm(form) {
+		var idField = form.querySelector('[data-ks-add-product-id]');
+		var skuField = form.querySelector('[data-ks-add-product-sku]');
+		var supplierSkuField = form.querySelector('[data-ks-add-supplier-sku]');
+		var supplierNameField = form.querySelector('[data-ks-add-supplier-name]');
+		var qty = form.querySelector('[name="qty"]');
+		var cost = form.querySelector('[name="unit_cost"]');
+		if (idField) { idField.value = '0'; }
+		if (skuField) { skuField.value = ''; skuField.removeAttribute('readonly'); }
+		if (supplierSkuField) { supplierSkuField.value = ''; }
+		if (supplierNameField) { supplierNameField.value = ''; }
+		if (qty) { qty.value = '1'; }
+		if (cost) { cost.value = ''; }
+		form.classList.remove('ks-has-product');
+
+		// Reset the search box + results table so it doesn't linger over new input.
+		var search = document.querySelector('[data-ks-product-search]');
+		var results = document.querySelector('[data-ks-picker-results]');
+		var pickerTable = results && results.closest ? results.closest('table') : null;
+		if (results) { results.innerHTML = ''; }
+		if (pickerTable) { pickerTable.hidden = true; }
+		if (search) { search.value = ''; search.focus(); }
 	}
 
 	/**
@@ -444,33 +565,28 @@
 
 	function wireLineEdit() {
 		var editForm = document.querySelector('[data-ks-line-edit]');
-		if (!editForm) {
-			return;
-		}
-		var lineField = editForm.querySelector('[data-ks-edit-line]');
-		var qtyField = editForm.querySelector('[data-ks-edit-qty]');
-		var costField = editForm.querySelector('[data-ks-edit-cost]');
-		var supplierSkuField = editForm.querySelector('[data-ks-edit-supplier-sku]');
-		var supplierNameField = editForm.querySelector('[data-ks-edit-supplier-name]');
-		var cancelBtn = editForm.querySelector('[data-ks-edit-cancel]');
+		var async = canAsyncLines();
 
-		document.querySelectorAll('.ks-edit-line').forEach(function (btn) {
-			btn.addEventListener('click', function () {
-				if (lineField) {
-					lineField.value = btn.getAttribute('data-line') || '0';
+		if (editForm) {
+			var lineField = editForm.querySelector('[data-ks-edit-line]');
+			var qtyField = editForm.querySelector('[data-ks-edit-qty]');
+			var costField = editForm.querySelector('[data-ks-edit-cost]');
+			var supplierSkuField = editForm.querySelector('[data-ks-edit-supplier-sku]');
+			var supplierNameField = editForm.querySelector('[data-ks-edit-supplier-name]');
+			var cancelBtn = editForm.querySelector('[data-ks-edit-cancel]');
+
+			// Edit buttons live in the repaintable <tbody>; delegate so async-added
+			// rows keep working after swapLines() replaces the body.
+			document.addEventListener('click', function (ev) {
+				var btn = ev.target.closest ? ev.target.closest('.ks-edit-line') : null;
+				if (!btn) {
+					return;
 				}
-				if (qtyField) {
-					qtyField.value = btn.getAttribute('data-qty') || '';
-				}
-				if (costField) {
-					costField.value = btn.getAttribute('data-cost') || '';
-				}
-				if (supplierSkuField) {
-					supplierSkuField.value = btn.getAttribute('data-supplier-sku') || '';
-				}
-				if (supplierNameField) {
-					supplierNameField.value = btn.getAttribute('data-supplier-name') || '';
-				}
+				if (lineField) { lineField.value = btn.getAttribute('data-line') || '0'; }
+				if (qtyField) { qtyField.value = btn.getAttribute('data-qty') || ''; }
+				if (costField) { costField.value = btn.getAttribute('data-cost') || ''; }
+				if (supplierSkuField) { supplierSkuField.value = btn.getAttribute('data-supplier-sku') || ''; }
+				if (supplierNameField) { supplierNameField.value = btn.getAttribute('data-supplier-name') || ''; }
 				editForm.hidden = false;
 				try {
 					editForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -482,11 +598,68 @@
 					qtyField.select();
 				}
 			});
-		});
 
-		if (cancelBtn) {
-			cancelBtn.addEventListener('click', function () {
-				editForm.hidden = true;
+			if (cancelBtn) {
+				cancelBtn.addEventListener('click', function () {
+					editForm.hidden = true;
+				});
+			}
+
+			if (async) {
+				editForm.addEventListener('submit', function (ev) {
+					ev.preventDefault();
+					var lineId = lineField ? (parseInt(lineField.value, 10) || 0) : 0;
+					if (lineId <= 0) {
+						return;
+					}
+					var body = {
+						qty: qtyField ? qtyField.value : '',
+						unit_cost: costField ? costField.value : '',
+						supplier_sku: supplierSkuField ? supplierSkuField.value : '',
+						supplier_name: supplierNameField ? supplierNameField.value : ''
+					};
+					var submitBtn = editForm.querySelector('[type="submit"]');
+					if (submitBtn) { submitBtn.disabled = true; }
+					lineFetch('POST', 'po/' + poId() + '/lines/' + lineId, body).then(function (out) {
+						if (submitBtn) { submitBtn.disabled = false; }
+						if (!out.ok || out.data.status !== 'ok') {
+							window.alert(out.data.message || t('genericError', 'Something went wrong.'));
+							return;
+						}
+						swapLines(out.data.lines_html);
+						editForm.hidden = true;
+					}).catch(function () {
+						if (submitBtn) { submitBtn.disabled = false; }
+						window.alert(t('genericError', 'Something went wrong.'));
+					});
+				});
+			}
+		}
+
+		// Remove links → async DELETE. The inline onclick confirm still runs first
+		// (target phase); if the operator cancelled it, defaultPrevented is set and
+		// we bail — so no double confirm, and the href stays the no-JS fallback.
+		if (async) {
+			document.addEventListener('click', function (ev) {
+				var link = ev.target.closest ? ev.target.closest('.ks-remove-line') : null;
+				if (!link || ev.defaultPrevented) {
+					return;
+				}
+				ev.preventDefault();
+				var lineId = parseInt(link.getAttribute('data-line'), 10) || 0;
+				if (lineId <= 0) {
+					window.location = link.href;
+					return;
+				}
+				lineFetch('DELETE', 'po/' + poId() + '/lines/' + lineId).then(function (out) {
+					if (!out.ok || out.data.status !== 'ok') {
+						window.alert(out.data.message || t('genericError', 'Something went wrong.'));
+						return;
+					}
+					swapLines(out.data.lines_html);
+				}).catch(function () {
+					window.alert(t('genericError', 'Something went wrong.'));
+				});
 			});
 		}
 	}
