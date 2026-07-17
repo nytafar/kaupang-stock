@@ -319,6 +319,12 @@ final class Engine {
         if (!$basis['all_costed'] || $basis['cost_ore'] === null) {
             return [null, true];
         }
+        // ponytail: blended source lots collapse to one rounded per-unit cost, so
+        // total inventory value is conserved only within integer rounding
+        // (≤ floor(qty/2) øre per transfer, and a reverse transfer need not zero
+        // value exactly); quantity/_stock stay exact. Upgrade path if exact value
+        // conservation is ever required: carry the remainder as a compensating
+        // row, or recreate the drawn source lots individually on the destination.
         return [
             (int) round($basis['cost_ore'] / $basis['qty']),
             $basis['is_estimate'],

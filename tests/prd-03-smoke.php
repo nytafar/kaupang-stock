@@ -213,6 +213,43 @@ try {
     Ledger::adjust($productId, -2, 'KSTEST estimated fixture cleanup', null, 'kstest-prd03-est-zero-' . $run, $originalDefault);
     Sweeper::sweepAll();
 
+    // Blended source: when the FIFO draw spans lots whose total cost is not
+    // divisible by the moved quantity, transfer_in stores a single rounded
+    // per-unit cost. Total value is then conserved only within integer rounding
+    // (≤ floor(qty/2) øre) — never guaranteed exact — while quantity stays exact.
+    // The exact-cost assertions above hold precisely because that fixture is a
+    // single uniform lot; this case exercises the rounding ceiling itself.
+    CostInputs::stash('adjust:kstest-prd03-blenda-' . $run, 100);
+    Ledger::adjust($productId, 5, 'KSTEST blended lot A', null, 'adjust:kstest-prd03-blenda-' . $run, $originalDefault);
+    CostInputs::stash('adjust:kstest-prd03-blendb-' . $run, 101);
+    Ledger::adjust($productId, 5, 'KSTEST blended lot B', null, 'adjust:kstest-prd03-blendb-' . $run, $originalDefault);
+    Sweeper::sweepAll();
+    $blendQty       = 6; // draws 5@100 + 1@101 = 601 øre; 601/6 is not integer
+    $blendBound     = intdiv($blendQty, 2); // rounding ceiling in øre
+    $blendBefore    = $productValue($productId);
+    $blendAggregate = $aggregate($productId);
+    $blendStock     = (float) wc_get_product($productId)->get_stock_quantity();
+    $assert($blendBefore === 5 * 100 + 5 * 101, 'blended source holds two lots at distinct cost');
+
+    Transfers::transfer($productId, $blendQty, $originalDefault, $locationId, 'kstest-prd03-blendf-' . $run, 'KSTEST blended forward');
+    Sweeper::sweepAll();
+    $assert(abs($aggregate($productId) - $blendAggregate) < 1e-9, 'blended transfer keeps SUM(on_hand) exact');
+    $assert(abs((float) wc_get_product($productId)->get_stock_quantity() - $blendStock) < 1e-9, 'blended transfer keeps _stock exact');
+    $assert(abs($productValue($productId) - $blendBefore) <= $blendBound, 'blended transfer conserves total value within floor(qty/2) øre');
+
+    Transfers::transfer($productId, $blendQty, $locationId, $originalDefault, 'kstest-prd03-blendr-' . $run, 'KSTEST blended reverse');
+    Sweeper::sweepAll();
+    $assert(abs($aggregate($productId) - $blendAggregate) < 1e-9, 'blended round-trip keeps SUM(on_hand) exact');
+    $assert(abs($productValue($productId) - $blendBefore) <= $blendBound, 'blended round-trip conserves total value within rounding');
+
+    foreach (array_unique([$originalDefault, $locationId]) as $blendZeroId) {
+        $blendOnHand = Balances::onHand($productId, $blendZeroId);
+        if (abs($blendOnHand) > 1e-9) {
+            Ledger::adjust($productId, -$blendOnHand, 'KSTEST blended cleanup', null, 'kstest-prd03-blendzero-' . $run . '-' . $blendZeroId, $blendZeroId);
+        }
+    }
+    Sweeper::sweepAll();
+
     // Validation seams: shadow, capability denial, same-location, and an
     // inactive location all reject before a batch can be written.
     Settings::update(['mode' => Settings::MODE_SHADOW]);
