@@ -754,6 +754,10 @@
 				// Sent as-is (site-local); the REST controller converts to UTC.
 				body.occurred_at = occurred.value;
 			}
+			var locationSelect = form.querySelector('.ks-receive-location');
+			if (locationSelect && locationSelect.value) {
+				body.location_id = parseInt(locationSelect.value, 10) || 0;
+			}
 
 			fetch(ROOT.restUrl + 'receive', {
 				method: 'POST',

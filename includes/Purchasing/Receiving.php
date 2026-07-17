@@ -51,11 +51,12 @@ final class Receiving {
      *                                          durably (CostInputs, keyed by the line's idempotency key) BEFORE
      *                                          the ledger posts, because the costing fold runs inside
      *                                          recordBatch's post-commit hook and rebuilds re-derive from inputs.
+     * @param int                $locationId    target location; 0 = default location; one receipt = one location
      *
      * @return array{status:string,issues:array<int,array<string,mixed>>,batch:string,movements:int,po_status:string,message:string}
      *         status is one of ok | confirm_required | error.
      */
-    public static function receive(int $poId, string $token, array $lines, ?string $occurredAtUtc, bool $confirmed, array $costs = []): array {
+    public static function receive(int $poId, string $token, array $lines, ?string $occurredAtUtc, bool $confirmed, array $costs = [], int $locationId = 0): array {
         $po = PurchaseOrders::find($poId);
         if ($po === null) {
             return self::result('error', [], '', 0, '', \__('Purchase order not found.', 'kaupang-stock'));
@@ -64,6 +65,12 @@ final class Receiving {
         $token = self::normalizeToken($token);
         if ($token === '') {
             return self::result('error', [], '', 0, (string) $po['status'], \__('A receive token is required.', 'kaupang-stock'));
+        }
+
+        // A receipt lands on ONE location; 0 (or an unknown/inactive id) falls back
+        // to the default via Balances::resolveLocation().
+        if ($locationId > 0 && !\Kaupang\Stock\Locations::isActive($locationId)) {
+            $locationId = 0;
         }
 
         // Gate: receipts are owned writes — the PO must be an open, ordered PO
@@ -157,7 +164,7 @@ final class Receiving {
                 $note,
                 $occurredAtUtc,                        // operator-editable, already UTC or null
                 'po_line:' . $lineId . ':receive:' . $token,
-                0
+                $locationId
             );
         }
 

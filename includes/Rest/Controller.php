@@ -115,6 +115,7 @@ final class Controller {
                 'occurred_at' => ['type' => 'string', 'required' => false],
                 'confirmed'   => ['type' => 'boolean', 'required' => false],
                 'costs'       => ['type' => 'object', 'required' => false],
+                'location_id' => ['type' => 'integer', 'required' => false],
             ],
         ]);
 
@@ -411,6 +412,7 @@ final class Controller {
 
         $poId  = (int) ($params['po_id'] ?? $req->get_param('po_id'));
         $token = \sanitize_text_field((string) ($params['token'] ?? $req->get_param('token')));
+        $locationId = (int) ($params['location_id'] ?? $req->get_param('location_id'));
 
         $rawLines = $params['lines'] ?? $req->get_param('lines');
         $lines    = [];
@@ -438,7 +440,7 @@ final class Controller {
             $occurredAtUtc = \get_gmt_from_date($normalized, 'Y-m-d H:i:s');
         }
 
-        $result = \call_user_func([$receiver, 'receive'], $poId, $token, $lines, $occurredAtUtc, $confirmed, $costs);
+        $result = \call_user_func([$receiver, 'receive'], $poId, $token, $lines, $occurredAtUtc, $confirmed, $costs, $locationId);
         return \rest_ensure_response($result);
     }
 

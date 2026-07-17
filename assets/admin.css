@@ -74,6 +74,10 @@
 	color: #00753a;
 }
 
+.ks-chip-loc-low {
+	margin-left: 4px;
+}
+
 /* --- Lagerverdi (valuation) --------------------------------------------- */
 .ks-valuation-filter,
 .ks-cogs-filter {

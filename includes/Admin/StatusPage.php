@@ -64,7 +64,13 @@ final class StatusPage {
         $category = isset($_GET['product_cat']) ? (int) $_GET['product_cat'] : 0; // phpcs:ignore WordPress.Security.NonceVerification
         $paged    = isset($_GET['paged']) ? max(1, (int) $_GET['paged']) : 1; // phpcs:ignore WordPress.Security.NonceVerification
 
-        $ids   = self::rowIds($search, $category);
+        $lowLoc = 0;
+        if (Locations::isMulti()) {
+            $rawLowLoc = isset($_GET['low_loc']) ? (int) $_GET['low_loc'] : 0; // phpcs:ignore WordPress.Security.NonceVerification
+            $lowLoc = Locations::isActive($rawLowLoc) ? $rawLowLoc : 0;
+        }
+
+        $ids   = self::rowIds($search, $category, $lowLoc);
         $total = count($ids);
         $pages = (int) max(1, (int) ceil($total / self::PER_PAGE));
         $paged = min($paged, $pages);
@@ -92,6 +98,14 @@ final class StatusPage {
                     <label class="screen-reader-text" for="ks-status-search"><?php \esc_html_e('Search products', 'kaupang-stock'); ?></label>
                     <input type="search" id="ks-status-search" name="s" value="<?php echo \esc_attr($search); ?>" placeholder="<?php \esc_attr_e('Title or SKU…', 'kaupang-stock'); ?>" />
                     <?php self::categoryDropdown($category); ?>
+                    <?php if (Locations::isMulti()): ?>
+                        <select name="low_loc">
+                            <option value="0"><?php \esc_html_e('Any low status', 'kaupang-stock'); ?></option>
+                            <?php foreach (Locations::all(true) as $loc): ?>
+                                <option value="<?php echo (int) $loc['id']; ?>" <?php \selected($lowLoc, (int) $loc['id']); ?>><?php echo \esc_html(sprintf(\__('Low at %s', 'kaupang-stock'), (string) $loc['name'])); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php endif; ?>
                     <?php \submit_button(\__('Filter', 'kaupang-stock'), '', '', false); ?>
                 </p>
             </form>
@@ -150,7 +164,12 @@ final class StatusPage {
                             <?php foreach ($locations as $location):
                                 $locationOnHand = (float) ($perLocation[(int) $location['id']]['on_hand'] ?? 0);
                             ?>
-                                <td class="ks-num<?php echo $locationOnHand < 0 ? ' ks-neg' : ''; ?>"><?php echo \esc_html(self::qty($locationOnHand)); ?></td>
+                                <td class="ks-num<?php echo $locationOnHand < 0 ? ' ks-neg' : ''; ?>">
+                                    <?php echo \esc_html(self::qty($locationOnHand)); ?>
+                                    <?php if ($inScope && self::isLowStock($productId, $locationOnHand)): ?>
+                                        <span class="ks-chip ks-chip-warning ks-chip-loc-low" title="<?php echo \esc_attr(sprintf(\__('Low at %s', 'kaupang-stock'), (string) $location['name'])); ?>"><?php \esc_html_e('Low', 'kaupang-stock'); ?></span>
+                                    <?php endif; ?>
+                                </td>
                             <?php endforeach; ?>
                             <td class="ks-num"><?php echo \esc_html(self::qty($reserved)); ?></td>
                             <td class="ks-num"><?php echo \esc_html(self::qty($avail)); ?></td>
@@ -301,7 +320,7 @@ final class StatusPage {
      *
      * @return int[]
      */
-    private static function rowIds(string $search, int $category): array {
+    private static function rowIds(string $search, int $category, int $lowLoc = 0): array {
         $managed = Seeder::stockManagedProductIds();
         $balance = array_keys(Balances::rows());
         $ids     = array_values(array_unique(array_merge($managed, $balance)));
@@ -312,8 +331,31 @@ final class StatusPage {
         if ($category > 0) {
             $ids = self::filterByCategory($ids, $category);
         }
+        if ($lowLoc > 0) {
+            $ids = self::filterByLowLocation($ids, $lowLoc);
+        }
 
         return self::sortByTitle($ids);
+    }
+
+    /** @param int[] $ids @return int[] ids low at $locationId (managed only) */
+    private static function filterByLowLocation(array $ids, int $locationId): array {
+        if ($ids === []) {
+            return [];
+        }
+        $managed = array_fill_keys(Seeder::stockManagedProductIds(), true);
+        $rows    = Balances::rows($ids);
+        $out     = [];
+        foreach ($ids as $id) {
+            if (!isset($managed[$id])) {
+                continue;
+            }
+            $onHand = (float) ($rows[$id][$locationId]['on_hand'] ?? 0);
+            if (self::isLowStock($id, $onHand)) {
+                $out[] = $id;
+            }
+        }
+        return $out;
     }
 
     /** @param int[] $ids @return int[] */

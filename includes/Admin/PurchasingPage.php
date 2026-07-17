@@ -694,6 +694,19 @@ final class PurchasingPage {
             </div>
 
             <table class="form-table" role="presentation">
+                <?php if (\Kaupang\Stock\Locations::isMulti()): ?>
+                <tr>
+                    <th scope="row"><label for="ks-receive-location"><?php \esc_html_e('Location', 'kaupang-stock'); ?></label></th>
+                    <td>
+                        <select id="ks-receive-location" class="ks-receive-location"<?php echo Settings::activeMode() ? '' : ' disabled'; ?>>
+                            <?php foreach (\Kaupang\Stock\Locations::all(true) as $location): ?>
+                                <option value="<?php echo (int) $location['id']; ?>" <?php \selected((int) $location['id'], Balances::defaultLocationId()); ?>><?php echo \esc_html((string) $location['name']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <p class="description"><?php \esc_html_e('Which location these goods arrive at. Partial receipts of the same order can go to different locations.', 'kaupang-stock'); ?></p>
+                    </td>
+                </tr>
+                <?php endif; ?>
                 <tr>
                     <th scope="row"><label for="ks-occurred"><?php \esc_html_e('Received at', 'kaupang-stock'); ?></label></th>
                     <td>
