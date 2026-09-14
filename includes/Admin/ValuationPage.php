@@ -3,13 +3,8 @@ declare(strict_types=1);
 
 namespace Kaupang\Stock\Admin;
 
-use Kaupang\Stock\Costing\Consumptions;
 use Kaupang\Stock\Costing\Costing;
 use Kaupang\Stock\Costing\CostingException;
-use Kaupang\Stock\Costing\Layers;
-use Kaupang\Stock\Costing\Opening;
-use Kaupang\Stock\Costing\Sweeper;
-use Kaupang\Stock\Costing\Valuation;
 use Kaupang\Stock\Costing\WcCogsBridge;
 use Kaupang\Stock\Ledger\Reasons;
 use Kaupang\Stock\Locations;
@@ -21,7 +16,7 @@ use Kaupang\Stock\Support\ProductSearch;
  * "Lager → Lagerverdi" — the valuation and COGS reporting surface.
  *
  * Read-only over the cost projection (the one write is the opening-cost
- * entry, which goes through Opening::save()). Renders:
+ * entry, which goes through Costing::saveOpening()). Renders:
  *  - the opening-cost setup box while products still await an opening cost;
  *  - per-product valuation (point-in-time capable via the as-of picker,
  *    since append-only tables make "as of" a filtered sum) + CSV export;
@@ -51,7 +46,7 @@ final class ValuationPage {
         }
 
         // Cheap at this catalog size; guarantees the page reflects the ledger.
-        Sweeper::sweepAll();
+        Costing::sweep();
 
         // phpcs:disable WordPress.Security.NonceVerification -- read-only GET filters.
         $view      = isset($_GET['view']) ? \sanitize_key((string) $_GET['view']) : '';
@@ -83,7 +78,7 @@ final class ValuationPage {
     /* --------------------------- Opening box ------------------------------ */
 
     private static function openingBox(): void {
-        $pending = Opening::pending();
+        $pending = Costing::pendingOpening();
         if ($pending === []) {
             return;
         }
@@ -154,8 +149,7 @@ final class ValuationPage {
         }
 
         $multi  = Locations::isMulti();
-        $rows   = $multi ? Valuation::rowsByLocation($asOfUtc) : Valuation::rows($asOfUtc);
-        $totals = Valuation::totals($asOfUtc);
+        ['rows' => $rows, 'totals' => $totals] = Costing::valuation(['as_of' => $asOfUtc, 'by_location' => $multi]);
         ?>
         <form method="get" class="ks-valuation-filter">
             <input type="hidden" name="page" value="<?php echo \esc_attr(Menu::SLUG_VALUATION); ?>" />
@@ -255,7 +249,7 @@ final class ValuationPage {
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $toRaw)) {
             $toRaw = (string) \wp_date('Y-m-d');
         }
-        $report = Valuation::cogsReport(
+        $report = Costing::report(
             \get_gmt_from_date($fromRaw . ' 00:00:00'),
             \get_gmt_from_date($toRaw . ' 23:59:59')
         );
@@ -331,6 +325,7 @@ final class ValuationPage {
         <?php if ($locationId > 0): ?><p class="ks-muted"><?php echo \esc_html(Locations::name($locationId)); ?></p><?php endif; ?>
         <p><a href="<?php echo \esc_url(self::url([])); ?>">&larr; <?php \esc_html_e('Back to stock value', 'kaupang-stock'); ?></a></p>
 
+        <?php $drill = Costing::drillDown($productId, $locationId); ?>
         <h2><?php \esc_html_e('Layers', 'kaupang-stock'); ?></h2>
         <div class="ks-tablewrap">
         <table class="wp-list-table widefat striped">
@@ -344,7 +339,7 @@ final class ValuationPage {
                 <th><?php \esc_html_e('Date', 'kaupang-stock'); ?></th>
             </tr></thead>
             <tbody>
-            <?php foreach (Layers::forProduct($productId, $locationId, 200) as $layer): ?>
+            <?php foreach ($drill['layers'] as $layer): ?>
                 <tr>
                     <td class="ks-muted">#<?php echo (int) $layer['id']; ?></td>
                     <td>
@@ -376,7 +371,7 @@ final class ValuationPage {
                 <th><?php \esc_html_e('Ref', 'kaupang-stock'); ?></th>
             </tr></thead>
             <tbody>
-            <?php foreach (Consumptions::forProduct($productId, $locationId, 200) as $c): ?>
+            <?php foreach ($drill['consumptions'] as $c): ?>
                 <tr>
                     <td class="ks-muted"><?php echo \esc_html(self::localTime((string) $c['occurred_at'])); ?></td>
                     <td><span class="ks-reason-chip"><?php echo \esc_html(self::kindLabel((string) $c['kind'])); ?></span></td>
@@ -407,7 +402,7 @@ final class ValuationPage {
             self::redirect(['ks_err' => 'opening_input']);
         }
         try {
-            Opening::save($productId, (int) round(((float) $costRaw) * 100));
+            Costing::saveOpening($productId, (int) round(((float) $costRaw) * 100));
         } catch (CostingException $e) {
             self::redirect(['ks_err' => 'opening', 'ks_detail' => rawurlencode($e->getMessage())]);
         }
@@ -428,10 +423,9 @@ final class ValuationPage {
             $asOfRaw = (string) \wp_date('Y-m-d');
         }
 
-        Sweeper::sweepAll();
+        Costing::sweep();
         $multi  = Locations::isMulti();
-        $rows   = $multi ? Valuation::rowsByLocation($asOfUtc) : Valuation::rows($asOfUtc);
-        $totals = Valuation::totals($asOfUtc);
+        ['rows' => $rows, 'totals' => $totals] = Costing::valuation(['as_of' => $asOfUtc, 'by_location' => $multi]);
 
         $filename = 'lagerverdi-' . $asOfRaw . '.csv';
         \nocache_headers();
@@ -499,10 +493,10 @@ final class ValuationPage {
 
     /** Origin/reason → Norwegian chip label (layers reuse movement reasons). */
     private static function originLabel(string $origin): string {
-        if ($origin === Layers::ORIGIN_OPENING) {
+        if ($origin === 'opening') {
             return \__('Opening cost', 'kaupang-stock');
         }
-        if ($origin === Layers::ORIGIN_CORRECTION || $origin === 'correction') {
+        if ($origin === 'correction') {
             return \__('Cost correction', 'kaupang-stock');
         }
         return Reasons::label($origin);
@@ -510,12 +504,12 @@ final class ValuationPage {
 
     private static function kindLabel(string $kind): string {
         $labels = [
-            Consumptions::KIND_FIFO          => \__('FIFO', 'kaupang-stock'),
-            Consumptions::KIND_PROVISIONAL   => \__('Provisional', 'kaupang-stock'),
-            Consumptions::KIND_PROV_REVERSAL => \__('True-up (reversal)', 'kaupang-stock'),
-            Consumptions::KIND_BACKFILL      => \__('True-up (backfill)', 'kaupang-stock'),
-            Consumptions::KIND_CORRECTION    => \__('Correction', 'kaupang-stock'),
-            Consumptions::KIND_TRANSFER_OUT  => \__('Transfer out', 'kaupang-stock'),
+            'fifo'          => \__('FIFO', 'kaupang-stock'),
+            'provisional'   => \__('Provisional', 'kaupang-stock'),
+            'prov_reversal' => \__('True-up (reversal)', 'kaupang-stock'),
+            'backfill'      => \__('True-up (backfill)', 'kaupang-stock'),
+            'correction'    => \__('Correction', 'kaupang-stock'),
+            'transfer_out'  => \__('Transfer out', 'kaupang-stock'),
         ];
         return $labels[$kind] ?? $kind;
     }

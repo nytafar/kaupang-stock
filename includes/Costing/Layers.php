@@ -12,6 +12,8 @@ use Kaupang\Stock\Schema;
  * deleted; its remaining quantity is always derived (qty_original − Σ drawn).
  * unit_cost_ore NULL means "cost unknown" — never a fake zero (0 øre is a
  * legitimate cost for samples/bonus goods).
+ *
+ * @internal Implementation of the Costing module — reach it through Costing.
  */
 final class Layers {
 

@@ -14,6 +14,8 @@ use Kaupang\Stock\Schema;
  * inputs — the movements stream, opening layers, cost_inputs and PO lines.
  * Delete everything derived, reset the watermarks to the anchor, sweep.
  * Opening layers survive (they ARE operator input, not derivation).
+ *
+ * @internal Implementation of the Costing module — reach it through Costing.
  */
 final class Rebuild {
 

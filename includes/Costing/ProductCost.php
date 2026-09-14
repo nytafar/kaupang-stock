@@ -18,6 +18,8 @@ use Kaupang\Stock\Schema;
  *
  * Also owns the module's transaction helpers: every cost write happens inside
  * ProductCost::begin()/commit() around a lockRow().
+ *
+ * @internal Implementation of the Costing module — reach it through Costing.
  */
 final class ProductCost {
 

@@ -13,6 +13,8 @@ use Kaupang\Stock\Schema;
  * from current on_hand, so entering costs days later is safe: interim sales
  * folded as provisionals and settle against the opening layer the moment it
  * is saved (Engine::settleProvisionals).
+ *
+ * @internal Implementation of the Costing module — reach it through Costing.
  */
 final class Opening {
 

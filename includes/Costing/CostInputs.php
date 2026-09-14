@@ -15,6 +15,8 @@ use Kaupang\Stock\Schema;
  * One mechanism serves both flows:
  *  - receive-line overrides:  key `po_line:{lineId}:receive:{token}`
  *  - costed quick-adjust:     key `adjust:{uuid}` (minted by the caller)
+ *
+ * @internal Implementation of the Costing module — reach it through Costing.
  */
 final class CostInputs {
 

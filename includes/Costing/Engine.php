@@ -33,6 +33,8 @@ use Kaupang\Stock\Schema;
  *            all            FIFO (occurred_at, id); shortfall → provisional
  *                           at last-known cost, settled by a true-up pair
  *                           when the next layer lands.
+ *
+ * @internal Implementation of the Costing module — reach it through Costing.
  */
 final class Engine {
 

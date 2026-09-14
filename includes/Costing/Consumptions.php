@@ -24,6 +24,8 @@ use Kaupang\Stock\Schema;
  *
  * cost_ore is qty × unit_cost_ore, exact integer øre; NULL when the source
  * layer/estimate is uncosted.
+ *
+ * @internal Implementation of the Costing module — reach it through Costing.
  */
 final class Consumptions {
 

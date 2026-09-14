@@ -40,6 +40,93 @@ final class Costing {
             return;
         }
         \add_action('kaupang/stock/movement_recorded', [self::class, 'onMovement']);
+        // Order-COGS stamping for margin analytics (own flag inside register()).
+        WcCogsBridge::register();
+    }
+
+    /* ------------------------------ Facade -------------------------------- */
+
+    /**
+     * Catch-up fold for anything the live hook missed.
+     *
+     * @return array{products:int,movements:int}
+     */
+    public static function sweep(): array {
+        return Sweeper::sweepAll();
+    }
+
+    /**
+     * Sweep first, so the invariant check never reports pure lag.
+     *
+     * @return array<string,mixed>
+     */
+    public static function sweepAndVerify(): array {
+        Sweeper::sweepAll();
+        return Verify::run();
+    }
+
+    /**
+     * @param array{as_of?:string|null,by_location?:bool} $filters
+     * @return array{rows:array<int,array<string,mixed>>,totals:array<string,mixed>}
+     */
+    public static function valuation(array $filters = []): array {
+        $asOfUtc = isset($filters['as_of']) ? (string) $filters['as_of'] : null;
+        return [
+            'rows'   => !empty($filters['by_location'])
+                ? Valuation::rowsByLocation($asOfUtc)
+                : Valuation::rows($asOfUtc),
+            'totals' => Valuation::totals($asOfUtc),
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    public static function report(string $fromUtc, string $toUtc): array {
+        return Valuation::cogsReport($fromUtc, $toUtc);
+    }
+
+    /**
+     * The audit chain behind one product's value at one location.
+     *
+     * @return array{layers:array<int,array<string,mixed>>,consumptions:array<int,array<string,mixed>>}
+     */
+    public static function drillDown(int $productId, int $locationId): array {
+        return [
+            'layers'       => Layers::forProduct($productId, $locationId, 200),
+            'consumptions' => Consumptions::forProduct($productId, $locationId, 200),
+        ];
+    }
+
+    /**
+     * Re-derive every cost row from the movements, with the totals either side.
+     *
+     * @return array{before:array<string,mixed>,swept:array{products:int,movements:int},after:array<string,mixed>}
+     */
+    public static function rebuild(): array {
+        $before = Valuation::totals();
+        $swept  = Rebuild::run();
+        return ['before' => $before, 'swept' => $swept, 'after' => Valuation::totals()];
+    }
+
+    public static function correct(int $layerId, int $newUnitCostOre, string $note, ?int $actorId = null): int {
+        return Rebuild::correctLayer($layerId, $newUnitCostOre, $note, $actorId);
+    }
+
+    public static function saveOpening(int $productId, int $unitCostOre, int $locationId = 0, ?int $actorId = null): int {
+        return Opening::save($productId, $unitCostOre, $locationId, $actorId);
+    }
+
+    /** Products still waiting for an operator-entered opening cost. */
+    public static function pendingOpening(): array {
+        return Opening::pending();
+    }
+
+    public static function stash(string $key, int $ore): void {
+        CostInputs::stash($key, $ore);
+    }
+
+    /** @param array<string,int> $map idempotency key => unit cost in øre */
+    public static function stashMany(array $map): void {
+        CostInputs::stashMany($map);
     }
 
     /**

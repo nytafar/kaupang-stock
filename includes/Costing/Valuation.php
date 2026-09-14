@@ -10,6 +10,8 @@ use Kaupang\Stock\Schema;
  * Append-only tables make "as of" a filtered sum: layers born at or before T
  * minus consumptions that occurred at or before T. Always computed live from
  * the tables (the cache is for quick current reads and verify, not reports).
+ *
+ * @internal Implementation of the Costing module — reach it through Costing.
  */
 final class Valuation {
 

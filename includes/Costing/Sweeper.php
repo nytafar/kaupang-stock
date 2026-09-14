@@ -15,6 +15,8 @@ use Kaupang\Stock\Schema;
  *
  * Runs from the daily Reconciler, the CLI, and the Lagerverdi render — never
  * needs its own schedule.
+ *
+ * @internal Implementation of the Costing module — reach it through Costing.
  */
 final class Sweeper {
 

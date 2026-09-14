@@ -207,7 +207,7 @@ final class Receiving {
             }
             if ($stash !== []) {
                 try {
-                    \Kaupang\Stock\Costing\CostInputs::stashMany($stash);
+                    \Kaupang\Stock\Costing\Costing::stashMany($stash);
                 } catch (\Throwable $e) {
                     Logger::error('receive_cost_stash_failed', ['po' => $poId, 'token' => $token, 'error' => $e->getMessage()]);
                 }

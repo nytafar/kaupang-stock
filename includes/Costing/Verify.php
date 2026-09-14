@@ -18,6 +18,8 @@ use Kaupang\Stock\Schema;
  * With the opening layer entered the right side collapses to on_hand. A
  * missing opening layer is therefore reported as `opening_pending`, never as
  * drift.
+ *
+ * @internal Implementation of the Costing module — reach it through Costing.
  */
 final class Verify {
 

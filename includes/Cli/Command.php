@@ -440,8 +440,7 @@ final class Command {
 
         switch ($action) {
             case 'verify':
-                \Kaupang\Stock\Costing\Sweeper::sweepAll();
-                $report = \Kaupang\Stock\Costing\Verify::run();
+                $report = \Kaupang\Stock\Costing\Costing::sweepAndVerify();
                 $this->renderCostVerify($report);
                 if (!empty($report['issues'])) {
                     \WP_CLI::halt(1);
@@ -452,9 +451,7 @@ final class Command {
                 if (!isset($assoc['yes'])) {
                     \WP_CLI::confirm('Rebuild deletes every derived cost row (consumptions + non-opening layers + cache) and re-folds from the movements. Continue?');
                 }
-                $before = \Kaupang\Stock\Costing\Valuation::totals();
-                $swept  = \Kaupang\Stock\Costing\Rebuild::run();
-                $after  = \Kaupang\Stock\Costing\Valuation::totals();
+                ['before' => $before, 'swept' => $swept, 'after' => $after] = \Kaupang\Stock\Costing\Costing::rebuild();
                 \WP_CLI::log(sprintf('Re-folded %d movement(s) across %d product(s).', $swept['movements'], $swept['products']));
                 \WP_CLI::log(sprintf('Valuation before: %s kr · after: %s kr', $this->kr($before['total_ore']), $this->kr($after['total_ore'])));
                 if ($before['total_ore'] === $after['total_ore'] && abs($before['open_qty'] - $after['open_qty']) < 1e-6) {
@@ -467,8 +464,8 @@ final class Command {
             case 'report':
                 $from = $this->bound((string) ($assoc['from'] ?? \wp_date('Y-m-01')), false);
                 $to   = $this->bound((string) ($assoc['to'] ?? \wp_date('Y-m-d')), true);
-                \Kaupang\Stock\Costing\Sweeper::sweepAll();
-                $report = \Kaupang\Stock\Costing\Valuation::cogsReport($from, $to);
+                \Kaupang\Stock\Costing\Costing::sweep();
+                $report = \Kaupang\Stock\Costing\Costing::report($from, $to);
                 $this->renderCostReport($report);
                 return;
 
@@ -480,7 +477,7 @@ final class Command {
                         \WP_CLI::error('--cost must be a non-negative kr amount.');
                     }
                     try {
-                        $layerId = \Kaupang\Stock\Costing\Opening::save($productId, (int) round(((float) $kr) * 100));
+                        $layerId = \Kaupang\Stock\Costing\Costing::saveOpening($productId, (int) round(((float) $kr) * 100));
                     } catch (\Kaupang\Stock\Costing\CostingException $e) {
                         \WP_CLI::error($e->getMessage());
                         return;
@@ -488,7 +485,7 @@ final class Command {
                     \WP_CLI::success(sprintf('Opening layer #%d saved for %s at %s kr.', $layerId, ProductSearch::label($productId), $kr));
                     return;
                 }
-                $pending = \Kaupang\Stock\Costing\Opening::pending();
+                $pending = \Kaupang\Stock\Costing\Costing::pendingOpening();
                 if ($pending === []) {
                     \WP_CLI::success('No products are waiting for an opening cost.');
                     return;
@@ -512,7 +509,7 @@ final class Command {
                     \WP_CLI::error('correct requires --layer=<id>, --cost=<kr> and --note=<note>.');
                 }
                 try {
-                    $newLayerId = \Kaupang\Stock\Costing\Rebuild::correctLayer($layerId, (int) round(((float) $kr) * 100), $note);
+                    $newLayerId = \Kaupang\Stock\Costing\Costing::correct($layerId, (int) round(((float) $kr) * 100), $note);
                 } catch (\Kaupang\Stock\Costing\CostingException $e) {
                     \WP_CLI::error($e->getMessage());
                     return;
@@ -527,7 +524,7 @@ final class Command {
 
     /* ------------------------------ Internals ----------------------------- */
 
-    /** @param array<string,mixed> $report Costing\Verify::run() output */
+    /** @param array<string,mixed> $report Costing::sweepAndVerify() output */
     private function renderCostVerify(array $report): void {
         \WP_CLI::log(sprintf('Cost projection checked for %d product(s).', (int) $report['checked']));
 
@@ -561,7 +558,7 @@ final class Command {
         }
     }
 
-    /** @param array<string,mixed> $report Costing\Valuation::cogsReport() output */
+    /** @param array<string,mixed> $report Costing::report() output */
     private function renderCostReport(array $report): void {
         \WP_CLI::log(sprintf('COGS %s → %s (UTC)', (string) $report['from'], (string) $report['to']));
         \WP_CLI::log('');

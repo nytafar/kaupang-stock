@@ -69,17 +69,14 @@ final class Reconciler {
      * Run the invariant check and persist the report (non-autoloaded option —
      * the Diagnostics-style screen and CLI read it). When costing is on, the
      * catch-up sweep runs first (so the cost section never reports pure lag)
-     * and the report gains a `cost` section (Costing\Verify).
+     * and the report gains a `cost` section (Costing::sweepAndVerify()).
      *
      * @return array{time:string,checked:int,issues:array,out_of_scope:array}
      */
     public static function run(): array {
-        if (\Kaupang\Stock\Costing\Costing::enabled()) {
-            \Kaupang\Stock\Costing\Sweeper::sweepAll();
-        }
         $report = self::verify();
         if (\Kaupang\Stock\Costing\Costing::enabled()) {
-            $report['cost'] = \Kaupang\Stock\Costing\Verify::run();
+            $report['cost'] = \Kaupang\Stock\Costing\Costing::sweepAndVerify();
             if (!empty($report['cost']['issues'])) {
                 Logger::warning('reconcile_cost_issues', ['count' => count($report['cost']['issues'])]);
             }

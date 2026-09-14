@@ -8,6 +8,8 @@ namespace Kaupang\Stock\Costing;
  * order, its outstanding provisionals, and the last known unit cost. Loaded
  * fresh inside the transaction (sees committed rows; the engine keeps it in
  * step with its own uncommitted inserts as it folds).
+ *
+ * @internal Implementation of the Costing module — reach it through Costing.
  */
 final class FoldState {
 

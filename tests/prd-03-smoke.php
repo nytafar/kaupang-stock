@@ -8,6 +8,7 @@ use Kaupang\Stock\Costing\Layers;
 use Kaupang\Stock\Costing\ProductCost;
 use Kaupang\Stock\Costing\Sweeper;
 use Kaupang\Stock\Costing\Valuation;
+use Kaupang\Stock\Costing\Verify;
 use Kaupang\Stock\Ledger\Balances;
 use Kaupang\Stock\Ledger\Ledger;
 use Kaupang\Stock\Ledger\LedgerException;
@@ -288,6 +289,13 @@ try {
     $assert(abs($aggregate($productId)) < 1e-9, 'fixture finishes at aggregate zero');
     $assert(abs((float) wc_get_product($productId)->get_stock_quantity()) < 1e-9, 'fixture finishes with Woo stock zero');
     $assert($productValue($productId) === 0, 'fixture finishes with zero stock value');
+
+    // The Costing facade is pure delegation: same issue count as the internal
+    // verifier run straight afterwards on the (now swept) same state.
+    $assert(
+        count(Costing::sweepAndVerify()['issues']) === count(Verify::run()['issues']),
+        'Costing::sweepAndVerify() returns the same issues count as Verify::run()'
+    );
 
     WP_CLI::success('PRD-03 transfer and costing smoke test passed.');
 } finally {

@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Kaupang\Stock;
 
-use Kaupang\Stock\Costing\CostInputs;
 use Kaupang\Stock\Costing\Costing;
 use Kaupang\Stock\Ledger\Ledger;
 use Kaupang\Stock\Ledger\Movement;
@@ -36,7 +35,7 @@ final class Adjust {
         // Removals are valued FIFO by the engine; an entered cost is only ever
         // the price of stock coming in.
         if ($delta > 0 && $unitCostOre !== null && Costing::enabled()) {
-            CostInputs::stash($idem, $unitCostOre);
+            Costing::stash($idem, $unitCostOre);
         }
 
         return Ledger::adjust($productId, $delta, $note, $occurredAt, $idem, $locationId);
