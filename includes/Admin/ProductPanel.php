@@ -121,7 +121,7 @@ final class ProductPanel {
             echo '<h4 class="ks-panel-heading">' . \esc_html__('Quick transfer', 'kaupang-stock') . '</h4>';
             foreach (array_keys($balances) as $childId) {
                 echo '<div class="ks-panel-transfer-product"><strong>' . \esc_html(ProductSearch::label((int) $childId)) . '</strong>';
-                StatusPage::transferForm((int) $childId, Settings::activeMode());
+                StatusPage::transferForm((int) $childId, Settings::activeMode(), false, 'ks-transfer-' . (int) $childId);
                 echo '</div>';
             }
         }
@@ -190,7 +190,7 @@ final class ProductPanel {
             return;
         }
         echo '<h4 class="ks-panel-heading">' . \esc_html__('Quick transfer', 'kaupang-stock') . '</h4>';
-        StatusPage::transferForm($productId, Settings::activeMode());
+        StatusPage::transferForm($productId, Settings::activeMode(), false, 'ks-transfer-' . $productId);
     }
 
     private static function movementsLink(int $productId): void {

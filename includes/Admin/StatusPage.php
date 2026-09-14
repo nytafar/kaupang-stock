@@ -573,8 +573,21 @@ final class StatusPage {
         <?php
     }
 
-    /** Quick transfer form shared with the product-side panel. */
-    public static function transferForm(int $productId, bool $enabled, bool $compact = false): void {
+    /** Transfer form owner ids waiting to be printed in the admin footer. */
+    private static array $deferredTransfers = [];
+
+    /**
+     * Quick transfer form shared with the product-side panel.
+     *
+     * On the product edit screen this markup lands inside one of the block
+     * editor's meta box forms. A nested <form> is invalid HTML: the parser
+     * drops the inner tag and every field is absorbed by the meta box form,
+     * where our "action" overrides WordPress's own "editpost" and makes
+     * post.php discard the entire meta box save. Passing $ownerFormId leaves
+     * the controls where they are visually but binds them, via the HTML5 form
+     * attribute, to a real <form> printed in the footer outside any meta box.
+     */
+    public static function transferForm(int $productId, bool $enabled, bool $compact = false, string $ownerFormId = ''): void {
         if (!Locations::isMulti()) {
             return;
         }
@@ -595,35 +608,73 @@ final class StatusPage {
 
         $disabled = $enabled ? '' : ' disabled';
         $title = $enabled ? '' : \esc_attr__('Switch to active mode in settings to transfer stock.', 'kaupang-stock');
+        $owned = $ownerFormId !== '';
+        $bind = $owned ? ' form="' . \esc_attr($ownerFormId) . '"' : '';
+        if ($owned) {
+            self::deferTransferForm($ownerFormId, $productId);
+        }
+        $classes = 'ks-quick-transfer' . ($compact ? ' ks-quick-transfer-compact' : '');
+        $titleAttr = $title !== '' ? ' title="' . $title . '"' : '';
         ?>
-        <form method="post" action="<?php echo \esc_url(\admin_url('admin-post.php')); ?>" class="ks-quick-transfer<?php echo $compact ? ' ks-quick-transfer-compact' : ''; ?>"<?php echo $title !== '' ? ' title="' . $title . '"' : ''; ?>>
+        <?php if ($owned): ?>
+        <div class="<?php echo \esc_attr($classes); ?>"<?php echo $titleAttr; ?>>
+        <?php else: ?>
+        <form method="post" action="<?php echo \esc_url(\admin_url('admin-post.php')); ?>" class="<?php echo \esc_attr($classes); ?>"<?php echo $titleAttr; ?>>
             <?php \wp_nonce_field(self::ACT_TRANSFER); ?>
             <input type="hidden" name="action" value="<?php echo \esc_attr(self::ACT_TRANSFER); ?>" />
             <input type="hidden" name="product_id" value="<?php echo (int) $productId; ?>" />
             <input type="hidden" name="token" value="<?php echo \esc_attr(\wp_generate_uuid4()); ?>" />
+        <?php endif; ?>
             <label><span><?php \esc_html_e('From', 'kaupang-stock'); ?></span>
-                <select name="source_location_id"<?php echo $disabled; ?>>
+                <select name="source_location_id"<?php echo $bind . $disabled; ?>>
                     <?php foreach ($locations as $location): $id = (int) $location['id']; ?>
                         <option value="<?php echo $id; ?>" <?php \selected($id, $sourceId); ?>><?php echo \esc_html((string) $location['name']); ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
             <label><span><?php \esc_html_e('To', 'kaupang-stock'); ?></span>
-                <select name="destination_location_id"<?php echo $disabled; ?>>
+                <select name="destination_location_id"<?php echo $bind . $disabled; ?>>
                     <?php foreach ($locations as $location): $id = (int) $location['id']; ?>
                         <option value="<?php echo $id; ?>" <?php \selected($id, $destinationId); ?>><?php echo \esc_html((string) $location['name']); ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
             <label><span><?php \esc_html_e('Qty', 'kaupang-stock'); ?></span>
-                <input type="number" name="quantity" step="1" min="1" class="small-text" required<?php echo $disabled; ?> />
+                <input type="number" name="quantity" step="1" min="1" class="small-text" required<?php echo $bind . $disabled; ?> />
             </label>
             <label class="ks-transfer-note"><span><?php \esc_html_e('Note', 'kaupang-stock'); ?></span>
-                <input type="text" name="note" maxlength="255" placeholder="<?php \esc_attr_e('Optional', 'kaupang-stock'); ?>"<?php echo $disabled; ?> />
+                <input type="text" name="note" maxlength="255" placeholder="<?php \esc_attr_e('Optional', 'kaupang-stock'); ?>"<?php echo $bind . $disabled; ?> />
             </label>
-            <button type="submit" class="button button-small"<?php echo $disabled; ?>><?php \esc_html_e('Transfer', 'kaupang-stock'); ?></button>
+            <button type="submit" class="button button-small"<?php echo $bind . $disabled; ?>><?php \esc_html_e('Transfer', 'kaupang-stock'); ?></button>
+        <?php if ($owned): ?>
+        </div>
+        <?php else: ?>
         </form>
+        <?php endif; ?>
         <?php
+    }
+
+    /** Queue the real <form> for this panel, printed after all meta boxes. */
+    private static function deferTransferForm(string $ownerFormId, int $productId): void {
+        if (self::$deferredTransfers === []) {
+            \add_action('admin_footer', [self::class, 'printDeferredTransferForms'], 100);
+        }
+        self::$deferredTransfers[$ownerFormId] = $productId;
+    }
+
+    /** Print the queued transfer forms outside of every meta box form. */
+    public static function printDeferredTransferForms(): void {
+        foreach (self::$deferredTransfers as $ownerFormId => $productId) {
+            ?>
+            <form method="post" action="<?php echo \esc_url(\admin_url('admin-post.php')); ?>" id="<?php echo \esc_attr($ownerFormId); ?>" class="ks-quick-transfer-owner">
+                <?php \wp_nonce_field(self::ACT_TRANSFER); ?>
+                <input type="hidden" name="action" value="<?php echo \esc_attr(self::ACT_TRANSFER); ?>" />
+                <input type="hidden" name="product_id" value="<?php echo (int) $productId; ?>" />
+                <input type="hidden" name="token" value="<?php echo \esc_attr(\wp_generate_uuid4()); ?>" />
+            </form>
+            <?php
+        }
+        self::$deferredTransfers = [];
     }
 
     /* ------------------------- Reconcile banner --------------------------- */

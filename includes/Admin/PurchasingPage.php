@@ -928,7 +928,9 @@ final class PurchasingPage {
                                placeholder="<?php \esc_attr_e('Company name or 9-digit org. nr…', 'kaupang-stock'); ?>" />
                     </label>
                     <?php \submit_button(\__('Search', 'kaupang-stock'), 'secondary', 'submit', false); ?>
-                    <span class="description"><?php echo \esc_html(sprintf(__('Looks the company up in %s and fills the name and org. nr.', 'kaupang-stock'), \Kaupang\Brreg\Client::SOURCE)); ?></span>
+                    <?php if (Suppliers::brregAvailable()): ?>
+                        <span class="description"><?php echo \esc_html(sprintf(__('Looks the company up in %s and fills the name and org. nr.', 'kaupang-stock'), \Kaupang\Brreg\Client::SOURCE)); ?></span>
+                    <?php endif; ?>
                 </form>
                 <ul class="ks-brreg-results" data-ks-brreg-results hidden aria-label="<?php \esc_attr_e('Search results', 'kaupang-stock'); ?>"></ul>
                 <?php if (is_array($lookup) && $prefillName !== ''): ?>

@@ -110,8 +110,10 @@ dependency on any other suite plugin — soft deps are `class_exists`-guarded.
 | `kaupang/stock/allow_negative` | filter | refuse negative on-hand (default: allow, matching Woo oversell/backorder). |
 | `kaupang/stock/can_manage` | filter | capability override (default `manage_woocommerce`). |
 
-**Tables** (`{prefix}kaupang_stock_*`): read-stable after 1.0; **write via `Ledger` only** —
-never `INSERT`/`UPDATE`/`DELETE` directly. `Kaupang\Brreg\Client` is used for supplier
+**Tables** (`{prefix}kaupang_stock_*`): read-stable after 1.0. `movements` and `balances` are
+written via `Ledger` only — never `INSERT`/`UPDATE`/`DELETE` those directly. The remaining
+tables are owned by their own modules, which write them directly: Counting, Purchasing,
+Costing and Locations. `Kaupang\Brreg\Client` is used for supplier
 org-nr lookup when kaupang-brreg is active.
 
 The seam to **spis-fiken's** Fiken stock-push module is WooCommerce itself
