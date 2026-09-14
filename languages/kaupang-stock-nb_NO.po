@@ -1835,3 +1835,123 @@ msgstr "Varemottaksmodulen er ikke tilgjengelig ennå."
 #, php-format
 #~ msgid "Looks the company up in %s and fills the name."
 #~ msgstr "Slår opp selskapet i %s og fyller inn navnet."
+
+msgid "Damaged"
+msgstr "Skadet"
+
+msgid "Own use"
+msgstr "Eget bruk"
+
+msgid "Sample"
+msgstr "Vareprøve"
+
+msgid "Count correction"
+msgstr "Tellekorreksjon"
+
+msgid "Found"
+msgstr "Funnet"
+
+msgid "Other"
+msgstr "Annet"
+
+msgid "Reason…"
+msgstr "Årsak …"
+
+msgid "Inbound"
+msgstr "Innkommende"
+
+msgid "Suppliers"
+msgstr "Leverandører"
+
+msgid "Supplier"
+msgstr "Leverandør"
+
+msgid "New count"
+msgstr "Ny telling"
+
+msgid "Ledger"
+msgstr "Hovedbok"
+
+msgid "Modules"
+msgstr "Moduler"
+
+msgid "Map created_via"
+msgstr "Koble created_via"
+
+msgid "Costing"
+msgstr "Kostpris"
+
+msgid "No products match."
+msgstr "Ingen produkter samsvarer."
+
+msgid "Quick transfer"
+msgstr "Hurtigflytting"
+
+msgid "Period…"
+msgstr "Periode …"
+
+msgid "Today"
+msgstr "I dag"
+
+msgid "Last 7 days"
+msgstr "Siste 7 dager"
+
+msgid "Last 30 days"
+msgstr "Siste 30 dager"
+
+msgid "This month"
+msgstr "Denne måneden"
+
+msgid "Last month"
+msgstr "Forrige måned"
+
+msgid "This year"
+msgstr "I år"
+
+msgid "All time"
+msgstr "Hele perioden"
+
+msgid "Period"
+msgstr "Periode"
+
+msgid "Record every stock change in the ledger"
+msgstr "Registrer alle lagerendringer i hovedboken"
+
+msgid "Seeds opening balances on first enable. History is kept when turned off."
+msgstr "Legger inn åpningsbalanser første gang. Historikken beholdes når den slås av."
+
+msgid "record only, nothing written to WooCommerce"
+msgstr "kun registrering, ingenting skrives til WooCommerce"
+
+msgid "adjustments, receipts and counts write to WooCommerce stock"
+msgstr "justeringer, varemottak og tellinger skriver til WooCommerce-lager"
+
+msgid "Active: stock operations now change WooCommerce stock."
+msgstr "Aktiv: lageroperasjoner endrer nå WooCommerce-lageret."
+
+msgid "Flag negative on-hand on Stock status"
+msgstr "Merk negativ beholdning på Lagerstatus"
+
+msgid "Allow adjustments and transfers to take a location below zero"
+msgstr "Tillat at justeringer og flyttinger tar en lokasjon under null"
+
+msgid "Suppliers, purchase orders and receiving"
+msgstr "Leverandører, innkjøpsordrer og varemottak"
+
+msgid "Lines off by more than this are flagged for recount."
+msgstr "Linjer med større avvik enn dette merkes for omtelling."
+
+msgid "Orders from these channels draw stock from the chosen location."
+msgstr "Ordrer fra disse kanalene trekker lager fra valgt lokasjon."
+
+msgid "Track cost of goods (FIFO)"
+msgstr "Spor varekostnad (FIFO)"
+
+msgid "Enter opening unit costs on Stock value after enabling."
+msgstr "Legg inn åpningskostpriser under Lagerverdi etter aktivering."
+
+msgid "Write FIFO cost onto order lines"
+msgstr "Skriv FIFO-kostpris på ordrelinjer"
+
+msgid "Feeds WooCommerce’s Cost of goods sold when that feature is on."
+msgstr "Mater WooCommerce sin varekostnad når den funksjonen er på."
