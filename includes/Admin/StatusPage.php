@@ -346,14 +346,7 @@ final class StatusPage {
 
     /** @param int[] $ids @return int[] matching title or SKU */
     private static function filterBySearch(array $ids, string $search): array {
-        $needle = mb_strtolower($search);
-        $out    = [];
-        foreach (ProductSearch::rows($ids) as $id => $row) {
-            if (mb_strpos(mb_strtolower($row['title'] . ' ' . $row['sku']), $needle) !== false) {
-                $out[] = $id;
-            }
-        }
-        return $out;
+        return ProductSearch::filterIds($ids, $search);
     }
 
     /** @param int[] $ids @return int[] */

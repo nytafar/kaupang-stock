@@ -99,6 +99,33 @@ final class ProductSearch {
         return $out;
     }
 
+    /**
+     * Narrow a fixed id set to those matching title or SKU. SQL LIKE, so the
+     * DB collation decides case/accent folding — not PHP string compare.
+     *
+     * @param int[] $ids
+     * @return int[]
+     */
+    public static function filterIds(array $ids, string $search): array {
+        global $wpdb;
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if ($ids === []) {
+            return [];
+        }
+        $in   = implode(',', $ids);
+        $like = '%' . $wpdb->esc_like($search) . '%';
+        $hits = $wpdb->get_col($wpdb->prepare(
+            "SELECT DISTINCT p.ID
+             FROM {$wpdb->posts} p
+             LEFT JOIN {$wpdb->postmeta} sku ON sku.post_id = p.ID AND sku.meta_key = '_sku'
+             WHERE p.ID IN ($in)
+               AND (p.post_title LIKE %s OR sku.meta_value LIKE %s)",
+            $like,
+            $like
+        ));
+        return array_map('intval', (array) $hits);
+    }
+
     /** "Title (SKU)" display label without loading a WC_Product. */
     public static function label(int $productId): string {
         global $wpdb;

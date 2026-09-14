@@ -1065,7 +1065,7 @@ final class PurchasingPage {
         }
 
         // Locked-PO edits are refused; a change note is appended to the trail instead.
-        if (PurchaseOrders::isLocked($poId)) {
+        if (!PurchaseOrders::isDraft($poId)) {
             $label = $lineId > 0 && ($line = Lines::find($lineId)) ? ProductSearch::label((int) $line['product_id']) : '';
             PurchaseOrders::appendNote($poId, sprintf(
                 /* translators: 1: product label, 2: requested qty */

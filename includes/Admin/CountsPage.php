@@ -539,6 +539,9 @@ final class CountsPage {
         }
         $parsed = Import::parse($handle);
         fclose($handle);
+        if ($parsed['lines'] === []) {
+            Screen::redirect(Menu::SLUG_COUNTS, ['count' => $countId, 'view' => 'review', 'ks_err' => 'parse_failed']);
+        }
 
         // Fill the count's own lines from the parsed product → counted map.
         $applied = 0;
