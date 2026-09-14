@@ -78,6 +78,24 @@ final class Reasons {
         return in_array($reason, self::all(), true);
     }
 
+    /**
+     * Quick-adjust note presets (key => label). The chosen label IS the note,
+     * so the ledger's requiresNote() rule and the audit trail keep working
+     * without asking the operator to write prose for every count fix.
+     *
+     * @return array<string,string>
+     */
+    public static function adjustPresets(): array {
+        return [
+            'damaged'    => \__('Damaged', 'kaupang-stock'),
+            'own_use'    => \__('Own use', 'kaupang-stock'),
+            'sample'     => \__('Sample', 'kaupang-stock'),
+            'count_fix'  => \__('Count correction', 'kaupang-stock'),
+            'found'      => \__('Found', 'kaupang-stock'),
+            'other'      => \__('Other', 'kaupang-stock'),
+        ];
+    }
+
     /** Free-text note is mandatory for operator judgement calls. */
     public static function requiresNote(string $reason): bool {
         return $reason === self::ADJUST || $reason === self::REVERSAL;

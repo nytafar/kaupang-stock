@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Kaupang\Stock\Admin;
 
+use Kaupang\Stock\Ledger\Reasons;
+
 use Kaupang\Stock\Settings;
 
 defined('ABSPATH') || exit;
@@ -78,6 +80,73 @@ abstract class Screen {
     }
 
     /** "12" / "1,5" → float; blank or non-numeric → null. */
+    /**
+     * Note for an adjustment from the posted preset + optional text:
+     * "Damaged", "Other: fell off the shelf", or plain text when no preset
+     * was posted (REST/CLI callers). Empty string = nothing usable.
+     */
+    public static function adjustNote(): string {
+        $text    = \sanitize_text_field(\wp_unslash((string) ($_POST['note'] ?? ''))); // phpcs:ignore WordPress.Security.NonceVerification
+        $preset  = \sanitize_key((string) ($_POST['preset'] ?? '')); // phpcs:ignore WordPress.Security.NonceVerification
+        $presets = Reasons::adjustPresets();
+        if ($preset === '' || !isset($presets[$preset])) {
+            return $text;
+        }
+        if ($preset === 'other') {
+            return $text;
+        }
+        return $text !== '' ? $presets[$preset] . ': ' . $text : $presets[$preset];
+    }
+
+    /**
+     * The preset select + optional text field shared by both adjust forms.
+     * With JS the text field stays hidden until "Other" is chosen; without
+     * JS both render.
+     */
+    public static function adjustNoteFields(bool $disabled, string $textClass = ''): void {
+        $dis = $disabled ? ' disabled' : '';
+        ?>
+        <select name="preset" class="ks-adjust-preset" aria-label="<?php \esc_attr_e('Reason', 'kaupang-stock'); ?>" required<?php echo $dis; ?>>
+            <option value=""><?php \esc_html_e('Reason…', 'kaupang-stock'); ?></option>
+            <?php foreach (Reasons::adjustPresets() as $key => $label): ?>
+                <option value="<?php echo \esc_attr($key); ?>"><?php echo \esc_html($label); ?></option>
+            <?php endforeach; ?>
+        </select>
+        <input type="text" name="note" class="ks-adjust-note <?php echo \esc_attr($textClass); ?>" maxlength="255" placeholder="<?php \esc_attr_e('Note', 'kaupang-stock'); ?>" aria-label="<?php \esc_attr_e('Note', 'kaupang-stock'); ?>"<?php echo $dis; ?> />
+        <?php
+    }
+
+    /**
+     * From/To date pair with a preset picker (today, 7 days, this month…).
+     * Native date inputs are the primitive; the preset select carries no name,
+     * so it never reaches the query — admin.js copies its range into the two
+     * real fields and lets their change event do the rest.
+     */
+    public static function dateRange(string $from, string $to, string $fromName = 'from', string $toName = 'to'): void {
+        $presets = [
+            ''           => \__('Period…', 'kaupang-stock'),
+            'today'      => \__('Today', 'kaupang-stock'),
+            '7d'         => \__('Last 7 days', 'kaupang-stock'),
+            '30d'        => \__('Last 30 days', 'kaupang-stock'),
+            'month'      => \__('This month', 'kaupang-stock'),
+            'last_month' => \__('Last month', 'kaupang-stock'),
+            'year'       => \__('This year', 'kaupang-stock'),
+            'all'        => \__('All time', 'kaupang-stock'),
+        ];
+        ?>
+        <span class="ks-daterange">
+            <select data-ks-daterange aria-label="<?php \esc_attr_e('Period', 'kaupang-stock'); ?>">
+                <?php foreach ($presets as $key => $label): ?>
+                    <option value="<?php echo \esc_attr($key); ?>"><?php echo \esc_html($label); ?></option>
+                <?php endforeach; ?>
+            </select>
+            <input type="date" name="<?php echo \esc_attr($fromName); ?>" value="<?php echo \esc_attr($from); ?>" aria-label="<?php \esc_attr_e('From', 'kaupang-stock'); ?>" />
+            <span class="ks-daterange-sep" aria-hidden="true">–</span>
+            <input type="date" name="<?php echo \esc_attr($toName); ?>" value="<?php echo \esc_attr($to); ?>" aria-label="<?php \esc_attr_e('To', 'kaupang-stock'); ?>" />
+        </span>
+        <?php
+    }
+
     public static function parseDelta(string $raw): ?float {
         $raw = trim(str_replace(',', '.', $raw));
         if ($raw === '' || !is_numeric($raw)) {
