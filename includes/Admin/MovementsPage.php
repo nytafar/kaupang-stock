@@ -10,6 +10,7 @@ use Kaupang\Stock\Ledger\LedgerException;
 use Kaupang\Stock\Ledger\Movements;
 use Kaupang\Stock\Ledger\Reasons;
 use Kaupang\Stock\Locations;
+use Kaupang\Stock\Schema;
 use Kaupang\Stock\Settings;
 use Kaupang\Stock\Support\ProductSearch;
 
@@ -47,6 +48,10 @@ final class MovementsPage {
         ?>
         <div class="wrap ks-wrap">
             <h1 class="wp-heading-inline"><?php \esc_html_e('Movements', 'kaupang-stock'); ?></h1>
+            <?php if ($batch === ''): ?>
+                <button type="button" class="page-title-action ks-panel-toggle" aria-expanded="false" data-ks-target="ks-new-adjust"><?php \esc_html_e('New adjustment', 'kaupang-stock'); ?></button>
+            <?php endif; ?>
+            <hr class="wp-header-end" />
             <?php self::notices(); ?>
 
             <?php if ($batch !== ''): ?>
@@ -72,19 +77,19 @@ final class MovementsPage {
             self::ACT_EXPORT
         );
         ?>
-        <hr class="wp-header-end" />
-        <form method="get" class="ks-filters ks-movements-filters">
+        <form method="get" class="ks-filters ks-filterbar" data-ks-fetchswap="ks-moves-list">
             <input type="hidden" name="page" value="<?php echo \esc_attr(Menu::SLUG_MOVES); ?>" />
             <?php self::filterControls($filters); ?>
         </form>
 
-        <p class="ks-export-row">
-            <a class="button" href="<?php echo \esc_url($exportUrl); ?>"><?php \esc_html_e('Export CSV (current filter)', 'kaupang-stock'); ?></a>
-        </p>
-
         <?php
+        // The ledger grows unbounded, so filtering stays server-side; admin.js
+        // fetches this same URL and swaps #ks-moves-list in place (no reload).
+        // Export lives inside the swapped region so its nonce URL tracks the filter.
         $table = new MovementsListTable($filters);
         $table->prepare_items();
+        echo '<div id="ks-moves-list">';
+        echo '<p class="ks-export-row"><a class="button" href="' . \esc_url($exportUrl) . '">' . \esc_html__('Export CSV (current filter)', 'kaupang-stock') . '</a></p>';
         // The 9-column ledger is the widest table in the plugin; give it a real
         // scroll container so it never pushes the page (see .ks-tablewrap).
         echo '<form method="get">';
@@ -93,6 +98,7 @@ final class MovementsPage {
         $table->display();
         echo '</div>';
         echo '</form>';
+        echo '</div>';
     }
 
     /** Per-batch "document" view (a receiving session / count apply). */
@@ -148,9 +154,6 @@ final class MovementsPage {
         $maxDate   = \wp_date('Y-m-d');
         ?>
         <div class="ks-panel ks-adjust-panel">
-            <button type="button" class="button ks-panel-toggle" aria-expanded="false" data-ks-target="ks-new-adjust">
-                <?php \esc_html_e('New adjustment', 'kaupang-stock'); ?>
-            </button>
             <div id="ks-new-adjust" class="ks-panel-body" hidden>
                 <?php if (!$canAdjust): ?>
                     <p class="description ks-warning"><?php \esc_html_e('Adjustments write to WooCommerce stock and require active mode. Switch to active mode in settings first.', 'kaupang-stock'); ?></p>
@@ -187,11 +190,9 @@ final class MovementsPage {
                         </label>
                     </p>
                     <?php endif; ?>
-                    <p>
-                        <label>
-                            <span class="ks-field-label"><?php \esc_html_e('Note (required)', 'kaupang-stock'); ?></span>
-                            <input type="text" name="note" class="regular-text" maxlength="255" required<?php \disabled(!$canAdjust); ?> />
-                        </label>
+                    <p class="ks-adjust-reason">
+                        <span class="ks-field-label"><?php \esc_html_e('Reason', 'kaupang-stock'); ?></span>
+                        <?php Screen::adjustNoteFields(!$canAdjust, 'regular-text'); ?>
                     </p>
                     <p>
                         <label>
@@ -222,13 +223,16 @@ final class MovementsPage {
         $to         = isset($_GET['to']) ? \sanitize_text_field((string) $_GET['to']) : '';
         // phpcs:enable WordPress.Security.NonceVerification.Recommended
 
-        $productId = 0;
+        $productId  = 0;
+        $productIds = null;
         if ($productRaw !== '') {
             if (ctype_digit($productRaw)) {
                 $productId = (int) $productRaw;
+            } elseif (($bySku = ProductSearch::bySku($productRaw)) !== null) {
+                $productId = $bySku;
             } else {
-                $bySku = ProductSearch::bySku($productRaw);
-                $productId = $bySku ?? 0;
+                // Title or partial SKU: every matching product, or nothing at all.
+                $productIds = array_map(static fn(array $r): int => (int) $r['id'], ProductSearch::search($productRaw, 500));
             }
         }
 
@@ -243,6 +247,8 @@ final class MovementsPage {
         ];
         if ($productId > 0) {
             $filters['product_id'] = $productId;
+        } elseif ($productIds !== null) {
+            $filters['product_ids'] = $productIds;
         }
         if ($from !== '') {
             $filters['occurred_from'] = Movements::dateBoundary($from);
@@ -272,15 +278,15 @@ final class MovementsPage {
                 <option value="<?php echo \esc_attr($rt); ?>" <?php \selected((string) ($filters['ref_type'] ?? ''), $rt); ?>><?php echo \esc_html($rt); ?></option>
             <?php endforeach; ?>
         </select>
-        <input type="number" name="actor_id" value="<?php echo \esc_attr($filters['actor_id'] !== null ? (string) $filters['actor_id'] : ''); ?>" class="small-text" placeholder="<?php \esc_attr_e('Actor ID', 'kaupang-stock'); ?>" />
-        <label class="ks-date-label"><?php \esc_html_e('From', 'kaupang-stock'); ?>
-            <input type="date" name="from" value="<?php echo \esc_attr((string) ($filters['from'] ?? '')); ?>" />
-        </label>
-        <label class="ks-date-label"><?php \esc_html_e('To', 'kaupang-stock'); ?>
-            <input type="date" name="to" value="<?php echo \esc_attr((string) ($filters['to'] ?? '')); ?>" />
-        </label>
-        <?php \submit_button(\__('Filter', 'kaupang-stock'), '', '', false); ?>
-        <a class="button-link" href="<?php echo \esc_url(\add_query_arg('page', Menu::SLUG_MOVES, \admin_url('admin.php'))); ?>"><?php \esc_html_e('Reset', 'kaupang-stock'); ?></a>
+        <select name="actor_id">
+            <option value="">— <?php \esc_html_e('Actor', 'kaupang-stock'); ?> —</option>
+            <?php foreach (self::actorChoices() as $id => $name): ?>
+                <option value="<?php echo (int) $id; ?>" <?php \selected($filters['actor_id'], $id); ?>><?php echo \esc_html($name); ?></option>
+            <?php endforeach; ?>
+        </select>
+        <?php Screen::dateRange((string) ($filters['from'] ?? ''), (string) ($filters['to'] ?? '')); ?>
+        <noscript><?php \submit_button(\__('Filter', 'kaupang-stock'), '', '', false); ?></noscript>
+        <a class="button-link ks-filterbar-end" href="<?php echo \esc_url(\add_query_arg('page', Menu::SLUG_MOVES, \admin_url('admin.php'))); ?>"><?php \esc_html_e('Reset', 'kaupang-stock'); ?></a>
         <?php
     }
 
@@ -318,7 +324,7 @@ final class MovementsPage {
 
         $productRaw = \sanitize_text_field(\wp_unslash((string) ($_POST['product'] ?? '')));
         $delta      = Screen::parseDelta((string) ($_POST['delta'] ?? ''));
-        $note       = \sanitize_text_field(\wp_unslash((string) ($_POST['note'] ?? '')));
+        $note       = Screen::adjustNote();
         $dateRaw    = \sanitize_text_field((string) ($_POST['occurred_date'] ?? ''));
         $key        = \sanitize_text_field((string) ($_POST['idem'] ?? ''));
         $locationId = self::postedLocation();
@@ -396,6 +402,25 @@ final class MovementsPage {
             $delta >= 0 ? 'ks-delta-pos' : 'ks-delta-neg',
             \esc_html(self::signed($delta))
         );
+    }
+
+    /**
+     * Staff who have recorded at least one movement (users with the manage
+     * capability only — customers on older sale rows are never listed).
+     *
+     * @return array<int,string> id => display name
+     */
+    private static function actorChoices(): array {
+        global $wpdb;
+        $ids = array_map('intval', (array) $wpdb->get_col('SELECT DISTINCT actor_id FROM ' . Schema::movements() . ' WHERE actor_id > 0'));
+        if ($ids === []) {
+            return [];
+        }
+        $out = [];
+        foreach (\get_users(['include' => $ids, 'capability' => Settings::capability(), 'fields' => ['ID', 'display_name'], 'orderby' => 'display_name']) as $user) {
+            $out[(int) $user->ID] = (string) $user->display_name;
+        }
+        return $out;
     }
 
     private static function locationSelect(string $name, int $selected, bool $allowAll, bool $disabled = false): void {
