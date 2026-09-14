@@ -3,8 +3,9 @@ declare(strict_types=1);
 
 namespace Kaupang\Stock\Admin;
 
+use Kaupang\Stock\Adjust;
+use Kaupang\Stock\Costing\CostingException;
 use Kaupang\Stock\Ledger\Balances;
-use Kaupang\Stock\Ledger\Ledger;
 use Kaupang\Stock\Ledger\LedgerException;
 use Kaupang\Stock\Ledger\Reasons;
 use Kaupang\Stock\Locations;
@@ -231,30 +232,15 @@ final class StatusPage {
             self::redirect(['ks_err' => 'note']);
         }
 
-        $idem = $key !== '' ? 'adjust:' . $key : null;
-
         // Optional "à kr" unit cost: entering stock at a known cost ("add 20 @
-        // 101") stashes the øre amount under the movement's idempotency key so
-        // the costing fold prices the layer exactly. Positive deltas only —
-        // removals are valued FIFO by the engine.
-        $costRaw = trim((string) ($_POST['unit_cost'] ?? ''));
-        if ($costRaw !== '' && $delta !== null && $delta > 0 && $idem !== null
-            && \Kaupang\Stock\Costing\Costing::enabled()
-        ) {
-            $ore = (int) round(((float) str_replace(',', '.', $costRaw)) * 100);
-            if ($ore >= 0) {
-                try {
-                    \Kaupang\Stock\Costing\CostInputs::stash($idem, $ore);
-                } catch (\Throwable $e) {
-                    \Kaupang\Stock\Logging\Logger::error('adjust_cost_stash_failed', ['error' => $e->getMessage()]);
-                }
-            }
-        }
+        // 101") prices the cost layer exactly. Adjust::withCost owns the order
+        // of operations; positive deltas only — removals are valued FIFO.
+        $ore = self::parseUnitCost((string) ($_POST['unit_cost'] ?? ''));
 
         try {
-            Ledger::adjust($productId, (float) $delta, $note, null, $idem, $locationId);
+            Adjust::withCost($productId, (float) $delta, $note, $ore, $locationId, $key !== '' ? $key : null);
             self::redirect(['ks_msg' => 'adjusted']);
-        } catch (LedgerException $e) {
+        } catch (LedgerException | CostingException $e) {
             self::redirect(['ks_err' => 'ledger', 'ks_detail' => rawurlencode($e->getMessage())]);
         }
     }
@@ -879,6 +865,15 @@ final class StatusPage {
             return null;
         }
         return (float) $raw;
+    }
+
+    /** "101" / "88,50" → øre; '' or negative → null (no cost entered). */
+    private static function parseUnitCost(string $raw): ?int {
+        $raw = trim(str_replace(',', '.', $raw));
+        if ($raw === '' || !is_numeric($raw) || (float) $raw < 0) {
+            return null;
+        }
+        return (int) round(((float) $raw) * 100);
     }
 
     private static function qty(float $q): string {

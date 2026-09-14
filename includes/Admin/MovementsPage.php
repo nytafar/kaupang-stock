@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Kaupang\Stock\Admin;
 
+use Kaupang\Stock\Adjust;
+use Kaupang\Stock\Costing\CostingException;
 use Kaupang\Stock\Ledger\Ledger;
 use Kaupang\Stock\Ledger\LedgerException;
 use Kaupang\Stock\Ledger\Movements;
@@ -177,6 +179,14 @@ final class MovementsPage {
                             <input type="number" name="delta" step="1" class="small-text" placeholder="±0" required<?php \disabled(!$canAdjust); ?> />
                         </label>
                     </p>
+                    <?php if (\Kaupang\Stock\Costing\Costing::enabled()): ?>
+                    <p>
+                        <label>
+                            <span class="ks-field-label"><?php \esc_html_e('Unit cost ex-VAT (kr)', 'kaupang-stock'); ?></span>
+                            <input type="number" name="unit_cost" step="0.01" min="0" class="small-text" placeholder="<?php \esc_attr_e('à kr', 'kaupang-stock'); ?>" title="<?php \esc_attr_e('Unit cost ex-VAT (kr) — prices the cost layer when adding stock', 'kaupang-stock'); ?>"<?php \disabled(!$canAdjust); ?> />
+                        </label>
+                    </p>
+                    <?php endif; ?>
                     <p>
                         <label>
                             <span class="ks-field-label"><?php \esc_html_e('Note (required)', 'kaupang-stock'); ?></span>
@@ -329,11 +339,11 @@ final class MovementsPage {
             $occurredAt = Movements::dateBoundary($dateRaw) ?: null;
         }
 
-        $idem = $key !== '' ? 'adjust:' . $key : null;
+        $ore = self::parseUnitCost((string) ($_POST['unit_cost'] ?? ''));
         try {
-            Ledger::adjust($productId, (float) $delta, $note, $occurredAt, $idem, $locationId);
+            Adjust::withCost($productId, (float) $delta, $note, $ore, $locationId, $key !== '' ? $key : null, $occurredAt);
             self::redirect(['ks_msg' => 'adjusted']);
-        } catch (LedgerException $e) {
+        } catch (LedgerException | CostingException $e) {
             self::redirect(['ks_err' => 'ledger', 'ks_detail' => rawurlencode($e->getMessage())]);
         }
     }
@@ -569,6 +579,15 @@ final class MovementsPage {
             return null;
         }
         return (float) $raw;
+    }
+
+    /** "101" / "88,50" → øre; '' or negative → null (no cost entered). */
+    private static function parseUnitCost(string $raw): ?int {
+        $raw = trim(str_replace(',', '.', $raw));
+        if ($raw === '' || !is_numeric($raw) || (float) $raw < 0) {
+            return null;
+        }
+        return (int) round(((float) $raw) * 100);
     }
 
     public static function qty(float $q): string {

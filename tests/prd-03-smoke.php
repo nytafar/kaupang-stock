@@ -1,5 +1,6 @@
 <?php
 
+use Kaupang\Stock\Adjust;
 use Kaupang\Stock\Costing\Consumptions;
 use Kaupang\Stock\Costing\CostInputs;
 use Kaupang\Stock\Costing\Costing;
@@ -248,6 +249,23 @@ try {
             Ledger::adjust($productId, -$blendOnHand, 'KSTEST blended cleanup', null, 'kstest-prd03-blendzero-' . $run . '-' . $blendZeroId, $blendZeroId);
         }
     }
+    Sweeper::sweepAll();
+
+    // One adjust policy: Adjust::withCost mints the movement key once, stashes
+    // the entered cost under it, then posts — so the fold prices the layer
+    // exactly. A removal is valued FIFO by the engine and must stash nothing.
+    $withCostIn = Adjust::withCost($productId, 5, 'KSTEST withCost inbound', 1200, $originalDefault, 'kstest-prd03-withcost-' . $run);
+    Sweeper::sweepAll();
+    $withCostLayer = Layers::bySourceMovement($withCostIn->id);
+    $assert($withCostLayer !== null && (int) $withCostLayer['unit_cost_ore'] === 1200, 'withCost prices the layer at the entered cost');
+    $assert(abs((float) $withCostLayer['qty_original'] - 5.0) < 1e-9 && (int) $withCostLayer['is_estimate'] === 0, 'withCost layer carries the full quantity as exact cost');
+
+    $withCostOut = Adjust::withCost($productId, -2, 'KSTEST withCost outbound', 1200, $originalDefault, 'kstest-prd03-withcost-out-' . $run);
+    Sweeper::sweepAll();
+    $assert(CostInputs::forKey($withCostOut->idempotencyKey) === null, 'withCost stashes no cost input for a removal');
+    $assert(Layers::bySourceMovement($withCostOut->id) === null, 'a removal creates no cost layer');
+
+    Ledger::adjust($productId, -Balances::onHand($productId, $originalDefault), 'KSTEST withCost cleanup', null, 'kstest-prd03-withcost-zero-' . $run, $originalDefault);
     Sweeper::sweepAll();
 
     // Validation seams: shadow, capability denial, same-location, and an

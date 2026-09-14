@@ -3,7 +3,8 @@ declare(strict_types=1);
 
 namespace Kaupang\Stock\Cli;
 
-use Kaupang\Stock\Ledger\Ledger;
+use Kaupang\Stock\Adjust;
+use Kaupang\Stock\Costing\CostingException;
 use Kaupang\Stock\Ledger\LedgerException;
 use Kaupang\Stock\Ledger\Movements;
 use Kaupang\Stock\Ledger\Reasons;
@@ -172,7 +173,7 @@ final class Command {
     /**
      * Record an operator adjustment through the ledger.
      *
-     * Writes a `adjust` movement with a CLI-scoped idempotency key. A note is
+     * Writes a `adjust` movement with a minted idempotency key. A note is
      * mandatory (it is the audit trail). In shadow mode this is refused — that is
      * the correct behavior: owned writes require mode=active. Backdating uses
      * site-local midday, converted to UTC, capped 90 days back by the ledger.
@@ -237,7 +238,6 @@ final class Command {
             $occurredAt = \get_gmt_from_date($date . ' 12:00:00');
         }
 
-        $idem = 'cli:adjust:' . \wp_generate_uuid4();
         $locationId = 0;
         if (Locations::isMulti() && isset($assoc['location']) && (int) $assoc['location'] > 0) {
             $locationId = (int) $assoc['location'];
@@ -246,8 +246,9 @@ final class Command {
             }
         }
 
-        // --cost: stash the entered øre under the movement's idempotency key
-        // BEFORE the ledger posts (the costing fold runs inside recordBatch).
+        // --cost: Adjust::withCost stashes the entered øre under the movement's
+        // idempotency key BEFORE the ledger posts (the fold runs in recordBatch).
+        $ore = null;
         if (isset($assoc['cost']) && $assoc['cost'] !== '') {
             $costRaw = str_replace(',', '.', (string) $assoc['cost']);
             if ($delta <= 0) {
@@ -259,19 +260,20 @@ final class Command {
             if (!is_numeric($costRaw) || (float) $costRaw < 0) {
                 \WP_CLI::error('--cost must be a non-negative kr amount, e.g. 101 or 88.50.');
             }
-            \Kaupang\Stock\Costing\CostInputs::stash($idem, (int) round(((float) $costRaw) * 100));
+            $ore = (int) round(((float) $costRaw) * 100);
         }
 
         try {
-            $movement = Ledger::adjust(
+            $movement = Adjust::withCost(
                 $productId,
                 $delta,
                 $note,
-                $occurredAt,
-                $idem,
-                $locationId
+                $ore,
+                $locationId,
+                null,
+                $occurredAt
             );
-        } catch (LedgerException $e) {
+        } catch (LedgerException | CostingException $e) {
             // Shadow-mode refusal surfaces here by design — do not swallow it.
             \WP_CLI::error($e->getMessage());
             return;
