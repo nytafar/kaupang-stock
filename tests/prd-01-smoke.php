@@ -1,5 +1,6 @@
 <?php
 
+use Kaupang\Stock\Counting\Import;
 use Kaupang\Stock\Purchasing\Lines;
 use Kaupang\Stock\Purchasing\PurchaseOrders;
 use Kaupang\Stock\Purchasing\SupplierProducts;
@@ -75,6 +76,27 @@ try {
 
     SupplierProducts::delete($supplierId, $productId);
     $assert(SupplierProducts::find($supplierId, $productId) === null, 'catalog deletion uses SupplierProducts and succeeds');
+
+    // The locked-PO rule lives in the model: everything except draft/cancelled is locked.
+    $poIds[] = PurchaseOrders::create(['supplier_id' => $supplierId, 'supplier_ref' => 'KSTEST-LOCK']);
+    $lockPo  = $poIds[count($poIds) - 1];
+    $assert(PurchaseOrders::isLocked($lockPo) === false, 'a draft PO is not locked');
+    foreach ([PurchaseOrders::STATUS_ORDERED, PurchaseOrders::STATUS_PARTIAL, PurchaseOrders::STATUS_RECEIVED] as $locked) {
+        $wpdb->update(Schema::purchaseOrders(), ['status' => $locked], ['id' => $lockPo], ['%s'], ['%d']);
+        $assert(PurchaseOrders::isLocked($lockPo) === true, 'a ' . $locked . ' PO is locked');
+    }
+    $wpdb->update(Schema::purchaseOrders(), ['status' => PurchaseOrders::STATUS_CANCELLED], ['id' => $lockPo], ['%s'], ['%d']);
+    $assert(PurchaseOrders::isLocked($lockPo) === false, 'a cancelled PO is not locked');
+
+    // Counting import owns the CSV parse: BOM strip, ';' sniff, SKU → product.
+    $sku    = (string) get_post_meta($productId, '_sku', true);
+    $handle = fopen('php://temp', 'r+');
+    fwrite($handle, "\xEF\xBB\xBF" . "sku;counted\n" . $sku . ";7\nKSTEST-NO-SUCH-SKU-1;3\nKSTEST-NO-SUCH-SKU-2;4\n");
+    rewind($handle);
+    $parsed = Import::parse($handle);
+    fclose($handle);
+    $assert($parsed['lines'] === [$productId => 7.0], 'the known SKU line maps to its product id with its counted qty');
+    $assert(count($parsed['errors']) === 2, 'both unknown SKUs are reported as errors');
 
     WP_CLI::success('PRD-01 supplier catalog / PO-line smoke test passed.');
 } finally {

@@ -209,7 +209,7 @@ final class PurchasingPage {
 
         $lines    = $po !== null ? Lines::forPoWithReceived($poId) : [];
         $status   = $po !== null ? PurchaseOrders::derivedStatus($po, $lines) : PurchaseOrders::STATUS_DRAFT;
-        $locked   = $po !== null && $status !== PurchaseOrders::STATUS_DRAFT && $status !== PurchaseOrders::STATUS_CANCELLED;
+        $locked   = $po !== null && PurchaseOrders::locks($status);
         $isDraft  = $status === PurchaseOrders::STATUS_DRAFT;
         $isClosed = $status === PurchaseOrders::STATUS_CANCELLED || $status === PurchaseOrders::STATUS_RECEIVED;
         $supplierId = (int) ($po['supplier_id'] ?? 0);
@@ -1006,7 +1006,7 @@ final class PurchasingPage {
     /* -------------------------------- Handlers ------------------------------- */
 
     public static function handleSavePo(): void {
-        self::guard(self::SAVE_PO);
+        Screen::guard(self::SAVE_PO);
         $poId = (int) ($_POST['po'] ?? 0);
         $data = [
             'supplier_id'  => (int) ($_POST['supplier_id'] ?? 0),
@@ -1017,43 +1017,43 @@ final class PurchasingPage {
         if ($poId > 0) {
             $po = PurchaseOrders::find($poId);
             if ($po === null) {
-                self::redirect(['view' => 'list', 'ks_err' => 'notfound']);
+                Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'list', 'ks_err' => 'notfound']);
             }
             // After ordering, header note edits should append to the trail rather
             // than clobber the locked context; supplier/ref/eta stay editable.
             PurchaseOrders::updateHeader($poId, $data);
-            self::redirect(['view' => 'edit', 'po' => $poId, 'ks_msg' => 'saved']);
+            Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'edit', 'po' => $poId, 'ks_msg' => 'saved']);
         }
         try {
             $newId = PurchaseOrders::create($data);
         } catch (\Throwable $e) {
-            self::redirect(['view' => 'list', 'ks_err' => 'save']);
+            Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'list', 'ks_err' => 'save']);
         }
-        self::redirect(['view' => 'edit', 'po' => $newId, 'ks_msg' => 'created']);
+        Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'edit', 'po' => $newId, 'ks_msg' => 'created']);
     }
 
     public static function handleOrderPo(): void {
-        self::guard(self::ORDER_PO);
+        Screen::guard(self::ORDER_PO);
         $poId = (int) ($_POST['po'] ?? 0);
         if ($poId > 0 && PurchaseOrders::isDraft($poId) && Lines::forPo($poId) !== []) {
             PurchaseOrders::order($poId);
-            self::redirect(['view' => 'edit', 'po' => $poId, 'ks_msg' => 'ordered']);
+            Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'edit', 'po' => $poId, 'ks_msg' => 'ordered']);
         }
-        self::redirect(['view' => 'edit', 'po' => $poId, 'ks_err' => 'order']);
+        Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'edit', 'po' => $poId, 'ks_err' => 'order']);
     }
 
     public static function handleCancelPo(): void {
-        self::guard(self::CANCEL_PO);
+        Screen::guard(self::CANCEL_PO);
         $poId = (int) ($_POST['po'] ?? 0);
         if ($poId > 0) {
             PurchaseOrders::cancel($poId);
-            self::redirect(['view' => 'edit', 'po' => $poId, 'ks_msg' => 'cancelled']);
+            Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'edit', 'po' => $poId, 'ks_msg' => 'cancelled']);
         }
-        self::redirect(['view' => 'list']);
+        Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'list']);
     }
 
     public static function handleSaveLine(): void {
-        self::guard(self::SAVE_LINE);
+        Screen::guard(self::SAVE_LINE);
         $poId   = (int) ($_POST['po'] ?? 0);
         $lineId = (int) ($_POST['line'] ?? 0);
         $qty    = (float) \str_replace(',', '.', (string) ($_POST['qty'] ?? '0'));
@@ -1061,11 +1061,11 @@ final class PurchasingPage {
 
         $po = $poId > 0 ? PurchaseOrders::find($poId) : null;
         if ($po === null) {
-            self::redirect(['view' => 'list', 'ks_err' => 'notfound']);
+            Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'list', 'ks_err' => 'notfound']);
         }
 
         // Locked-PO edits are refused; a change note is appended to the trail instead.
-        if (!PurchaseOrders::isDraft($poId)) {
+        if (PurchaseOrders::isLocked($poId)) {
             $label = $lineId > 0 && ($line = Lines::find($lineId)) ? ProductSearch::label((int) $line['product_id']) : '';
             PurchaseOrders::appendNote($poId, sprintf(
                 /* translators: 1: product label, 2: requested qty */
@@ -1073,14 +1073,14 @@ final class PurchasingPage {
                 $label !== '' ? $label : ('#' . $lineId),
                 self::qty($qty)
             ));
-            self::redirect(['view' => 'edit', 'po' => $poId, 'ks_err' => 'locked']);
+            Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'edit', 'po' => $poId, 'ks_err' => 'locked']);
         }
 
         try {
             if ($lineId > 0) {
                 $line = Lines::find($lineId);
                 if ($line === null || (int) $line['po_id'] !== $poId) {
-                    self::redirect(['view' => 'edit', 'po' => $poId, 'ks_err' => 'line']);
+                    Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'edit', 'po' => $poId, 'ks_err' => 'line']);
                 }
                 Lines::edit($lineId, $qty, $cost, null);
                 self::saveSupplierIdentity(
@@ -1088,35 +1088,35 @@ final class PurchasingPage {
                     (int) $line['product_id'],
                     !empty($_POST['supplier_identity_force'])
                 );
-                self::redirect(['view' => 'edit', 'po' => $poId, 'ks_msg' => 'line_saved']);
+                Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'edit', 'po' => $poId, 'ks_msg' => 'line_saved']);
             }
             $productId = self::resolveProductId(
                 (int) ($_POST['product_id'] ?? 0),
                 (string) \wp_unslash($_POST['product_sku'] ?? '')
             );
             if ($productId <= 0) {
-                self::redirect(['view' => 'edit', 'po' => $poId, 'ks_err' => 'noproduct']);
+                Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'edit', 'po' => $poId, 'ks_err' => 'noproduct']);
             }
             [, $merged] = Lines::add($poId, $productId, $qty, $cost, null);
             self::saveSupplierIdentity((int) ($po['supplier_id'] ?? 0), $productId, false);
-            self::redirect(['view' => 'edit', 'po' => $poId, 'ks_msg' => $merged ? 'line_merged' : 'line_added']);
+            Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'edit', 'po' => $poId, 'ks_msg' => $merged ? 'line_merged' : 'line_added']);
         } catch (\Throwable $e) {
-            self::redirect(['view' => 'edit', 'po' => $poId, 'ks_err' => 'line']);
+            Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'edit', 'po' => $poId, 'ks_err' => 'line']);
         }
     }
 
     public static function handleDeleteLine(): void {
-        self::guard(self::DELETE_LINE, false);
+        Screen::guard(self::DELETE_LINE, 'GET');
         $poId   = (int) ($_GET['po'] ?? 0);
         $lineId = (int) ($_GET['line'] ?? 0);
         if ($poId > 0 && $lineId > 0 && PurchaseOrders::isDraft($poId)) {
             $line = Lines::find($lineId);
             if ($line !== null && (int) $line['po_id'] === $poId) {
                 Lines::delete($lineId);
-                self::redirect(['view' => 'edit', 'po' => $poId, 'ks_msg' => 'line_deleted']);
+                Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'edit', 'po' => $poId, 'ks_msg' => 'line_deleted']);
             }
         }
-        self::redirect(['view' => 'edit', 'po' => $poId, 'ks_err' => 'line']);
+        Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'edit', 'po' => $poId, 'ks_err' => 'line']);
     }
 
     /* ------------------------------ REST: lines ------------------------------ */
@@ -1253,7 +1253,7 @@ final class PurchasingPage {
     }
 
     public static function handleSaveSupplier(): void {
-        self::guard(self::SAVE_SUPPLIER);
+        Screen::guard(self::SAVE_SUPPLIER);
         $sid  = (int) ($_POST['supplier'] ?? 0);
         $data = [
             'name'    => (string) \wp_unslash($_POST['name'] ?? ''),
@@ -1277,25 +1277,25 @@ final class PurchasingPage {
                 $sid = Suppliers::create($data);
             }
         } catch (\InvalidArgumentException $e) {
-            self::redirect(['view' => 'suppliers', 'ks_err' => 'suppname']);
+            Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'suppliers', 'ks_err' => 'suppname']);
         } catch (\Throwable $e) {
-            self::redirect(['view' => 'suppliers', 'ks_err' => 'save']);
+            Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'suppliers', 'ks_err' => 'save']);
         }
         $args = ['view' => 'suppliers', 'ks_msg' => 'supp_saved'];
         if ($err !== '') {
             $args['ks_err'] = $err;
         }
-        self::redirect($args);
+        Screen::redirect(Menu::SLUG_PURCHASE, $args);
     }
 
     public static function handleToggleSupplier(): void {
-        self::guard(self::TOGGLE_SUPP, false);
+        Screen::guard(self::TOGGLE_SUPP, 'GET');
         $sid    = (int) ($_GET['supplier'] ?? 0);
         $active = !empty($_GET['active']);
         if ($sid > 0) {
             Suppliers::setActive($sid, $active);
         }
-        self::redirect(['view' => 'suppliers', 'ks_msg' => 'supp_saved']);
+        Screen::redirect(Menu::SLUG_PURCHASE, ['view' => 'suppliers', 'ks_msg' => 'supp_saved']);
     }
 
     /**
@@ -1307,7 +1307,7 @@ final class PurchasingPage {
      * (no result) when brreg is absent / nothing matches / BRREG is unavailable.
      */
     public static function handleBrregLookup(): void {
-        self::guard(self::BRREG_LOOKUP);
+        Screen::guard(self::BRREG_LOOKUP);
         $sid   = (int) ($_POST['supplier'] ?? 0);
         $query = (string) \wp_unslash($_POST['lookup_query'] ?? '');
 
@@ -1321,7 +1321,7 @@ final class PurchasingPage {
         $hits = Suppliers::search($query, 8);
         if ($hits === []) {
             $args['ks_err'] = trim($query) === '' ? 'orgnr' : 'brreg';
-            self::redirect($args);
+            Screen::redirect(Menu::SLUG_PURCHASE, $args);
         }
 
         $hit = $hits[0];
@@ -1332,17 +1332,10 @@ final class PurchasingPage {
             'source_url' => \Kaupang\Brreg\Client::SOURCE_URL,
         ], 120);
         $args['ks_msg'] = 'brreg_ok';
-        self::redirect($args);
+        Screen::redirect(Menu::SLUG_PURCHASE, $args);
     }
 
     /* --------------------------------- Helpers ------------------------------- */
-
-    private static function guard(string $action, bool $post = true): void {
-        if (!\current_user_can(Settings::capability())) {
-            \wp_die(\esc_html__('You do not have permission to do this.', 'kaupang-stock'), '', ['response' => 403]);
-        }
-        \check_admin_referer($action);
-    }
 
     private static function supplierSelect(int $current): void {
         $suppliers = Suppliers::all();
@@ -1390,12 +1383,6 @@ final class PurchasingPage {
             \add_query_arg(['action' => self::TOGGLE_SUPP, 'supplier' => $sid, 'active' => $active ? 1 : 0], \admin_url('admin-post.php')),
             self::TOGGLE_SUPP
         );
-    }
-
-    /** @param array<string,mixed> $args */
-    private static function redirect(array $args): void {
-        \wp_safe_redirect(self::url($args));
-        exit;
     }
 
     /** kr input → integer øre, or null when blank. */
@@ -1505,38 +1492,30 @@ final class PurchasingPage {
     }
 
     private static function notices(): void {
-        $msg = isset($_GET['ks_msg']) ? \sanitize_key((string) $_GET['ks_msg']) : ''; // phpcs:ignore WordPress.Security.NonceVerification
-        $err = isset($_GET['ks_err']) ? \sanitize_key((string) $_GET['ks_err']) : ''; // phpcs:ignore WordPress.Security.NonceVerification
-
-        $messages = [
-            'created'      => \__('Draft purchase order created.', 'kaupang-stock'),
-            'saved'        => \__('Purchase order saved.', 'kaupang-stock'),
-            'ordered'      => \__('Order placed. Lines are now locked.', 'kaupang-stock'),
-            'cancelled'    => \__('Purchase order cancelled. Any received stock was kept.', 'kaupang-stock'),
-            'line_added'   => \__('Line added.', 'kaupang-stock'),
-            'line_merged'  => \__('Product already on the order — its quantity was increased.', 'kaupang-stock'),
-            'line_saved'   => \__('Line saved.', 'kaupang-stock'),
-            'line_deleted' => \__('Line removed.', 'kaupang-stock'),
-            'supp_saved'   => \__('Supplier saved.', 'kaupang-stock'),
-            'brreg_ok'     => \__('Company found — the name was filled in below.', 'kaupang-stock'),
-        ];
-        $errors = [
-            'notfound'   => \__('Purchase order not found.', 'kaupang-stock'),
-            'save'       => \__('Could not save. Please try again.', 'kaupang-stock'),
-            'order'      => \__('Could not place the order — add at least one line to a draft first.', 'kaupang-stock'),
-            'line'       => \__('Could not save the line.', 'kaupang-stock'),
-            'noproduct'  => \__('Pick a product first.', 'kaupang-stock'),
-            'locked'     => \__('The order is placed — lines are locked. The change was noted on the order instead.', 'kaupang-stock'),
-            'suppname'   => \__('A supplier name is required.', 'kaupang-stock'),
-            'orgnr'      => \__('That organisation number failed the MOD11 check.', 'kaupang-stock'),
-            'brreg'      => \__('No company found for that organisation number (or the registry was unavailable).', 'kaupang-stock'),
-        ];
-
-        if ($msg !== '' && isset($messages[$msg])) {
-            echo '<div class="notice notice-success is-dismissible"><p>' . \esc_html($messages[$msg]) . '</p></div>';
-        }
-        if ($err !== '' && isset($errors[$err])) {
-            echo '<div class="notice notice-error is-dismissible"><p>' . \esc_html($errors[$err]) . '</p></div>';
-        }
+        Screen::notices(
+            [
+                'created'      => \__('Draft purchase order created.', 'kaupang-stock'),
+                'saved'        => \__('Purchase order saved.', 'kaupang-stock'),
+                'ordered'      => \__('Order placed. Lines are now locked.', 'kaupang-stock'),
+                'cancelled'    => \__('Purchase order cancelled. Any received stock was kept.', 'kaupang-stock'),
+                'line_added'   => \__('Line added.', 'kaupang-stock'),
+                'line_merged'  => \__('Product already on the order — its quantity was increased.', 'kaupang-stock'),
+                'line_saved'   => \__('Line saved.', 'kaupang-stock'),
+                'line_deleted' => \__('Line removed.', 'kaupang-stock'),
+                'supp_saved'   => \__('Supplier saved.', 'kaupang-stock'),
+                'brreg_ok'     => \__('Company found — the name was filled in below.', 'kaupang-stock'),
+            ],
+            [
+                'notfound'   => \__('Purchase order not found.', 'kaupang-stock'),
+                'save'       => \__('Could not save. Please try again.', 'kaupang-stock'),
+                'order'      => \__('Could not place the order — add at least one line to a draft first.', 'kaupang-stock'),
+                'line'       => \__('Could not save the line.', 'kaupang-stock'),
+                'noproduct'  => \__('Pick a product first.', 'kaupang-stock'),
+                'locked'     => \__('The order is placed — lines are locked. The change was noted on the order instead.', 'kaupang-stock'),
+                'suppname'   => \__('A supplier name is required.', 'kaupang-stock'),
+                'orgnr'      => \__('That organisation number failed the MOD11 check.', 'kaupang-stock'),
+                'brreg'      => \__('No company found for that organisation number (or the registry was unavailable).', 'kaupang-stock'),
+            ]
+        );
     }
 }

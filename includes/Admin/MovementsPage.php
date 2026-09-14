@@ -314,10 +314,10 @@ final class MovementsPage {
     /* ------------------------------ Handlers ------------------------------ */
 
     public static function handleAdjust(): void {
-        self::guard(self::ACT_ADJUST);
+        Screen::guard(self::ACT_ADJUST);
 
         $productRaw = \sanitize_text_field(\wp_unslash((string) ($_POST['product'] ?? '')));
-        $delta      = self::parseDelta((string) ($_POST['delta'] ?? ''));
+        $delta      = Screen::parseDelta((string) ($_POST['delta'] ?? ''));
         $note       = \sanitize_text_field(\wp_unslash((string) ($_POST['note'] ?? '')));
         $dateRaw    = \sanitize_text_field((string) ($_POST['occurred_date'] ?? ''));
         $key        = \sanitize_text_field((string) ($_POST['idem'] ?? ''));
@@ -325,13 +325,13 @@ final class MovementsPage {
 
         $productId = self::resolveProduct($productRaw);
         if ($productId <= 0) {
-            self::redirect(['ks_err' => 'product']);
+            Screen::redirect(Menu::SLUG_MOVES, ['ks_err' => 'product']);
         }
         if ($delta === null || abs($delta) < 1e-9) {
-            self::redirect(['ks_err' => 'delta']);
+            Screen::redirect(Menu::SLUG_MOVES, ['ks_err' => 'delta']);
         }
         if ($note === '') {
-            self::redirect(['ks_err' => 'note']);
+            Screen::redirect(Menu::SLUG_MOVES, ['ks_err' => 'note']);
         }
 
         $occurredAt = null;
@@ -339,39 +339,36 @@ final class MovementsPage {
             $occurredAt = Movements::dateBoundary($dateRaw) ?: null;
         }
 
-        $ore = self::parseUnitCost((string) ($_POST['unit_cost'] ?? ''));
+        $ore = Screen::parseUnitCost((string) ($_POST['unit_cost'] ?? ''));
         try {
             Adjust::withCost($productId, (float) $delta, $note, $ore, $locationId, $key !== '' ? $key : null, $occurredAt);
-            self::redirect(['ks_msg' => 'adjusted']);
+            Screen::redirect(Menu::SLUG_MOVES, ['ks_msg' => 'adjusted']);
         } catch (LedgerException | CostingException $e) {
-            self::redirect(['ks_err' => 'ledger', 'ks_detail' => rawurlencode($e->getMessage())]);
+            Screen::redirect(Menu::SLUG_MOVES, ['ks_err' => 'ledger', 'ks_detail' => $e->getMessage()]);
         }
     }
 
     public static function handleReverse(): void {
-        self::guard(self::ACT_REVERSE);
+        Screen::guard(self::ACT_REVERSE);
         $movementId = isset($_POST['movement_id']) ? (int) $_POST['movement_id'] : 0;
         $note       = \sanitize_text_field(\wp_unslash((string) ($_POST['note'] ?? '')));
         if ($movementId <= 0) {
-            self::redirect(['ks_err' => 'movement']);
+            Screen::redirect(Menu::SLUG_MOVES, ['ks_err' => 'movement']);
         }
         if ($note === '') {
-            self::redirect(['ks_err' => 'note']);
+            Screen::redirect(Menu::SLUG_MOVES, ['ks_err' => 'note']);
         }
         try {
             Ledger::reverse($movementId, $note);
-            self::redirect(['ks_msg' => 'reversed']);
+            Screen::redirect(Menu::SLUG_MOVES, ['ks_msg' => 'reversed']);
         } catch (LedgerException $e) {
-            self::redirect(['ks_err' => 'ledger', 'ks_detail' => rawurlencode($e->getMessage())]);
+            Screen::redirect(Menu::SLUG_MOVES, ['ks_err' => 'ledger', 'ks_detail' => $e->getMessage()]);
         }
     }
 
     /** Streaming CSV of the current filter (pages of 500 over Movements::query). */
     public static function handleExport(): void {
-        if (!\current_user_can(Settings::capability())) {
-            \wp_die(\esc_html__('You do not have permission to do this.', 'kaupang-stock'), '', ['response' => 403]);
-        }
-        \check_admin_referer(self::ACT_EXPORT);
+        Screen::guard(self::ACT_EXPORT, 'GET');
 
         $filters = self::readFilters();
 
@@ -501,58 +498,23 @@ final class MovementsPage {
     /* --------------------------- Notices/util ----------------------------- */
 
     private static function notices(): void {
-        // phpcs:disable WordPress.Security.NonceVerification.Recommended
-        $msg    = isset($_GET['ks_msg']) ? \sanitize_key((string) $_GET['ks_msg']) : '';
-        $err    = isset($_GET['ks_err']) ? \sanitize_key((string) $_GET['ks_err']) : '';
-        $detail = isset($_GET['ks_detail']) ? \sanitize_text_field(\wp_unslash((string) $_GET['ks_detail'])) : '';
-        // phpcs:enable WordPress.Security.NonceVerification.Recommended
-
-        $map = [
-            'adjusted' => \__('Adjustment recorded.', 'kaupang-stock'),
-            'reversed' => \__('Movement reversed.', 'kaupang-stock'),
-        ];
-        if (isset($map[$msg])) {
-            self::flash('success', $map[$msg]);
-        }
-
-        if ($err === 'product') {
-            self::flash('error', \__('Could not resolve a product from that value.', 'kaupang-stock'));
-        } elseif ($err === 'delta') {
-            self::flash('error', \__('Enter a non-zero quantity change.', 'kaupang-stock'));
-        } elseif ($err === 'note') {
-            self::flash('error', \__('A note is required.', 'kaupang-stock'));
-        } elseif ($err === 'movement') {
-            self::flash('error', \__('A valid movement is required.', 'kaupang-stock'));
-        } elseif ($err === 'ledger') {
-            self::flash('error', sprintf(
-                /* translators: %s: ledger error */
-                \__('Could not record the movement: %s', 'kaupang-stock'),
-                $detail !== '' ? $detail : \__('unknown error', 'kaupang-stock')
-            ));
-        }
-    }
-
-    private static function guard(string $action): void {
-        if (!\current_user_can(Settings::capability())) {
-            \wp_die(\esc_html__('You do not have permission to do this.', 'kaupang-stock'), '', ['response' => 403]);
-        }
-        \check_admin_referer($action);
-    }
-
-    /** @param array<string,string> $args */
-    private static function redirect(array $args): void {
-        \wp_safe_redirect(\add_query_arg(
-            array_merge(['page' => Menu::SLUG_MOVES], $args),
-            \admin_url('admin.php')
-        ));
-        exit;
-    }
-
-    private static function flash(string $type, string $message): void {
-        printf(
-            '<div class="notice notice-%s is-dismissible"><p>%s</p></div>',
-            \esc_attr($type),
-            \esc_html($message)
+        $detail = Screen::detail();
+        Screen::notices(
+            [
+                'adjusted' => \__('Adjustment recorded.', 'kaupang-stock'),
+                'reversed' => \__('Movement reversed.', 'kaupang-stock'),
+            ],
+            [
+                'product'  => \__('Could not resolve a product from that value.', 'kaupang-stock'),
+                'delta'    => \__('Enter a non-zero quantity change.', 'kaupang-stock'),
+                'note'     => \__('A note is required.', 'kaupang-stock'),
+                'movement' => \__('A valid movement is required.', 'kaupang-stock'),
+                'ledger'   => sprintf(
+                    /* translators: %s: ledger error */
+                    \__('Could not record the movement: %s', 'kaupang-stock'),
+                    $detail !== '' ? $detail : \__('unknown error', 'kaupang-stock')
+                ),
+            ]
         );
     }
 
@@ -571,23 +533,6 @@ final class MovementsPage {
         // Fall back to a single unambiguous search hit.
         $hits = ProductSearch::search($raw, 2);
         return count($hits) === 1 ? (int) $hits[0]['id'] : 0;
-    }
-
-    private static function parseDelta(string $raw): ?float {
-        $raw = trim(str_replace(',', '.', $raw));
-        if ($raw === '' || !is_numeric($raw)) {
-            return null;
-        }
-        return (float) $raw;
-    }
-
-    /** "101" / "88,50" → øre; '' or negative → null (no cost entered). */
-    private static function parseUnitCost(string $raw): ?int {
-        $raw = trim(str_replace(',', '.', $raw));
-        if ($raw === '' || !is_numeric($raw) || (float) $raw < 0) {
-            return null;
-        }
-        return (int) round(((float) $raw) * 100);
     }
 
     public static function qty(float $q): string {

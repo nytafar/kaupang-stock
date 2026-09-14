@@ -4,8 +4,10 @@ declare(strict_types=1);
 namespace Kaupang\Stock\Admin;
 
 use Kaupang\Stock\Counting\CountLines;
+use Kaupang\Stock\Counting\Import;
 use Kaupang\Stock\Counting\Counts;
 use Kaupang\Stock\Settings;
+use Kaupang\Stock\Support\ProductSearch;
 use Kaupang\Stock\Support\Assets;
 
 /**
@@ -424,7 +426,7 @@ final class CountsPage {
     /* ------------------------------ Handlers ------------------------------ */
 
     public static function handleCreate(): void {
-        self::guard(self::A_CREATE);
+        Screen::guard(self::A_CREATE);
 
         $scope = isset($_POST['scope']) ? \sanitize_key((string) $_POST['scope']) : Counts::SCOPE_ALL;
         $args  = [
@@ -442,38 +444,37 @@ final class CountsPage {
 
         $countId = Counts::create($args);
         if ($countId <= 0) {
-            self::redirect(self::listUrl(), 'error', 'create_failed');
+            Screen::redirect(Menu::SLUG_COUNTS, ['ks_err' => 'create_failed']);
         }
         $lines = Counts::progress($countId)['lines'];
         if ($lines === 0) {
             // A scope that matched nothing still creates the document; warn.
-            self::redirect(self::captureUrl($countId), 'warning', 'empty_scope');
+            Screen::redirect(Menu::SLUG_COUNTS, ['count' => $countId, 'view' => 'capture', 'ks_msg' => 'empty_scope']);
         }
-        self::redirect(self::captureUrl($countId), 'success', 'created');
+        Screen::redirect(Menu::SLUG_COUNTS, ['count' => $countId, 'view' => 'capture', 'ks_msg' => 'created']);
     }
 
     public static function handleTransition(): void {
-        self::guard(self::A_TRANSITION);
+        Screen::guard(self::A_TRANSITION);
         $countId = isset($_POST['count']) ? (int) $_POST['count'] : 0;
         $to      = isset($_POST['to']) ? \sanitize_key((string) $_POST['to']) : '';
 
         $ok   = false;
-        $dest = self::listUrl();
+        $dest = [];
         switch ($to) {
             case 'to_review':
                 $ok   = Counts::toReview($countId);
-                $dest = self::reviewUrl($countId);
+                $dest = ['count' => $countId, 'view' => 'review'];
                 break;
             case 'reopen':
                 $ok   = Counts::reopen($countId);
-                $dest = self::captureUrl($countId);
+                $dest = ['count' => $countId, 'view' => 'capture'];
                 break;
             case 'cancel':
                 $ok   = Counts::cancel($countId);
-                $dest = self::listUrl();
                 break;
         }
-        self::redirect($dest, $ok ? 'success' : 'error', $ok ? 'transition' : 'transition_failed');
+        Screen::redirect(Menu::SLUG_COUNTS, $dest + ($ok ? ['ks_msg' => 'transition'] : ['ks_err' => 'transition_failed']));
     }
 
     /**
@@ -481,22 +482,14 @@ final class CountsPage {
      * `expected` column ONLY when the count is not blind. Streamed as a download.
      */
     public static function handleExport(): void {
-        self::guard(self::A_EXPORT, 'GET');
+        Screen::guard(self::A_EXPORT, 'GET');
         $countId = isset($_GET['count']) ? (int) $_GET['count'] : 0;
         $count   = Counts::find($countId);
         if ($count === null) {
-            self::redirect(self::listUrl(), 'error', 'not_found');
+            Screen::redirect(Menu::SLUG_COUNTS, ['ks_err' => 'not_found']);
         }
         $blind = !empty($count['blind']);
         $rows  = self::decorateLines(Counts::lines($countId));
-
-        \nocache_headers();
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="varetelling-' . $countId . '.csv"');
-
-        $out = fopen('php://output', 'w');
-        // BOM so Excel reads UTF-8 correctly on the round trip.
-        fwrite($out, "\xEF\xBB\xBF");
 
         $header = ['sku', 'product', 'counted'];
         if (!$blind) {
@@ -504,8 +497,8 @@ final class CountsPage {
         }
         // A product_id column makes re-import robust when SKUs are blank.
         $header[] = 'product_id';
-        fputcsv($out, $header);
 
+        $csv = [];
         foreach ($rows as $r) {
             $line = [
                 $r['sku'],
@@ -516,71 +509,44 @@ final class CountsPage {
                 $line[] = self::fmt($r['expected']);
             }
             $line[] = $r['product_id'];
-            fputcsv($out, $line);
+            $csv[]  = $line;
         }
-        fclose($out);
-        exit;
+        Screen::streamCsv('varetelling-' . $countId . '.csv', $header, $csv, ',');
     }
 
     /**
      * CSV import (§6.7): fill `counted` for matching lines (by sku, falling back to
-     * a product_id column), move the count to review, never apply. Robust parse:
-     * BOM strip + ; / , delimiter sniff via fgetcsv.
+     * a product_id column), move the count to review, never apply. The parse and
+     * the SKU match live in Counting\Import.
      */
     public static function handleImport(): void {
-        self::guard(self::A_IMPORT);
+        Screen::guard(self::A_IMPORT);
         $countId = isset($_POST['count']) ? (int) $_POST['count'] : 0;
         $count   = Counts::find($countId);
         if ($count === null) {
-            self::redirect(self::listUrl(), 'error', 'not_found');
+            Screen::redirect(Menu::SLUG_COUNTS, ['ks_err' => 'not_found']);
         }
         if (!in_array((string) $count['status'], [Counts::STATUS_OPEN, Counts::STATUS_REVIEW], true)) {
-            self::redirect(self::reviewUrl($countId), 'error', 'import_wrong_status');
+            Screen::redirect(Menu::SLUG_COUNTS, ['count' => $countId, 'view' => 'review', 'ks_err' => 'import_wrong_status']);
         }
         if (empty($_FILES['sheet']['tmp_name']) || !is_uploaded_file((string) $_FILES['sheet']['tmp_name'])) {
-            self::redirect(self::reviewUrl($countId), 'error', 'no_file');
+            Screen::redirect(Menu::SLUG_COUNTS, ['count' => $countId, 'view' => 'review', 'ks_err' => 'no_file']);
         }
 
-        $parsed = self::parseCsv((string) $_FILES['sheet']['tmp_name']);
-        if ($parsed === null) {
-            self::redirect(self::reviewUrl($countId), 'error', 'parse_failed');
+        $handle = fopen((string) $_FILES['sheet']['tmp_name'], 'r');
+        if ($handle === false) {
+            Screen::redirect(Menu::SLUG_COUNTS, ['count' => $countId, 'view' => 'review', 'ks_err' => 'parse_failed']);
         }
+        $parsed = Import::parse($handle);
+        fclose($handle);
 
-        // Index the count's lines by product id and by SKU for matching.
-        $lines     = Counts::lines($countId);
-        $byProduct = [];
-        $bySku     = [];
-        foreach ($lines as $line) {
-            $pid             = (int) $line['product_id'];
-            $byProduct[$pid] = (int) $line['id'];
-            $rawSku          = self::skuFor($pid);
-            if ($rawSku !== '') {
-                $bySku[$rawSku] = (int) $line['id'];
-            }
-        }
-
+        // Fill the count's own lines from the parsed product → counted map.
         $applied = 0;
-        foreach ($parsed['rows'] as $row) {
-            $lineId = null;
-            $sku    = isset($row['sku']) ? trim((string) $row['sku']) : '';
-            if ($sku !== '' && isset($bySku[$sku])) {
-                $lineId = $bySku[$sku];
-            } elseif (isset($row['product_id'])) {
-                $pid = (int) $row['product_id'];
-                if ($pid > 0 && isset($byProduct[$pid])) {
-                    $lineId = $byProduct[$pid];
-                }
-            }
-            if ($lineId === null) {
-                continue;
-            }
-            $rawCounted = $row['counted'] ?? '';
-            if ($rawCounted === '' || $rawCounted === null) {
-                continue; // blank counted → leave the line uncounted
-            }
-            // Tolerate comma decimals from a Norwegian locale export.
-            $value = (float) str_replace(',', '.', (string) $rawCounted);
-            if (CountLines::setCounted($lineId, $value) !== null) {
+        foreach (Counts::lines($countId) as $line) {
+            $productId = (int) $line['product_id'];
+            if (isset($parsed['lines'][$productId])
+                && CountLines::setCounted((int) $line['id'], $parsed['lines'][$productId]) !== null
+            ) {
                 $applied++;
             }
         }
@@ -589,59 +555,7 @@ final class CountsPage {
         if ((string) $count['status'] === Counts::STATUS_OPEN) {
             Counts::toReview($countId);
         }
-        self::redirect(self::reviewUrl($countId), 'success', 'imported', ['n' => $applied]);
-    }
-
-    /* ------------------------------ CSV parse ----------------------------- */
-
-    /**
-     * Parse an uploaded CSV into associative rows keyed by a normalised header.
-     * Sniffs ; vs , and strips a UTF-8 BOM from the first field.
-     *
-     * @return array{rows:array<int,array<string,string>>}|null
-     */
-    private static function parseCsv(string $path): ?array {
-        $handle = fopen($path, 'r');
-        if ($handle === false) {
-            return null;
-        }
-        // Sniff the delimiter off the first line.
-        $first = fgets($handle);
-        if ($first === false) {
-            fclose($handle);
-            return null;
-        }
-        $first     = preg_replace('/^\xEF\xBB\xBF/', '', $first) ?? $first;
-        $delimiter = (substr_count($first, ';') > substr_count($first, ',')) ? ';' : ',';
-
-        rewind($handle);
-        $rows    = [];
-        $header  = null;
-        while (($cols = fgetcsv($handle, 0, $delimiter)) !== false) {
-            if ($cols === [null] || $cols === false) {
-                continue;
-            }
-            if ($header === null) {
-                // Strip BOM from the first header cell and normalise names.
-                if (isset($cols[0])) {
-                    $cols[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $cols[0]) ?? $cols[0];
-                }
-                $header = array_map(static fn ($h): string => strtolower(trim((string) $h)), $cols);
-                continue;
-            }
-            $assoc = [];
-            foreach ($header as $i => $name) {
-                if ($name === '') {
-                    continue;
-                }
-                $assoc[$name] = isset($cols[$i]) ? (string) $cols[$i] : '';
-            }
-            if ($assoc !== []) {
-                $rows[] = $assoc;
-            }
-        }
-        fclose($handle);
-        return ['rows' => $rows];
+        Screen::redirect(Menu::SLUG_COUNTS, ['count' => $countId, 'view' => 'review', 'ks_msg' => 'imported', 'n' => $applied]);
     }
 
     /* ------------------------------ Decorate ------------------------------ */
@@ -654,22 +568,7 @@ final class CountsPage {
      * @return array<int,array{id:int,product_id:int,title:string,sku:string,expected:float,counted:?float,recount:bool}>
      */
     private static function decorateLines(array $lines): array {
-        global $wpdb;
-        $ids = array_values(array_filter(array_map(static fn ($l): int => (int) $l['product_id'], $lines)));
-        $meta = [];
-        if (!empty($ids)) {
-            $in   = implode(',', $ids);
-            $data = $wpdb->get_results(
-                "SELECT p.ID AS id, p.post_title AS title, COALESCE(sku.meta_value, '') AS sku
-                 FROM {$wpdb->posts} p
-                 LEFT JOIN {$wpdb->postmeta} sku ON sku.post_id = p.ID AND sku.meta_key = '_sku'
-                 WHERE p.ID IN ($in)",
-                ARRAY_A
-            );
-            foreach ((array) $data as $d) {
-                $meta[(int) $d['id']] = ['title' => (string) $d['title'], 'sku' => (string) $d['sku']];
-            }
-        }
+        $meta = ProductSearch::rows(array_map(static fn ($l): int => (int) $l['product_id'], $lines));
 
         $out = [];
         foreach ($lines as $l) {
@@ -686,15 +585,6 @@ final class CountsPage {
             ];
         }
         return $out;
-    }
-
-    private static function skuFor(int $productId): string {
-        global $wpdb;
-        $sku = $wpdb->get_var($wpdb->prepare(
-            "SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = '_sku' LIMIT 1",
-            $productId
-        ));
-        return $sku !== null ? (string) $sku : '';
     }
 
     /* ------------------------------ URLs & UI ----------------------------- */
@@ -788,25 +678,7 @@ final class CountsPage {
      * @return array<int,array{id:int,title:string,sku:string}>
      */
     private static function managedProductChoices(): array {
-        global $wpdb;
-        $ids = \Kaupang\Stock\Observe\Seeder::stockManagedProductIds();
-        if (empty($ids)) {
-            return [];
-        }
-        $in   = implode(',', array_map('intval', $ids));
-        $rows = $wpdb->get_results(
-            "SELECT p.ID AS id, p.post_title AS title, COALESCE(sku.meta_value, '') AS sku
-             FROM {$wpdb->posts} p
-             LEFT JOIN {$wpdb->postmeta} sku ON sku.post_id = p.ID AND sku.meta_key = '_sku'
-             WHERE p.ID IN ($in)
-             ORDER BY p.post_title ASC",
-            ARRAY_A
-        );
-        $out = [];
-        foreach ((array) $rows as $r) {
-            $out[] = ['id' => (int) $r['id'], 'title' => (string) $r['title'], 'sku' => (string) $r['sku']];
-        }
-        return $out;
+        return array_values(ProductSearch::rows(\Kaupang\Stock\Observe\Seeder::stockManagedProductIds()));
     }
 
     private static function userName(int $userId): string {
@@ -833,55 +705,27 @@ final class CountsPage {
         return '0';
     }
 
-    private static function guard(string $action, string $method = 'POST'): void {
-        if (!\current_user_can(Settings::capability())) {
-            \wp_die(\esc_html__('You are not allowed to do this.', 'kaupang-stock'), '', ['response' => 403]);
-        }
-        \check_admin_referer($action);
-        if ($method === 'POST' && ($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-            \wp_die(\esc_html__('Invalid request method.', 'kaupang-stock'), '', ['response' => 405]);
-        }
-    }
-
-    /** @param array<string,scalar> $extra */
-    private static function redirect(string $url, string $type, string $code, array $extra = []): void {
-        $args = array_merge(['ks_notice' => $type, 'ks_code' => $code], $extra);
-        \wp_safe_redirect(\add_query_arg($args, $url));
-        exit;
-    }
-
     private static function notices(): void {
-        // phpcs:disable WordPress.Security.NonceVerification
-        $type = isset($_GET['ks_notice']) ? \sanitize_key((string) $_GET['ks_notice']) : '';
-        $code = isset($_GET['ks_code']) ? \sanitize_key((string) $_GET['ks_code']) : '';
-        // phpcs:enable
-        if ($type === '' || $code === '') {
-            return;
-        }
-        $n       = isset($_GET['n']) ? (int) $_GET['n'] : 0; // phpcs:ignore WordPress.Security.NonceVerification
-        $classes = ['success' => 'notice-success', 'warning' => 'notice-warning', 'error' => 'notice-error'];
-        $class   = $classes[$type] ?? 'notice-info';
-
-        $messages = [
-            'created'             => \__('Count created. Start scanning below.', 'kaupang-stock'),
-            'empty_scope'         => \__('The count was created but no stock-managed products matched the scope.', 'kaupang-stock'),
-            'create_failed'       => \__('Could not create the count.', 'kaupang-stock'),
-            'transition'          => \__('Count updated.', 'kaupang-stock'),
-            'transition_failed'   => \__('That status change is not allowed.', 'kaupang-stock'),
-            'not_found'           => \__('Count not found.', 'kaupang-stock'),
-            'import_wrong_status' => \__('This count can no longer be imported into.', 'kaupang-stock'),
-            'no_file'             => \__('No CSV file was uploaded.', 'kaupang-stock'),
-            'parse_failed'        => \__('The CSV could not be read.', 'kaupang-stock'),
-            'imported'            => sprintf(
-                /* translators: %d: number of matched lines filled from the CSV. */
-                \_n('%d line filled from the CSV. The count is now in review.', '%d lines filled from the CSV. The count is now in review.', $n, 'kaupang-stock'),
-                $n
-            ),
-        ];
-        $message = $messages[$code] ?? '';
-        if ($message === '') {
-            return;
-        }
-        echo '<div class="notice ' . \esc_attr($class) . ' is-dismissible"><p>' . \esc_html($message) . '</p></div>';
+        $n = isset($_GET['n']) ? (int) $_GET['n'] : 0; // phpcs:ignore WordPress.Security.NonceVerification
+        Screen::notices(
+            [
+                'created'     => \__('Count created. Start scanning below.', 'kaupang-stock'),
+                'empty_scope' => [\__('The count was created but no stock-managed products matched the scope.', 'kaupang-stock'), 'warning'],
+                'transition'  => \__('Count updated.', 'kaupang-stock'),
+                'imported'    => sprintf(
+                    /* translators: %d: number of matched lines filled from the CSV. */
+                    \_n('%d line filled from the CSV. The count is now in review.', '%d lines filled from the CSV. The count is now in review.', $n, 'kaupang-stock'),
+                    $n
+                ),
+            ],
+            [
+                'create_failed'       => \__('Could not create the count.', 'kaupang-stock'),
+                'transition_failed'   => \__('That status change is not allowed.', 'kaupang-stock'),
+                'not_found'           => \__('Count not found.', 'kaupang-stock'),
+                'import_wrong_status' => \__('This count can no longer be imported into.', 'kaupang-stock'),
+                'no_file'             => \__('No CSV file was uploaded.', 'kaupang-stock'),
+                'parse_failed'        => \__('The CSV could not be read.', 'kaupang-stock'),
+            ]
+        );
     }
 }

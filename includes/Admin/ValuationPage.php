@@ -390,30 +390,24 @@ final class ValuationPage {
     /* ------------------------------ Handlers ------------------------------ */
 
     public static function handleOpeningSave(): void {
-        if (!\current_user_can(Settings::capability())) {
-            \wp_die(\esc_html__('You do not have permission to do this.', 'kaupang-stock'), '', ['response' => 403]);
-        }
-        \check_admin_referer(self::ACT_OPENING);
+        Screen::guard(self::ACT_OPENING);
 
         $productId = isset($_POST['product_id']) ? (int) $_POST['product_id'] : 0;
         $costRaw   = str_replace(',', '.', trim((string) ($_POST['unit_cost'] ?? '')));
 
         if ($productId <= 0 || $costRaw === '' || !is_numeric($costRaw) || (float) $costRaw < 0) {
-            self::redirect(['ks_err' => 'opening_input']);
+            Screen::redirect(Menu::SLUG_VALUATION, ['ks_err' => 'opening_input']);
         }
         try {
             Costing::saveOpening($productId, (int) round(((float) $costRaw) * 100));
         } catch (CostingException $e) {
-            self::redirect(['ks_err' => 'opening', 'ks_detail' => rawurlencode($e->getMessage())]);
+            Screen::redirect(Menu::SLUG_VALUATION, ['ks_err' => 'opening', 'ks_detail' => $e->getMessage()]);
         }
-        self::redirect(['ks_msg' => 'opening_saved']);
+        Screen::redirect(Menu::SLUG_VALUATION, ['ks_msg' => 'opening_saved']);
     }
 
     public static function handleCsv(): void {
-        if (!\current_user_can(Settings::capability())) {
-            \wp_die(\esc_html__('You do not have permission to do this.', 'kaupang-stock'), '', ['response' => 403]);
-        }
-        \check_admin_referer(self::ACT_CSV);
+        Screen::guard(self::ACT_CSV);
 
         $asOfRaw = \sanitize_text_field((string) ($_POST['as_of'] ?? ''));
         $asOfUtc = null;
@@ -427,32 +421,22 @@ final class ValuationPage {
         $multi  = Locations::isMulti();
         ['rows' => $rows, 'totals' => $totals] = Costing::valuation(['as_of' => $asOfUtc, 'by_location' => $multi]);
 
-        $filename = 'lagerverdi-' . $asOfRaw . '.csv';
-        \nocache_headers();
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-
-        $out = fopen('php://output', 'w');
-        // BOM so Excel opens UTF-8 (æøå in product names) correctly.
-        fwrite($out, "\xEF\xBB\xBF");
-        $headers = ['product_id', 'product'];
+        $header = ['product_id', 'product'];
         if ($multi) {
-            $headers = array_merge($headers, ['location_id', 'location']);
+            $header = array_merge($header, ['location_id', 'location']);
         }
-        $headers = array_merge($headers, ['qty', 'uncosted_qty', 'estimate_qty', 'provisional_qty', 'avg_cost_kr', 'value_kr']);
-        fputcsv($out, $headers, ';');
+        $header = array_merge($header, ['qty', 'uncosted_qty', 'estimate_qty', 'provisional_qty', 'avg_cost_kr', 'value_kr']);
+
+        $csv = [];
         foreach ($rows as $row) {
             $costedQty = $row['open_qty'] - $row['uncosted_qty'];
             $avg       = $costedQty > 1e-9 ? round($row['value_ore'] / $costedQty) / 100 : null;
-            $csv = [
-                $row['product_id'],
-                ProductSearch::label($row['product_id']),
-            ];
+            $line      = [$row['product_id'], ProductSearch::label($row['product_id'])];
             if ($multi) {
-                $csv[] = (int) $row['location_id'];
-                $csv[] = Locations::name((int) $row['location_id']);
+                $line[] = (int) $row['location_id'];
+                $line[] = Locations::name((int) $row['location_id']);
             }
-            $csv = array_merge($csv, [
+            $csv[] = array_merge($line, [
                 self::qty($row['open_qty']),
                 self::qty($row['uncosted_qty']),
                 self::qty($row['estimate_qty']),
@@ -460,35 +444,34 @@ final class ValuationPage {
                 $avg !== null ? number_format($avg, 2, ',', '') : '',
                 number_format($row['value_ore'] / 100, 2, ',', ''),
             ]);
-            fputcsv($out, $csv, ';');
         }
         $total = ['', 'TOTAL'];
         if ($multi) {
             $total = array_merge($total, ['', '']);
         }
-        $total = array_merge($total, [self::qty($totals['open_qty']), self::qty($totals['uncosted_qty']), self::qty($totals['estimate_qty']), self::qty($totals['provisional_qty']), '', number_format($totals['total_ore'] / 100, 2, ',', '')]);
-        fputcsv($out, $total, ';');
-        fclose($out);
-        exit;
+        $csv[] = array_merge($total, [
+            self::qty($totals['open_qty']),
+            self::qty($totals['uncosted_qty']),
+            self::qty($totals['estimate_qty']),
+            self::qty($totals['provisional_qty']),
+            '',
+            number_format($totals['total_ore'] / 100, 2, ',', ''),
+        ]);
+
+        Screen::streamCsv('lagerverdi-' . $asOfRaw . '.csv', $header, $csv);
     }
 
     /* ------------------------------ Helpers ------------------------------- */
 
     private static function notices(): void {
-        // phpcs:disable WordPress.Security.NonceVerification
-        $msg    = isset($_GET['ks_msg']) ? \sanitize_key((string) $_GET['ks_msg']) : '';
-        $err    = isset($_GET['ks_err']) ? \sanitize_key((string) $_GET['ks_err']) : '';
-        $detail = isset($_GET['ks_detail']) ? \sanitize_text_field(rawurldecode((string) $_GET['ks_detail'])) : '';
-        // phpcs:enable
-        if ($msg === 'opening_saved') {
-            self::flash('success', \__('Opening cost saved — value on hand updated.', 'kaupang-stock'));
-        }
-        if ($err === 'opening_input') {
-            self::flash('error', \__('Enter a non-negative unit cost in kr.', 'kaupang-stock'));
-        }
-        if ($err === 'opening') {
-            self::flash('error', $detail !== '' ? $detail : \__('Could not save the opening cost.', 'kaupang-stock'));
-        }
+        $detail = Screen::detail();
+        Screen::notices(
+            ['opening_saved' => \__('Opening cost saved — value on hand updated.', 'kaupang-stock')],
+            [
+                'opening_input' => \__('Enter a non-negative unit cost in kr.', 'kaupang-stock'),
+                'opening'       => $detail !== '' ? $detail : \__('Could not save the opening cost.', 'kaupang-stock'),
+            ]
+        );
     }
 
     /** Origin/reason → Norwegian chip label (layers reuse movement reasons). */
@@ -556,23 +539,6 @@ final class ValuationPage {
         return \add_query_arg(
             array_merge(['page' => Menu::SLUG_VALUATION], $args),
             \admin_url('admin.php')
-        );
-    }
-
-    /** @param array<string,string> $args */
-    private static function redirect(array $args): void {
-        \wp_safe_redirect(\add_query_arg(
-            array_merge(['page' => Menu::SLUG_VALUATION], $args),
-            \admin_url('admin.php')
-        ));
-        exit;
-    }
-
-    private static function flash(string $type, string $message): void {
-        printf(
-            '<div class="notice notice-%s is-dismissible"><p>%s</p></div>',
-            \esc_attr($type),
-            \esc_html($message)
         );
     }
 

@@ -69,6 +69,36 @@ final class ProductSearch {
         return count($ids) === 1 ? (int) $ids[0] : null;
     }
 
+    /**
+     * Title + SKU for a fixed id set — the list join every admin table needs,
+     * keyed by product id and ordered by title.
+     *
+     * @param int[] $ids
+     * @return array<int,array{id:int,title:string,sku:string}>
+     */
+    public static function rows(array $ids): array {
+        global $wpdb;
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if ($ids === []) {
+            return [];
+        }
+        $in   = implode(',', $ids);
+        $data = $wpdb->get_results(
+            "SELECT p.ID AS id, p.post_title AS title, COALESCE(sku.meta_value, '') AS sku
+             FROM {$wpdb->posts} p
+             LEFT JOIN {$wpdb->postmeta} sku ON sku.post_id = p.ID AND sku.meta_key = '_sku'
+             WHERE p.ID IN ($in)
+             ORDER BY p.post_title ASC",
+            ARRAY_A
+        );
+        $out = [];
+        foreach ((array) $data as $row) {
+            $id = (int) $row['id'];
+            $out[$id] = ['id' => $id, 'title' => (string) $row['title'], 'sku' => (string) $row['sku']];
+        }
+        return $out;
+    }
+
     /** "Title (SKU)" display label without loading a WC_Product. */
     public static function label(int $productId): string {
         global $wpdb;

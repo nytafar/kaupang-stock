@@ -187,7 +187,7 @@ final class StatusPage {
             </table>
             </div>
 
-            <?php self::pagination($paged, $pages, $total); ?>
+            <?php echo Screen::paginate($total, self::PER_PAGE, $paged); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped inside ?>
         </div>
         <?php
     }
@@ -210,10 +210,10 @@ final class StatusPage {
     /* ------------------------------ Handlers ------------------------------ */
 
     public static function handleAdjust(): void {
-        self::guard(self::ACT_ADJUST);
+        Screen::guard(self::ACT_ADJUST);
 
         $productId = isset($_POST['product_id']) ? (int) $_POST['product_id'] : 0;
-        $delta     = self::parseDelta((string) ($_POST['delta'] ?? ''));
+        $delta     = Screen::parseDelta((string) ($_POST['delta'] ?? ''));
         $note      = \sanitize_text_field(\wp_unslash((string) ($_POST['note'] ?? '')));
         $key       = \sanitize_text_field((string) ($_POST['idem'] ?? ''));
         $locationId = 0;
@@ -223,30 +223,30 @@ final class StatusPage {
         }
 
         if ($productId <= 0) {
-            self::redirect(['ks_err' => 'product']);
+            Screen::redirect(Menu::SLUG, ['ks_err' => 'product']);
         }
         if ($delta === null || abs($delta) < 1e-9) {
-            self::redirect(['ks_err' => 'delta']);
+            Screen::redirect(Menu::SLUG, ['ks_err' => 'delta']);
         }
         if ($note === '') {
-            self::redirect(['ks_err' => 'note']);
+            Screen::redirect(Menu::SLUG, ['ks_err' => 'note']);
         }
 
         // Optional "à kr" unit cost: entering stock at a known cost ("add 20 @
         // 101") prices the cost layer exactly. Adjust::withCost owns the order
         // of operations; positive deltas only — removals are valued FIFO.
-        $ore = self::parseUnitCost((string) ($_POST['unit_cost'] ?? ''));
+        $ore = Screen::parseUnitCost((string) ($_POST['unit_cost'] ?? ''));
 
         try {
             Adjust::withCost($productId, (float) $delta, $note, $ore, $locationId, $key !== '' ? $key : null);
-            self::redirect(['ks_msg' => 'adjusted']);
+            Screen::redirect(Menu::SLUG, ['ks_msg' => 'adjusted']);
         } catch (LedgerException | CostingException $e) {
-            self::redirect(['ks_err' => 'ledger', 'ks_detail' => rawurlencode($e->getMessage())]);
+            Screen::redirect(Menu::SLUG, ['ks_err' => 'ledger', 'ks_detail' => $e->getMessage()]);
         }
     }
 
     public static function handleTransfer(): void {
-        self::guard(self::ACT_TRANSFER);
+        Screen::guard(self::ACT_TRANSFER);
 
         $productId = isset($_POST['product_id']) ? (int) $_POST['product_id'] : 0;
         $quantity = isset($_POST['quantity']) ? (int) $_POST['quantity'] : 0;
@@ -256,10 +256,10 @@ final class StatusPage {
         $note = \sanitize_text_field(\wp_unslash((string) ($_POST['note'] ?? '')));
 
         if ($productId <= 0) {
-            self::redirect(['ks_err' => 'product']);
+            Screen::redirect(Menu::SLUG, ['ks_err' => 'product']);
         }
         if ($quantity <= 0) {
-            self::redirect(['ks_err' => 'transfer_quantity']);
+            Screen::redirect(Menu::SLUG, ['ks_err' => 'transfer_quantity']);
         }
 
         try {
@@ -271,30 +271,30 @@ final class StatusPage {
                 $token,
                 $note !== '' ? $note : null
             );
-            self::redirect(['ks_msg' => 'transferred']);
+            Screen::redirect(Menu::SLUG, ['ks_msg' => 'transferred']);
         } catch (\Throwable $e) {
-            self::redirect(['ks_err' => 'transfer', 'ks_detail' => rawurlencode($e->getMessage())]);
+            Screen::redirect(Menu::SLUG, ['ks_err' => 'transfer', 'ks_detail' => $e->getMessage()]);
         }
     }
 
     public static function handleHeal(): void {
-        self::guard(self::ACT_HEAL);
+        Screen::guard(self::ACT_HEAL);
         $productId = isset($_POST['product_id']) ? (int) $_POST['product_id'] : 0;
         if ($productId <= 0) {
-            self::redirect(['ks_err' => 'product']);
+            Screen::redirect(Menu::SLUG, ['ks_err' => 'product']);
         }
         try {
             $outcome = Reconciler::healProduct($productId);
-            self::redirect(['ks_msg' => 'healed', 'ks_detail' => rawurlencode($outcome)]);
+            Screen::redirect(Menu::SLUG, ['ks_msg' => 'healed', 'ks_detail' => $outcome]);
         } catch (LedgerException $e) {
-            self::redirect(['ks_err' => 'ledger', 'ks_detail' => rawurlencode($e->getMessage())]);
+            Screen::redirect(Menu::SLUG, ['ks_err' => 'ledger', 'ks_detail' => $e->getMessage()]);
         }
     }
 
     public static function handleReconcile(): void {
-        self::guard(self::ACT_RECONCILE);
+        Screen::guard(self::ACT_RECONCILE);
         $report = Reconciler::run();
-        self::redirect(['ks_msg' => 'reconciled', 'ks_detail' => rawurlencode((string) count((array) ($report['issues'] ?? [])))]);
+        Screen::redirect(Menu::SLUG, ['ks_msg' => 'reconciled', 'ks_detail' => (string) count((array) ($report['issues'] ?? []))]);
     }
 
     /* ------------------------------ Row set ------------------------------- */
@@ -344,24 +344,16 @@ final class StatusPage {
         return $out;
     }
 
-    /** @param int[] $ids @return int[] */
+    /** @param int[] $ids @return int[] matching title or SKU */
     private static function filterBySearch(array $ids, string $search): array {
-        if (empty($ids)) {
-            return [];
+        $needle = mb_strtolower($search);
+        $out    = [];
+        foreach (ProductSearch::rows($ids) as $id => $row) {
+            if (mb_strpos(mb_strtolower($row['title'] . ' ' . $row['sku']), $needle) !== false) {
+                $out[] = $id;
+            }
         }
-        global $wpdb;
-        $in   = implode(',', array_map('intval', $ids));
-        $like = '%' . $wpdb->esc_like($search) . '%';
-        $hits = $wpdb->get_col($wpdb->prepare(
-            "SELECT DISTINCT p.ID
-             FROM {$wpdb->posts} p
-             LEFT JOIN {$wpdb->postmeta} sku ON sku.post_id = p.ID AND sku.meta_key = '_sku'
-             WHERE p.ID IN ($in)
-               AND (p.post_title LIKE %s OR sku.meta_value LIKE %s)",
-            $like,
-            $like
-        ));
-        return array_map('intval', (array) $hits);
+        return $out;
     }
 
     /** @param int[] $ids @return int[] */
@@ -739,52 +731,45 @@ final class StatusPage {
     /* ------------------------------ Chrome -------------------------------- */
 
     private static function notices(): void {
-        $msg    = isset($_GET['ks_msg']) ? \sanitize_key((string) $_GET['ks_msg']) : ''; // phpcs:ignore WordPress.Security.NonceVerification
-        $err    = isset($_GET['ks_err']) ? \sanitize_key((string) $_GET['ks_err']) : ''; // phpcs:ignore WordPress.Security.NonceVerification
-        $detail = isset($_GET['ks_detail']) ? \sanitize_text_field(\wp_unslash((string) $_GET['ks_detail'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification
-
-        if ($msg === 'adjusted') {
-            self::flash('success', \__('Stock adjusted.', 'kaupang-stock'));
-        } elseif ($msg === 'transferred') {
-            self::flash('success', \__('Stock transferred.', 'kaupang-stock'));
-        } elseif ($msg === 'healed') {
-            self::flash('success', sprintf(
-                /* translators: %s: heal outcome */
-                \__('Heal complete: %s.', 'kaupang-stock'),
-                $detail !== '' ? $detail : 'ok'
-            ));
-        } elseif ($msg === 'reconciled') {
-            $n = (int) $detail;
-            self::flash('info', $n > 0
-                ? sprintf(
-                    /* translators: %d: number of discrepancies */
-                    \_n('Reconciliation complete: %d discrepancy found.', 'Reconciliation complete: %d discrepancies found.', $n, 'kaupang-stock'),
-                    $n
-                )
-                : \__('Reconciliation complete: no discrepancies.', 'kaupang-stock'));
-        }
-
-        if ($err === 'product') {
-            self::flash('error', \__('A valid product is required.', 'kaupang-stock'));
-        } elseif ($err === 'delta') {
-            self::flash('error', \__('Enter a non-zero quantity change.', 'kaupang-stock'));
-        } elseif ($err === 'note') {
-            self::flash('error', \__('A note is required for an adjustment.', 'kaupang-stock'));
-        } elseif ($err === 'transfer_quantity') {
-            self::flash('error', \__('Enter a positive whole transfer quantity.', 'kaupang-stock'));
-        } elseif ($err === 'transfer') {
-            self::flash('error', sprintf(
-                /* translators: %s: transfer error message */
-                \__('Could not transfer stock: %s', 'kaupang-stock'),
-                $detail !== '' ? $detail : \__('unknown error', 'kaupang-stock')
-            ));
-        } elseif ($err === 'ledger') {
-            self::flash('error', sprintf(
-                /* translators: %s: ledger error message */
-                \__('Could not record the movement: %s', 'kaupang-stock'),
-                $detail !== '' ? $detail : \__('unknown error', 'kaupang-stock')
-            ));
-        }
+        $detail = Screen::detail();
+        $n      = (int) $detail;
+        Screen::notices(
+            [
+                'adjusted'    => \__('Stock adjusted.', 'kaupang-stock'),
+                'transferred' => \__('Stock transferred.', 'kaupang-stock'),
+                'healed'      => sprintf(
+                    /* translators: %s: heal outcome */
+                    \__('Heal complete: %s.', 'kaupang-stock'),
+                    $detail !== '' ? $detail : 'ok'
+                ),
+                'reconciled'  => [
+                    $n > 0
+                        ? sprintf(
+                            /* translators: %d: number of discrepancies */
+                            \_n('Reconciliation complete: %d discrepancy found.', 'Reconciliation complete: %d discrepancies found.', $n, 'kaupang-stock'),
+                            $n
+                        )
+                        : \__('Reconciliation complete: no discrepancies.', 'kaupang-stock'),
+                    'info',
+                ],
+            ],
+            [
+                'product'           => \__('A valid product is required.', 'kaupang-stock'),
+                'delta'             => \__('Enter a non-zero quantity change.', 'kaupang-stock'),
+                'note'              => \__('A note is required for an adjustment.', 'kaupang-stock'),
+                'transfer_quantity' => \__('Enter a positive whole transfer quantity.', 'kaupang-stock'),
+                'transfer'          => sprintf(
+                    /* translators: %s: transfer error message */
+                    \__('Could not transfer stock: %s', 'kaupang-stock'),
+                    $detail !== '' ? $detail : \__('unknown error', 'kaupang-stock')
+                ),
+                'ledger'            => sprintf(
+                    /* translators: %s: ledger error message */
+                    \__('Could not record the movement: %s', 'kaupang-stock'),
+                    $detail !== '' ? $detail : \__('unknown error', 'kaupang-stock')
+                ),
+            ]
+        );
     }
 
     private static function categoryDropdown(int $selected): void {
@@ -804,77 +789,7 @@ final class StatusPage {
         ]);
     }
 
-    private static function pagination(int $paged, int $pages, int $total): void {
-        if ($pages <= 1) {
-            return;
-        }
-        $base = \add_query_arg('paged', '%#%');
-        $links = \paginate_links([
-            'base'      => $base,
-            'format'    => '',
-            'current'   => $paged,
-            'total'     => $pages,
-            'prev_text' => '‹',
-            'next_text' => '›',
-        ]);
-        if ($links === null) {
-            return;
-        }
-        echo '<div class="tablenav"><div class="tablenav-pages">';
-        printf(
-            '<span class="displaying-num">%s</span>',
-            \esc_html(sprintf(
-                /* translators: %d: total item count */
-                \_n('%d item', '%d items', $total, 'kaupang-stock'),
-                $total
-            ))
-        );
-        echo \wp_kses_post($links);
-        echo '</div></div>';
-    }
-
     /* ------------------------------ Shared -------------------------------- */
-
-    private static function guard(string $action): void {
-        if (!\current_user_can(Settings::capability())) {
-            \wp_die(\esc_html__('You do not have permission to do this.', 'kaupang-stock'), '', ['response' => 403]);
-        }
-        \check_admin_referer($action);
-    }
-
-    /** @param array<string,string> $args */
-    private static function redirect(array $args): void {
-        \wp_safe_redirect(\add_query_arg(
-            array_merge(['page' => Menu::SLUG], $args),
-            \admin_url('admin.php')
-        ));
-        exit;
-    }
-
-    private static function flash(string $type, string $message): void {
-        printf(
-            '<div class="notice notice-%s is-dismissible"><p>%s</p></div>',
-            \esc_attr($type),
-            \esc_html($message)
-        );
-    }
-
-    private static function parseDelta(string $raw): ?float {
-        $raw = trim(str_replace(',', '.', $raw));
-        if ($raw === '' || !is_numeric($raw)) {
-            return null;
-        }
-        return (float) $raw;
-    }
-
-    /** "101" / "88,50" → øre; '' or negative → null (no cost entered). */
-    private static function parseUnitCost(string $raw): ?int {
-        $raw = trim(str_replace(',', '.', $raw));
-        if ($raw === '' || !is_numeric($raw) || (float) $raw < 0) {
-            return null;
-        }
-        return (int) round(((float) $raw) * 100);
-    }
 
     private static function qty(float $q): string {
         // Integer-only v1; show whole numbers without trailing zeros.

@@ -167,6 +167,15 @@ final class SettingsPage {
             </p>
 
             <?php \settings_errors(Settings::OPTION_KEY); ?>
+            <?php Screen::notices(
+                [
+                    'created' => \__('Location added.', 'kaupang-stock'),
+                    'renamed' => \__('Location renamed.', 'kaupang-stock'),
+                    'default' => \__('Default location changed.', 'kaupang-stock'),
+                    'active'  => \__('Location status changed.', 'kaupang-stock'),
+                ],
+                ['location' => Screen::detail() !== '' ? Screen::detail() : \__('Could not change the location.', 'kaupang-stock')]
+            ); ?>
 
             <form method="post" action="options.php">
                 <?php \settings_fields(self::GROUP); ?>
@@ -322,50 +331,43 @@ final class SettingsPage {
     }
 
     public static function handleLocationCreate(): void {
-        self::guardLocation(self::ACT_LOCATION_CREATE);
+        Screen::guard(self::ACT_LOCATION_CREATE);
         try {
             Locations::create((string) ($_POST['name'] ?? ''), !empty($_POST['make_default']));
-            self::locationRedirect('created');
+            Screen::redirect(Menu::SLUG_SETTINGS, ['ks_msg' => 'created']);
         } catch (\Throwable $e) {
-            self::locationRedirect('', $e->getMessage());
+            Screen::redirect(Menu::SLUG_SETTINGS, ['ks_err' => 'location', 'ks_detail' => mb_substr($e->getMessage(), 0, 180)]);
         }
     }
 
     public static function handleLocationRename(): void {
-        self::guardLocation(self::ACT_LOCATION_RENAME);
+        Screen::guard(self::ACT_LOCATION_RENAME);
         try {
             Locations::rename((int) ($_POST['location_id'] ?? 0), (string) ($_POST['name'] ?? ''));
-            self::locationRedirect('renamed');
+            Screen::redirect(Menu::SLUG_SETTINGS, ['ks_msg' => 'renamed']);
         } catch (\Throwable $e) {
-            self::locationRedirect('', $e->getMessage());
+            Screen::redirect(Menu::SLUG_SETTINGS, ['ks_err' => 'location', 'ks_detail' => mb_substr($e->getMessage(), 0, 180)]);
         }
     }
 
     public static function handleLocationDefault(): void {
-        self::guardLocation(self::ACT_LOCATION_DEFAULT);
+        Screen::guard(self::ACT_LOCATION_DEFAULT);
         try {
             Locations::setDefault((int) ($_POST['location_id'] ?? 0));
-            self::locationRedirect('default');
+            Screen::redirect(Menu::SLUG_SETTINGS, ['ks_msg' => 'default']);
         } catch (\Throwable $e) {
-            self::locationRedirect('', $e->getMessage());
+            Screen::redirect(Menu::SLUG_SETTINGS, ['ks_err' => 'location', 'ks_detail' => mb_substr($e->getMessage(), 0, 180)]);
         }
     }
 
     public static function handleLocationActive(): void {
-        self::guardLocation(self::ACT_LOCATION_ACTIVE);
+        Screen::guard(self::ACT_LOCATION_ACTIVE);
         try {
             Locations::setActive((int) ($_POST['location_id'] ?? 0), !empty($_POST['active']));
-            self::locationRedirect('active');
+            Screen::redirect(Menu::SLUG_SETTINGS, ['ks_msg' => 'active']);
         } catch (\Throwable $e) {
-            self::locationRedirect('', $e->getMessage());
+            Screen::redirect(Menu::SLUG_SETTINGS, ['ks_err' => 'location', 'ks_detail' => mb_substr($e->getMessage(), 0, 180)]);
         }
-    }
-
-    private static function guardLocation(string $action): void {
-        if (!\current_user_can(Settings::capability())) {
-            \wp_die(\esc_html__('You do not have permission to do this.', 'kaupang-stock'), '', ['response' => 403]);
-        }
-        \check_admin_referer($action);
     }
 
     /** @param array<string,string> $extra */
@@ -378,17 +380,5 @@ final class SettingsPage {
             echo '<input type="hidden" name="' . \esc_attr($key) . '" value="' . \esc_attr($value) . '" />';
         }
         echo '<button type="submit" class="button button-small">' . \esc_html($label) . '</button></form> ';
-    }
-
-    private static function locationRedirect(string $message = '', string $error = ''): void {
-        $args = ['page' => Menu::SLUG_SETTINGS];
-        if ($message !== '') {
-            $args['ks_location_msg'] = $message;
-        }
-        if ($error !== '') {
-            $args['ks_location_err'] = mb_substr($error, 0, 180);
-        }
-        \wp_safe_redirect(\add_query_arg($args, \admin_url('admin.php')));
-        exit;
     }
 }

@@ -212,7 +212,12 @@ final class PurchaseOrders {
     /** True once a PO is ordered (lines locked) — covers ordered/partial/received. */
     public static function isLocked(int $id): bool {
         $po = self::find($id);
-        return $po !== null && (string) $po['status'] === self::STATUS_ORDERED;
+        return $po !== null && self::locks((string) $po['status']);
+    }
+
+    /** The lock rule itself: only draft and cancelled leave the lines editable. */
+    public static function locks(string $status): bool {
+        return $status !== self::STATUS_DRAFT && $status !== self::STATUS_CANCELLED;
     }
 
     /**
