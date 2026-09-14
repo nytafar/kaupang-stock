@@ -80,6 +80,17 @@ final class Settings {
     }
 
     /** Admin/REST capability, overridable via the kaupang/stock/can_manage seam. */
+    /**
+     * Actor for a movement recorded now: the current user when they manage
+     * stock, else 0 (system). A customer checking out is not an actor — their
+     * order is the reference, and listing customers as actors would enumerate
+     * the whole customer base in the Movements filter.
+     */
+    public static function actorId(): int {
+        $uid = \get_current_user_id();
+        return $uid > 0 && \user_can($uid, self::capability()) ? $uid : 0;
+    }
+
     public static function capability(): string {
         $cap = \apply_filters('kaupang/stock/can_manage', 'manage_woocommerce');
         return is_string($cap) && $cap !== '' ? $cap : 'manage_woocommerce';

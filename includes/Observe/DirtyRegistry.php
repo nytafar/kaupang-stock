@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Kaupang\Stock\Observe;
 
+use Kaupang\Stock\Settings;
+
 use Kaupang\Stock\Ledger\WriteThrough;
 
 /**
@@ -37,7 +39,7 @@ final class DirtyRegistry {
         if ($managedId <= 0 || WriteThrough::guardActive()) {
             return;
         }
-        $claim['actor_id'] = $claim['actor_id'] ?? \get_current_user_id();
+        $claim['actor_id'] = $claim['actor_id'] ?? Settings::actorId();
         self::$claims[$managedId] = $claim; // last claim wins — it is the most specific
     }
 
