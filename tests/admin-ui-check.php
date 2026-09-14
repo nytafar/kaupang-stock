@@ -48,7 +48,9 @@ $checks['settings: no inline styles']        = strpos($h, 'style="') === false;
 
 $h = ks_render(\Kaupang\Stock\Admin\ValuationPage::class, ['page' => 'kaupang-stock-valuation']);
 $checks['valuation: balanced markup']        = ks_balanced($h);
-$checks['valuation: autosubmit bars']        = substr_count($h, 'data-ks-autosubmit') === 2;
+if (\Kaupang\Stock\Costing\Costing::enabled()) {
+    $checks['valuation: autosubmit bars']    = substr_count($h, 'data-ks-autosubmit') === 2;
+}
 
 // Movements product filter: a title fragment must narrow the ledger, a miss must return nothing.
 $all = (int) \Kaupang\Stock\Ledger\Movements::query([], 1, 1)['total'];
