@@ -273,6 +273,12 @@ final class Movements {
             $clauses[] = 'product_id = %d';
             $args[]    = (int) $filters['product_id'];
         }
+        if (isset($filters['product_ids']) && is_array($filters['product_ids'])) {
+            // Title/SKU fragment resolved to a set upstream; [] must match nothing.
+            $ids       = array_map('intval', $filters['product_ids']) ?: [0];
+            $clauses[] = 'product_id IN (' . implode(',', array_fill(0, count($ids), '%d')) . ')';
+            $args      = array_merge($args, $ids);
+        }
         if (!empty($filters['location_id'])) {
             $clauses[] = 'location_id = %d';
             $args[]    = Balances::resolveLocation((int) $filters['location_id']);
