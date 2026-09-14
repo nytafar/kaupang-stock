@@ -342,24 +342,11 @@ final class Command {
             $filters['location_id'] = $locationId;
         }
         if (isset($assoc['from']) && $assoc['from'] !== '') {
-            $filters['occurred_from'] = $this->dateBoundary((string) $assoc['from'], false);
+            $filters['occurred_from'] = $this->bound((string) $assoc['from'], false);
         }
         if (isset($assoc['to']) && $assoc['to'] !== '') {
-            $filters['occurred_to'] = $this->dateBoundary((string) $assoc['to'], true);
+            $filters['occurred_to'] = $this->bound((string) $assoc['to'], true);
         }
-
-        $multi = Locations::isMulti();
-        $columns = [
-            'id', 'occurred_at', 'created_at', 'product_id', 'product',
-        ];
-        if ($multi) {
-            $columns[] = 'location_id';
-            $columns[] = 'location';
-        }
-        $columns = array_merge($columns, [
-            'delta', 'balance_after', 'reason', 'ref_type', 'ref_id', 'ref_line',
-            'batch', 'actor_id', 'via', 'note',
-        ]);
 
         $file   = isset($assoc['file']) && $assoc['file'] !== '' ? (string) $assoc['file'] : null;
         $handle = $file !== null ? fopen($file, 'wb') : fopen('php://stdout', 'wb');
@@ -367,48 +354,7 @@ final class Command {
             \WP_CLI::error($file !== null ? "Could not open {$file} for writing." : 'Could not open STDOUT.');
         }
 
-        fputcsv($handle, $columns);
-
-        $labels  = [];
-        $page    = 1;
-        $perPage = 500;
-        $written = 0;
-        do {
-            $result = Movements::query($filters, $page, $perPage, 'ASC');
-            $rows   = $result['rows'];
-            foreach ($rows as $row) {
-                $productId = (int) $row['product_id'];
-                if (!isset($labels[$productId])) {
-                    $labels[$productId] = ProductSearch::label($productId);
-                }
-                $csv = [
-                    (int) $row['id'],
-                    (string) $row['occurred_at'],
-                    (string) $row['created_at'],
-                    $productId,
-                    $labels[$productId],
-                ];
-                if ($multi) {
-                    $csv[] = (int) $row['location_id'];
-                    $csv[] = Locations::name((int) $row['location_id']);
-                }
-                $csv = array_merge($csv, [
-                    $this->qty((float) $row['delta']),
-                    $this->qty((float) $row['balance_after']),
-                    (string) $row['reason'],
-                    (string) ($row['ref_type'] ?? ''),
-                    $row['ref_id'] !== null ? (int) $row['ref_id'] : '',
-                    $row['ref_line'] !== null ? (int) $row['ref_line'] : '',
-                    (string) ($row['batch'] ?? ''),
-                    (int) ($row['actor_id'] ?? 0),
-                    (string) ($row['via'] ?? ''),
-                    (string) ($row['note'] ?? ''),
-                ]);
-                fputcsv($handle, $csv);
-                $written++;
-            }
-            $page++;
-        } while (count($rows) === $perPage);
+        $written = Movements::export($filters, $handle);
 
         if ($file !== null) {
             fclose($handle);
@@ -517,8 +463,8 @@ final class Command {
                 return;
 
             case 'report':
-                $from = $this->dateBoundary((string) ($assoc['from'] ?? \wp_date('Y-m-01')), false);
-                $to   = $this->dateBoundary((string) ($assoc['to'] ?? \wp_date('Y-m-d')), true);
+                $from = $this->bound((string) ($assoc['from'] ?? \wp_date('Y-m-01')), false);
+                $to   = $this->bound((string) ($assoc['to'] ?? \wp_date('Y-m-d')), true);
                 \Kaupang\Stock\Costing\Sweeper::sweepAll();
                 $report = \Kaupang\Stock\Costing\Valuation::cogsReport($from, $to);
                 $this->renderCostReport($report);
@@ -695,16 +641,12 @@ final class Command {
         }
     }
 
-    /**
-     * A Y-m-d filter bound → UTC 'Y-m-d H:i:s'. Site-local midnight for the lower
-     * bound, 23:59:59 for the upper, so an inclusive day range means what an
-     * operator expects.
-     */
-    private function dateBoundary(string $date, bool $endOfDay): string {
+    /** A --from/--to Y-m-d bound → UTC 'Y-m-d H:i:s'; errors out on anything else. */
+    private function bound(string $date, bool $endOfDay): string {
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
             \WP_CLI::error(sprintf("Date '%s' must be Y-m-d.", $date));
         }
-        return \get_gmt_from_date($date . ($endOfDay ? ' 23:59:59' : ' 00:00:00'));
+        return Movements::dateBoundary($date, $endOfDay);
     }
 
     /** Integer-clean quantity rendering (v1 is integer-only; keep CSV tidy). */

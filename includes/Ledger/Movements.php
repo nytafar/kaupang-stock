@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 namespace Kaupang\Stock\Ledger;
 
+use Kaupang\Stock\Locations;
 use Kaupang\Stock\Schema;
+use Kaupang\Stock\Support\ProductSearch;
 
 /**
  * Read-only query helpers over the movements table — the one query surface the
@@ -15,8 +17,8 @@ final class Movements {
 
     /**
      * @param array<string,mixed> $filters product_id, reason (string|string[]),
-     *        location_id, ref_type, ref_id, batch, actor_id, via, occurred_from, occurred_to
-     *        (UTC 'Y-m-d H:i:s'), id_after
+     *        location_id, ref_type, ref_id, batch, actor_id, via, occurred_from, occurred_to,
+     *        created_from, created_to (UTC 'Y-m-d H:i:s'), id_after
      * @return array{rows: array<int,array<string,mixed>>, total: int}
      */
     public static function query(array $filters = [], int $page = 1, int $perPage = 50, string $order = 'DESC'): array {
@@ -52,6 +54,104 @@ final class Movements {
     /** One operator action (a receiving session, a count apply) as a document. */
     public static function forBatch(string $batch): array {
         return self::query(['batch' => $batch], 1, 500, 'ASC')['rows'];
+    }
+
+    /**
+     * The movements CSV (admin export and `wp kaupang-stock export` share it).
+     * Streams pages of 500 through $handle; the location columns appear only in
+     * multi-location mode. $bom prepends a UTF-8 BOM so Excel reads æøå.
+     *
+     * @param array<string,mixed> $filters same shape as query()
+     * @param resource $handle
+     * @return int rows written
+     */
+    public static function export(array $filters, $handle, bool $bom = false): int {
+        if ($bom) {
+            fwrite($handle, "\xEF\xBB\xBF");
+        }
+        $multi   = Locations::isMulti();
+        $columns = ['id', 'occurred_at', 'created_at', 'product_id', 'product'];
+        if ($multi) {
+            $columns[] = 'location_id';
+            $columns[] = 'location';
+        }
+        $columns = array_merge($columns, [
+            'delta', 'balance_after', 'reason', 'ref_type', 'ref_id', 'ref_line',
+            'batch', 'actor_id', 'via', 'note',
+        ]);
+        fputcsv($handle, $columns);
+
+        $labels  = [];
+        $page    = 1;
+        $written = 0;
+        do {
+            $rows = self::query($filters, $page, 500, 'ASC')['rows'];
+            foreach ($rows as $row) {
+                $productId = (int) $row['product_id'];
+                if (!isset($labels[$productId])) {
+                    $labels[$productId] = ProductSearch::label($productId);
+                }
+                $csv = [
+                    (int) $row['id'],
+                    (string) $row['occurred_at'],
+                    (string) $row['created_at'],
+                    $productId,
+                    $labels[$productId],
+                ];
+                if ($multi) {
+                    $csv[] = (int) $row['location_id'];
+                    $csv[] = Locations::name((int) $row['location_id']);
+                }
+                $csv = array_merge($csv, [
+                    self::qty((float) $row['delta']),
+                    self::qty((float) $row['balance_after']),
+                    (string) $row['reason'],
+                    (string) ($row['ref_type'] ?? ''),
+                    $row['ref_id'] !== null ? (int) $row['ref_id'] : '',
+                    $row['ref_line'] !== null ? (int) $row['ref_line'] : '',
+                    (string) ($row['batch'] ?? ''),
+                    (int) ($row['actor_id'] ?? 0),
+                    (string) ($row['via'] ?? ''),
+                    (string) ($row['note'] ?? ''),
+                ]);
+                fputcsv($handle, $csv);
+                $written++;
+            }
+            $page++;
+        } while (count($rows) === 500);
+
+        return $written;
+    }
+
+    /**
+     * A filter bound → UTC 'Y-m-d H:i:s'. A bare site-local Y-m-d becomes local
+     * midnight, or 23:59:59 for an upper bound, so an inclusive day range means
+     * what an operator expects; a value that already carries a time is UTC and
+     * passes through. Empty or unparseable input returns '' (no bound).
+     */
+    public static function dateBoundary(string $local, bool $end = false): string {
+        $local = trim(str_replace('T', ' ', $local));
+        if ($local === '') {
+            return '';
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $local)) {
+            return (string) \get_gmt_from_date($local . ($end ? ' 23:59:59' : ' 00:00:00'), 'Y-m-d H:i:s');
+        }
+        foreach (['Y-m-d H:i:s', 'Y-m-d H:i'] as $format) {
+            $dt = \DateTimeImmutable::createFromFormat($format, $local, new \DateTimeZone('UTC'));
+            if ($dt !== false) {
+                return $dt->format('Y-m-d H:i:s');
+            }
+        }
+        return '';
+    }
+
+    /** Integer-clean quantity rendering for the CSV (v1 is integer-only). */
+    private static function qty(float $value): string {
+        if (abs($value - round($value)) < 1e-9) {
+            return (string) (int) round($value);
+        }
+        return rtrim(rtrim(number_format($value, 3, '.', ''), '0'), '.');
     }
 
     /**
@@ -211,6 +311,14 @@ final class Movements {
         if (!empty($filters['occurred_to'])) {
             $clauses[] = 'occurred_at <= %s';
             $args[]    = (string) $filters['occurred_to'];
+        }
+        if (!empty($filters['created_from'])) {
+            $clauses[] = 'created_at >= %s';
+            $args[]    = (string) $filters['created_from'];
+        }
+        if (!empty($filters['created_to'])) {
+            $clauses[] = 'created_at <= %s';
+            $args[]    = (string) $filters['created_to'];
         }
         if (!empty($filters['id_after'])) {
             $clauses[] = 'id > %d';

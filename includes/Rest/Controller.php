@@ -206,12 +206,8 @@ final class Controller {
         if ($reason !== '') {
             $filters['reason'] = $reason;
         }
-        $since = self::normalizeSince((string) $req->get_param('since'));
-        if ($since !== null) {
-            // Movements::query() keys created_at on nothing directly, so filter via
-            // sinceForProducts semantics: created_at >= since is the drill-down's
-            // contract. Reuse the query's occurred filter only when no product is
-            // scoped to a "since"; for the drill-down we always scope a product.
+        $since = Movements::dateBoundary((string) $req->get_param('since'));
+        if ($since !== '') {
             $filters['created_from'] = $since;
         }
 
@@ -219,7 +215,9 @@ final class Controller {
         $perPage = (int) $req->get_param('per_page');
         $perPage = $perPage > 0 ? $perPage : 50;
 
-        $result = self::queryMovements($filters, $page, $perPage);
+        // The product-scoped drill-down reads oldest-first (movements since the
+        // count started); the audit feed stays newest-first.
+        $result = Movements::query($filters, $page, $perPage, $since !== '' && $productId > 0 ? 'ASC' : 'DESC');
 
         $labels = [];
         foreach ($result['rows'] as $row) {
@@ -236,53 +234,6 @@ final class Controller {
             'per_page' => $perPage,
             'labels'   => $labels,
         ]);
-    }
-
-    /**
-     * Movements::query() supports occurred_from/occurred_to and product/reason/ref
-     * filters, but the drill-down needs created_at >= since. Bridge it: when a
-     * `created_from` filter is present, run the query then post-filter — the
-     * drill-down is always product-scoped (small result), so this is cheap and
-     * keeps the shared query surface untouched.
-     *
-     * @param array<string,mixed> $filters
-     * @return array{rows:array<int,array<string,mixed>>,total:int}
-     */
-    private static function queryMovements(array $filters, int $page, int $perPage): array {
-        $createdFrom = null;
-        if (isset($filters['created_from'])) {
-            $createdFrom = (string) $filters['created_from'];
-            unset($filters['created_from']);
-        }
-
-        if ($createdFrom === null) {
-            return Movements::query($filters, $page, $perPage);
-        }
-
-        // created_at drill-down: fetch the product's rows since the cutoff via the
-        // dedicated helper (index-covered), then paginate in PHP.
-        $productId = (int) ($filters['product_id'] ?? 0);
-        if ($productId <= 0) {
-            // Without a product scope fall back to occurred_from on the shared
-            // query — the audit screen path.
-            $filters['occurred_from'] = $createdFrom;
-            return Movements::query($filters, $page, $perPage);
-        }
-
-        $byProduct = Movements::sinceForProducts([$productId], $createdFrom);
-        $rows      = $byProduct[$productId] ?? [];
-
-        // Apply any reason/ref filters the drill-down might carry.
-        if (!empty($filters['reason'])) {
-            $reason = (string) $filters['reason'];
-            $rows   = array_values(array_filter($rows, static fn (array $r): bool => (string) $r['reason'] === $reason));
-        }
-
-        $total  = count($rows);
-        $offset = ($page - 1) * $perPage;
-        $rows   = array_slice($rows, $offset, $perPage);
-
-        return ['rows' => $rows, 'total' => $total];
     }
 
     /* ------------------------------ Count lines --------------------------- */
@@ -471,23 +422,4 @@ final class Controller {
         ];
     }
 
-    /**
-     * Normalise an incoming `since` (the drill-down cutoff) to a UTC
-     * 'Y-m-d H:i:s'. The count's created_at is already stored UTC, so a value that
-     * came straight off a count row passes through; a 'Y-m-d\TH:i' form is
-     * tolerated. Returns null for an empty/invalid value.
-     */
-    private static function normalizeSince(string $since): ?string {
-        $since = trim($since);
-        if ($since === '') {
-            return null;
-        }
-        $since = str_replace('T', ' ', $since);
-        $dt    = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $since, new \DateTimeZone('UTC'));
-        if ($dt === false) {
-            // Tolerate a date-only or minute-precision value.
-            $dt = \DateTimeImmutable::createFromFormat('Y-m-d H:i', $since, new \DateTimeZone('UTC'));
-        }
-        return $dt === false ? null : $dt->format('Y-m-d H:i:s');
-    }
 }

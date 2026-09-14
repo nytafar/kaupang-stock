@@ -186,6 +186,31 @@ try {
     Ledger::reverse($first->id, 'KSTEST PRD-02 idempotence cleanup');
     $assert(abs($productAggregate($productId)) < 1e-9, 'owned reversal restores aggregate zero');
 
+    // created_from selects on insert time: a movement recorded after the boundary
+    // second is in the window, one recorded before it is not.
+    $moveA    = Ledger::adjust($productId, 1, 'KSTEST PRD-02 created_from A', null, 'kstest:prd02:cfa:' . $run, $locationId);
+    $boundary = gmdate('Y-m-d H:i:s', (int) strtotime($moveA->createdAt . ' UTC') + 1);
+    while (gmdate('Y-m-d H:i:s') < $boundary) {
+        usleep(100000);
+    }
+    $moveB      = Ledger::adjust($productId, 1, 'KSTEST PRD-02 created_from B', null, 'kstest:prd02:cfb:' . $run, $locationId);
+    $window     = ['product_id' => $productId, 'created_from' => $boundary];
+    $windowIds  = array_map(static fn (array $row): int => (int) $row['id'], Movements::query($window, 1, 500, 'ASC')['rows']);
+    $assert(in_array($moveB->id, $windowIds, true), 'created_from includes the movement recorded after the boundary');
+    $assert(!in_array($moveA->id, $windowIds, true), 'created_from excludes the movement recorded before the boundary');
+    $csv = fopen('php://temp', 'r+');
+    $assert(Movements::export($window, $csv) === 1, 'export writes exactly the rows the filter matches');
+    rewind($csv);
+    $header = (string) fgets($csv);
+    fclose($csv);
+    $assert(
+        $header === "id,occurred_at,created_at,product_id,product,location_id,location,delta,balance_after,reason,ref_type,ref_id,ref_line,batch,actor_id,via,note\n",
+        'export starts with the documented CSV header row'
+    );
+    Ledger::reverse($moveB->id, 'KSTEST PRD-02 created_from cleanup B');
+    Ledger::reverse($moveA->id, 'KSTEST PRD-02 created_from cleanup A');
+    $assert(abs($productAggregate($productId)) < 1e-9, 'created_from fixtures reversed back to aggregate zero');
+
     // Mapping feeds the filter, the selected location freezes on the order, and
     // restore reuses the original sale location even after order meta changes.
     $mappedSeen = 0;

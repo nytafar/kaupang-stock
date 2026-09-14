@@ -235,10 +235,10 @@ final class MovementsPage {
             $filters['product_id'] = $productId;
         }
         if ($from !== '') {
-            $filters['occurred_from'] = self::localDateToUtc($from, false);
+            $filters['occurred_from'] = Movements::dateBoundary($from);
         }
         if ($to !== '') {
-            $filters['occurred_to'] = self::localDateToUtc($to, true);
+            $filters['occurred_to'] = Movements::dateBoundary($to, true);
         }
         return $filters;
     }
@@ -326,7 +326,7 @@ final class MovementsPage {
 
         $occurredAt = null;
         if ($dateRaw !== '') {
-            $occurredAt = self::localDateToUtc($dateRaw, false);
+            $occurredAt = Movements::dateBoundary($dateRaw) ?: null;
         }
 
         $idem = $key !== '' ? 'adjust:' . $key : null;
@@ -374,53 +374,7 @@ final class MovementsPage {
             exit;
         }
         // BOM so Excel reads UTF-8 (Norwegian characters) correctly.
-        fwrite($out, "\xEF\xBB\xBF");
-        $multi = Locations::isMulti();
-        $columns = [
-            'id', 'occurred_at', 'created_at', 'product_id', 'product',
-        ];
-        if ($multi) {
-            $columns[] = 'location_id';
-            $columns[] = 'location';
-        }
-        $columns = array_merge($columns, [
-            'delta', 'balance_after', 'reason', 'ref_type', 'ref_id', 'ref_line',
-            'batch', 'actor_id', 'via', 'note',
-        ]);
-        fputcsv($out, $columns);
-
-        $page = 1;
-        do {
-            $result = Movements::query($filters, $page, 500, 'ASC');
-            $rows   = $result['rows'];
-            foreach ($rows as $row) {
-                $csv = [
-                    (int) $row['id'],
-                    (string) $row['occurred_at'],
-                    (string) $row['created_at'],
-                    (int) $row['product_id'],
-                    ProductSearch::label((int) $row['product_id']),
-                ];
-                if ($multi) {
-                    $csv[] = (int) $row['location_id'];
-                    $csv[] = Locations::name((int) $row['location_id']);
-                }
-                $csv = array_merge($csv, [
-                    self::qty((float) $row['delta']),
-                    self::qty((float) $row['balance_after']),
-                    (string) $row['reason'],
-                    (string) ($row['ref_type'] ?? ''),
-                    $row['ref_id'] !== null ? (int) $row['ref_id'] : '',
-                    $row['ref_line'] !== null ? (int) $row['ref_line'] : '',
-                    (string) ($row['batch'] ?? ''),
-                    (int) ($row['actor_id'] ?? 0),
-                    (string) ($row['via'] ?? ''),
-                    (string) ($row['note'] ?? ''),
-                ]);
-                fputcsv($out, $csv);
-            }
-            $page++;
-        } while (count($rows) === 500);
+        Movements::export($filters, $out, true);
 
         fclose($out);
         exit;
@@ -615,17 +569,6 @@ final class MovementsPage {
             return null;
         }
         return (float) $raw;
-    }
-
-    /**
-     * Site-local Y-m-d → UTC 'Y-m-d H:i:s' at the day's start (or end for a
-     * to-bound). Uses WordPress' configured timezone via get_gmt_from_date.
-     */
-    private static function localDateToUtc(string $date, bool $endOfDay): string {
-        $time  = $endOfDay ? ' 23:59:59' : ' 00:00:00';
-        $local = $date . $time;
-        $utc   = \get_gmt_from_date($local, 'Y-m-d H:i:s');
-        return $utc !== '' ? $utc : gmdate('Y-m-d H:i:s');
     }
 
     public static function qty(float $q): string {
