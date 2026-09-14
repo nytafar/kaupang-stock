@@ -105,13 +105,16 @@ final class CountsPage {
     private static function renderList(): void {
         $counts = Counts::all();
         ?>
-        <div class="wrap ks-counts">
-            <h1><?php \esc_html_e('Varetelling', 'kaupang-stock'); ?></h1>
+        <div class="wrap ks-wrap ks-counts">
+            <h1 class="wp-heading-inline"><?php \esc_html_e('Stock counts', 'kaupang-stock'); ?></h1>
+            <button type="button" class="page-title-action ks-panel-toggle" aria-expanded="false" data-ks-target="ks-new-count"><?php \esc_html_e('New count', 'kaupang-stock'); ?></button>
+            <hr class="wp-header-end" />
             <?php self::notices(); ?>
 
+            <div class="ks-panel"><div id="ks-new-count" class="ks-panel-body" hidden>
             <?php self::renderCreateForm(); ?>
+            </div></div>
 
-            <h2 style="margin-top:2em"><?php \esc_html_e('Counts', 'kaupang-stock'); ?></h2>
             <div class="ks-tablewrap">
             <table class="wp-list-table widefat striped">
                 <thead>
@@ -158,7 +161,6 @@ final class CountsPage {
     private static function renderCreateForm(): void {
         $categories = self::categoryChoices();
         ?>
-        <h2><?php \esc_html_e('Ny telling', 'kaupang-stock'); ?></h2>
         <form method="post" action="<?php echo \esc_url(\admin_url('admin-post.php')); ?>" class="ks-create-form">
             <?php \wp_nonce_field(self::A_CREATE); ?>
             <input type="hidden" name="action" value="<?php echo \esc_attr(self::A_CREATE); ?>" />

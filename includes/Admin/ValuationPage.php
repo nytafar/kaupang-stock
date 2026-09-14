@@ -151,11 +151,11 @@ final class ValuationPage {
         $multi  = Locations::isMulti();
         ['rows' => $rows, 'totals' => $totals] = Costing::valuation(['as_of' => $asOfUtc, 'by_location' => $multi]);
         ?>
-        <form method="get" class="ks-valuation-filter">
+        <form method="get" class="ks-filters ks-filterbar ks-valuation-filter" data-ks-autosubmit>
             <input type="hidden" name="page" value="<?php echo \esc_attr(Menu::SLUG_VALUATION); ?>" />
             <label for="ks-asof"><?php \esc_html_e('Value as of', 'kaupang-stock'); ?></label>
             <input type="date" id="ks-asof" name="as_of" value="<?php echo \esc_attr($asOfRaw); ?>" />
-            <button type="submit" class="button"><?php \esc_html_e('Show', 'kaupang-stock'); ?></button>
+            <noscript><button type="submit" class="button"><?php \esc_html_e('Show', 'kaupang-stock'); ?></button></noscript>
             <?php if ($asOfRaw !== ''): ?>
                 <a class="button button-link" href="<?php echo \esc_url(self::url([])); ?>"><?php \esc_html_e('Now', 'kaupang-stock'); ?></a>
             <?php endif; ?>
@@ -255,13 +255,10 @@ final class ValuationPage {
         );
         ?>
         <h2><?php \esc_html_e('Cost of goods sold', 'kaupang-stock'); ?></h2>
-        <form method="get" class="ks-cogs-filter">
+        <form method="get" class="ks-filters ks-filterbar ks-cogs-filter" data-ks-autosubmit>
             <input type="hidden" name="page" value="<?php echo \esc_attr(Menu::SLUG_VALUATION); ?>" />
-            <label for="ks-from"><?php \esc_html_e('From', 'kaupang-stock'); ?></label>
-            <input type="date" id="ks-from" name="from" value="<?php echo \esc_attr($fromRaw); ?>" />
-            <label for="ks-to"><?php \esc_html_e('To', 'kaupang-stock'); ?></label>
-            <input type="date" id="ks-to" name="to" value="<?php echo \esc_attr($toRaw); ?>" />
-            <button type="submit" class="button"><?php \esc_html_e('Show', 'kaupang-stock'); ?></button>
+            <?php Screen::dateRange($fromRaw, $toRaw); ?>
+            <noscript><button type="submit" class="button"><?php \esc_html_e('Show', 'kaupang-stock'); ?></button></noscript>
         </form>
 
         <div class="ks-tablewrap">

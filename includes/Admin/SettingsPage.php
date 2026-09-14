@@ -162,9 +162,6 @@ final class SettingsPage {
         ?>
         <div class="wrap ks-wrap">
             <h1><?php \esc_html_e('Stock — settings', 'kaupang-stock'); ?></h1>
-            <p class="description ks-maxw-52">
-                <?php \esc_html_e('The ledger is the source of truth for stock; every other number is a projection of it. Turn the ledger on in shadow mode first, prove reconciliation is clean over real traffic, then switch to active mode so adjustments, receipts and counts write through to WooCommerce.', 'kaupang-stock'); ?>
-            </p>
 
             <?php \settings_errors(Settings::OPTION_KEY); ?>
             <?php Screen::notices(
@@ -177,47 +174,69 @@ final class SettingsPage {
                 ['location' => Screen::detail() !== '' ? Screen::detail() : \__('Could not change the location.', 'kaupang-stock')]
             ); ?>
 
-            <form method="post" action="options.php">
+            <form method="post" action="options.php" class="ks-settings-form">
                 <?php \settings_fields(self::GROUP); ?>
+                <div class="ks-card">
+                <h2><?php \esc_html_e('Ledger', 'kaupang-stock'); ?></h2>
                 <table class="form-table" role="presentation">
                     <tr>
                         <th scope="row"><?php \esc_html_e('Stock ledger', 'kaupang-stock'); ?></th>
                         <td>
                             <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[stock_enabled]" value="1" <?php \checked($enabled); ?> />
-                                <?php \esc_html_e('Enable ledger-backed stock management', 'kaupang-stock'); ?></label>
-                            <p class="description"><?php \esc_html_e('Turning this on seeds an opening balance for every stock-managed product and starts recording every WooCommerce stock change. Turning it off stops the observer; recorded history is kept.', 'kaupang-stock'); ?></p>
+                                <?php \esc_html_e('Record every stock change in the ledger', 'kaupang-stock'); ?></label>
+                            <p class="description"><?php \esc_html_e('Seeds opening balances on first enable. History is kept when turned off.', 'kaupang-stock'); ?></p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row"><?php \esc_html_e('Mode', 'kaupang-stock'); ?></th>
                         <td>
                             <fieldset>
-                                <label style="display:block;margin-bottom:.35em">
+                                <label class="ks-radio">
                                     <input type="radio" name="<?php echo \esc_attr($opt); ?>[mode]" value="<?php echo \esc_attr(Settings::MODE_SHADOW); ?>" <?php \checked(($s['mode'] ?? Settings::MODE_SHADOW) !== Settings::MODE_ACTIVE); ?> />
-                                    <strong><?php \esc_html_e('Shadow', 'kaupang-stock'); ?></strong> — <?php \esc_html_e('observe and record only; owned operations do not write to WooCommerce. Run this first.', 'kaupang-stock'); ?>
+                                    <strong><?php \esc_html_e('Shadow', 'kaupang-stock'); ?></strong> <span class="description"><?php \esc_html_e('record only, nothing written to WooCommerce', 'kaupang-stock'); ?></span>
                                 </label>
-                                <label style="display:block">
+                                <label class="ks-radio">
                                     <input type="radio" name="<?php echo \esc_attr($opt); ?>[mode]" value="<?php echo \esc_attr(Settings::MODE_ACTIVE); ?>" <?php \checked(($s['mode'] ?? '') === Settings::MODE_ACTIVE); ?> />
-                                    <strong><?php \esc_html_e('Active', 'kaupang-stock'); ?></strong> — <?php \esc_html_e('adjustments, receipts and counts write through to WooCommerce stock.', 'kaupang-stock'); ?>
+                                    <strong><?php \esc_html_e('Active', 'kaupang-stock'); ?></strong> <span class="description"><?php \esc_html_e('adjustments, receipts and counts write to WooCommerce stock', 'kaupang-stock'); ?></span>
                                 </label>
                             </fieldset>
                             <?php if ($isActive): ?>
-                                <p class="description ks-warning"><?php \esc_html_e('Active mode is on: owned stock operations now change WooCommerce _stock. Only switch to active once a shadow run has reconciled cleanly.', 'kaupang-stock'); ?></p>
+                                <p class="description ks-warning"><?php \esc_html_e('Active: stock operations now change WooCommerce stock.', 'kaupang-stock'); ?></p>
                             <?php endif; ?>
                         </td>
                     </tr>
                     <tr>
+                        <th scope="row"><?php \esc_html_e('Negative stock', 'kaupang-stock'); ?></th>
+                        <td>
+                            <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[negative_warning]" value="1" <?php \checked(!empty($s['negative_warning'])); ?> />
+                                <?php \esc_html_e('Flag negative on-hand on Stock status', 'kaupang-stock'); ?></label>
+                            <?php if (Locations::isMulti()): ?>
+                            <br />
+                            <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[allow_negative_locations]" value="1" <?php \checked(!empty($s['allow_negative_locations'])); ?> />
+                                <?php \esc_html_e('Allow adjustments and transfers to take a location below zero', 'kaupang-stock'); ?></label>
+                            <?php else: ?>
+                                <input type="hidden" name="<?php echo \esc_attr($opt); ?>[allow_negative_locations]" value="1" />
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                </table>
+                </div>
+
+                <div class="ks-card">
+                <h2><?php \esc_html_e('Modules', 'kaupang-stock'); ?></h2>
+                <table class="form-table" role="presentation">
+                    <tr>
                         <th scope="row"><?php \esc_html_e('Purchasing', 'kaupang-stock'); ?></th>
                         <td>
                             <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[po_enabled]" value="1" <?php \checked(!empty($s['po_enabled'])); ?> />
-                                <?php \esc_html_e('Enable suppliers, purchase orders and receiving (Innkjøp)', 'kaupang-stock'); ?></label>
+                                <?php \esc_html_e('Suppliers, purchase orders and receiving', 'kaupang-stock'); ?></label>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row"><?php \esc_html_e('Stock counts', 'kaupang-stock'); ?></th>
                         <td>
                             <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[counting_enabled]" value="1" <?php \checked(!empty($s['counting_enabled'])); ?> />
-                                <?php \esc_html_e('Enable stock counting (Varetelling)', 'kaupang-stock'); ?></label>
+                                <?php \esc_html_e('Stock counts', 'kaupang-stock'); ?></label>
                         </td>
                     </tr>
                     <tr>
@@ -225,29 +244,20 @@ final class SettingsPage {
                         <td>
                             <input name="<?php echo \esc_attr($opt); ?>[variance_threshold_pct]" id="ks-variance" type="number" step="1" min="1" max="100" class="small-text"
                                    value="<?php echo \esc_attr((string) (int) ($s['variance_threshold_pct'] ?? 20)); ?>" /> %
-                            <p class="description"><?php \esc_html_e('Count lines whose variance exceeds this percentage are flagged for recount before the count can be applied.', 'kaupang-stock'); ?></p>
+                            <p class="description"><?php \esc_html_e('Lines off by more than this are flagged for recount.', 'kaupang-stock'); ?></p>
                         </td>
                     </tr>
+                </table>
+                </div>
+
+                <?php if (Locations::isMulti()): ?>
+                <div class="ks-card">
+                <h2><?php \esc_html_e('Order routing', 'kaupang-stock'); ?></h2>
+                <table class="form-table" role="presentation">
                     <tr>
-                        <th scope="row"><?php \esc_html_e('Negative stock', 'kaupang-stock'); ?></th>
+                        <th scope="row"><?php \esc_html_e('Map created_via', 'kaupang-stock'); ?></th>
                         <td>
-                            <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[negative_warning]" value="1" <?php \checked(!empty($s['negative_warning'])); ?> />
-                                <?php \esc_html_e('Show a warning chip on Lagerstatus when on-hand is negative', 'kaupang-stock'); ?></label>
-                            <?php if (Locations::isMulti()): ?>
-                            <br />
-                            <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[allow_negative_locations]" value="1" <?php \checked(!empty($s['allow_negative_locations'])); ?> />
-                                <?php \esc_html_e('Allow owned operations to take an individual location below zero', 'kaupang-stock'); ?></label>
-                            <p class="description"><?php \esc_html_e('Observed sales are always recorded. This setting controls adjustments and other operations owned by Kaupang Stock; site filters may override it.', 'kaupang-stock'); ?></p>
-                            <?php else: ?>
-                                <input type="hidden" name="<?php echo \esc_attr($opt); ?>[allow_negative_locations]" value="1" />
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                    <?php if (Locations::isMulti()): ?>
-                    <tr>
-                        <th scope="row"><?php \esc_html_e('Order routing', 'kaupang-stock'); ?></th>
-                        <td>
-                            <p class="description"><?php \esc_html_e('Map WooCommerce created_via values to a stock location. Order overrides and the order_location filter still take priority.', 'kaupang-stock'); ?></p>
+                            <p class="description"><?php \esc_html_e('Orders from these channels draw stock from the chosen location.', 'kaupang-stock'); ?></p>
                             <table class="widefat striped ks-settings-map"><thead><tr>
                                 <th><?php \esc_html_e('created_via', 'kaupang-stock'); ?></th>
                                 <th><?php \esc_html_e('Location', 'kaupang-stock'); ?></th>
@@ -268,30 +278,37 @@ final class SettingsPage {
                             </tbody></table>
                         </td>
                     </tr>
-                    <?php endif; ?>
+                </table>
+                </div>
+                <?php endif; ?>
+
+                <div class="ks-card">
+                <h2><?php \esc_html_e('Costing', 'kaupang-stock'); ?></h2>
+                <table class="form-table" role="presentation">
                     <tr>
                         <th scope="row"><?php \esc_html_e('Cost tracking (FIFO)', 'kaupang-stock'); ?></th>
                         <td>
                             <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[costing_enabled]" value="1" <?php \checked(!empty($s['costing_enabled'])); ?> />
-                                <?php \esc_html_e('Track cost of goods with FIFO cost layers (Lagerverdi)', 'kaupang-stock'); ?></label>
-                            <p class="description"><?php \esc_html_e('Receipts and cost-entered adjustments create cost layers; sales consume them oldest-first. Enabling stamps a starting point — enter opening unit costs on the Lagerverdi screen afterwards. Works in shadow mode, but receipts (purchase orders) require active mode.', 'kaupang-stock'); ?></p>
+                                <?php \esc_html_e('Track cost of goods (FIFO)', 'kaupang-stock'); ?></label>
+                            <p class="description"><?php \esc_html_e('Enter opening unit costs on Stock value after enabling.', 'kaupang-stock'); ?></p>
                         </td>
                     </tr>
                     <tr>
                         <th scope="row"><?php \esc_html_e('Order COGS', 'kaupang-stock'); ?></th>
                         <td>
                             <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[cogs_order_meta_enabled]" value="1" <?php \checked(!empty($s['cogs_order_meta_enabled'])); ?> />
-                                <?php \esc_html_e('Stamp each order line with its FIFO cost (for margin analytics)', 'kaupang-stock'); ?></label>
-                            <p class="description"><?php \esc_html_e('Writes the consumed cost onto the order line meta once stock is reduced. The WooCommerce “Cost of goods sold” feature must be enabled for the native COGS fields; the plugin’s own øre-exact meta is written regardless.', 'kaupang-stock'); ?></p>
+                                <?php \esc_html_e('Write FIFO cost onto order lines', 'kaupang-stock'); ?></label>
+                            <p class="description"><?php \esc_html_e('Feeds WooCommerce’s Cost of goods sold when that feature is on.', 'kaupang-stock'); ?></p>
                         </td>
                     </tr>
                 </table>
-                <?php \submit_button(); ?>
+                </div>
+                <div class="ks-save-bar"><?php \submit_button(null, 'primary', 'submit', false); ?></div>
             </form>
 
-            <hr />
+            <div class="ks-card">
             <h2><?php \esc_html_e('Stock locations', 'kaupang-stock'); ?></h2>
-            <p class="description"><?php \esc_html_e('Locations are deactivated rather than deleted so historical ledger references remain intact.', 'kaupang-stock'); ?></p>
+
             <div class="ks-tablewrap"><table class="wp-list-table widefat striped ks-table ks-location-table"><thead><tr>
                 <th><?php \esc_html_e('Name', 'kaupang-stock'); ?></th>
                 <th><?php \esc_html_e('Default', 'kaupang-stock'); ?></th>
@@ -318,7 +335,7 @@ final class SettingsPage {
             <?php endforeach; ?>
             </tbody></table></div>
 
-            <h3><?php \esc_html_e('Add location', 'kaupang-stock'); ?></h3>
+            <h3 class="ks-card-sub"><?php \esc_html_e('Add location', 'kaupang-stock'); ?></h3>
             <form method="post" action="<?php echo \esc_url(\admin_url('admin-post.php')); ?>" class="ks-location-create">
                 <?php \wp_nonce_field(self::ACT_LOCATION_CREATE); ?>
                 <input type="hidden" name="action" value="<?php echo \esc_attr(self::ACT_LOCATION_CREATE); ?>" />
@@ -326,6 +343,7 @@ final class SettingsPage {
                 <label><input type="checkbox" name="make_default" value="1" /> <?php \esc_html_e('Make default', 'kaupang-stock'); ?></label>
                 <button type="submit" class="button button-secondary"><?php \esc_html_e('Add location', 'kaupang-stock'); ?></button>
             </form>
+            </div>
         </div>
         <?php
     }

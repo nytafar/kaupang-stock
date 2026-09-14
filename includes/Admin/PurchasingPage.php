@@ -146,10 +146,10 @@ final class PurchasingPage {
     private static function renderList(): void {
         $pos = PurchaseOrders::all();
         ?>
-        <h1 class="wp-heading-inline"><?php echo \esc_html('Innkjøp'); ?></h1>
+        <h1 class="wp-heading-inline"><?php echo \esc_html(\__('Purchasing', 'kaupang-stock')); ?></h1>
         <a href="<?php echo \esc_url(self::url(['view' => 'edit', 'po' => 'new'])); ?>" class="page-title-action"><?php \esc_html_e('New purchase order', 'kaupang-stock'); ?></a>
-        <a href="<?php echo \esc_url(self::url(['view' => 'inbound'])); ?>" class="page-title-action"><?php echo \esc_html('Innkommende'); ?></a>
-        <a href="<?php echo \esc_url(self::url(['view' => 'suppliers'])); ?>" class="page-title-action"><?php echo \esc_html('Leverandører'); ?></a>
+        <a href="<?php echo \esc_url(self::url(['view' => 'inbound'])); ?>" class="page-title-action"><?php echo \esc_html(\__('Inbound', 'kaupang-stock')); ?></a>
+        <a href="<?php echo \esc_url(self::url(['view' => 'suppliers'])); ?>" class="page-title-action"><?php echo \esc_html(\__('Suppliers', 'kaupang-stock')); ?></a>
         <hr class="wp-header-end" />
 
         <div class="ks-tablewrap">
@@ -157,7 +157,7 @@ final class PurchasingPage {
             <thead>
                 <tr>
                     <th><?php \esc_html_e('PO', 'kaupang-stock'); ?></th>
-                    <th><?php echo \esc_html('Leverandør'); ?></th>
+                    <th><?php echo \esc_html(\__('Supplier', 'kaupang-stock')); ?></th>
                     <th><?php \esc_html_e('Status', 'kaupang-stock'); ?></th>
                     <th><?php \esc_html_e('Lines', 'kaupang-stock'); ?></th>
                     <th><?php \esc_html_e('ETA', 'kaupang-stock'); ?></th>
@@ -228,14 +228,14 @@ final class PurchasingPage {
 
         <div class="ks-po-grid">
             <div class="ks-po-header">
-                <h2><?php echo \esc_html('Detaljer'); ?></h2>
+                <h2><?php echo \esc_html(\__('Details', 'kaupang-stock')); ?></h2>
                 <form method="post" action="<?php echo \esc_url(\admin_url('admin-post.php')); ?>">
                     <input type="hidden" name="action" value="<?php echo \esc_attr(self::SAVE_PO); ?>" />
                     <input type="hidden" name="po" value="<?php echo (int) $poId; ?>" />
                     <?php \wp_nonce_field(self::SAVE_PO); ?>
                     <table class="form-table" role="presentation">
                         <tr>
-                            <th scope="row"><label for="ks-supplier"><?php echo \esc_html('Leverandør'); ?></label></th>
+                            <th scope="row"><label for="ks-supplier"><?php echo \esc_html(\__('Supplier', 'kaupang-stock')); ?></label></th>
                             <td><?php self::supplierSelect((int) ($po['supplier_id'] ?? 0)); ?></td>
                         </tr>
                         <tr>
@@ -803,7 +803,7 @@ final class PurchasingPage {
     private static function renderInbound(): void {
         $rows = PurchaseOrders::inboundLines();
         ?>
-        <h1 class="wp-heading-inline"><?php echo \esc_html('Innkommende'); ?></h1>
+        <h1 class="wp-heading-inline"><?php echo \esc_html(\__('Inbound', 'kaupang-stock')); ?></h1>
         <a href="<?php echo \esc_url(self::url(['view' => 'list'])); ?>" class="page-title-action"><?php \esc_html_e('Back to list', 'kaupang-stock'); ?></a>
         <hr class="wp-header-end" />
         <p class="description"><?php \esc_html_e('Every open purchase-order line across all orders — the single "what is coming" answer.', 'kaupang-stock'); ?></p>
@@ -817,7 +817,7 @@ final class PurchasingPage {
                     <th class="ks-num"><?php \esc_html_e('Received', 'kaupang-stock'); ?></th>
                     <th class="ks-num"><?php \esc_html_e('Remaining', 'kaupang-stock'); ?></th>
                     <th><?php \esc_html_e('ETA', 'kaupang-stock'); ?></th>
-                    <th><?php echo \esc_html('Leverandør'); ?></th>
+                    <th><?php echo \esc_html(\__('Supplier', 'kaupang-stock')); ?></th>
                     <th><?php \esc_html_e('PO', 'kaupang-stock'); ?></th>
                 </tr>
             </thead>
@@ -858,7 +858,7 @@ final class PurchasingPage {
         $prefillName = is_array($lookup) ? (string) ($lookup['name'] ?? '') : '';
         $prefillOrg  = is_array($lookup) ? (string) ($lookup['orgnr'] ?? '') : '';
         ?>
-        <h1 class="wp-heading-inline"><?php echo \esc_html('Leverandører'); ?></h1>
+        <h1 class="wp-heading-inline"><?php echo \esc_html(\__('Suppliers', 'kaupang-stock')); ?></h1>
         <a href="<?php echo \esc_url(self::url(['view' => 'list'])); ?>" class="page-title-action"><?php \esc_html_e('Back to list', 'kaupang-stock'); ?></a>
         <hr class="wp-header-end" />
 
