@@ -79,14 +79,6 @@
 }
 
 /* --- Lagerverdi (valuation) --------------------------------------------- */
-.ks-valuation-filter,
-.ks-cogs-filter {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin: 12px 0;
-}
-
 .ks-opening-box {
 	margin: 16px 0;
 	padding: 4px 12px 12px;
@@ -131,29 +123,24 @@
 	-webkit-overflow-scrolling: touch;
 }
 
-/* The primary action column stays reachable when the wrapper scrolls: pin it to
-   the right edge. Background must match the row (WP core .striped alternates the
-   odd rows) so nothing shows through the sticky cell. */
-.ks-status-table th.ks-col-adjust,
-.ks-status-table td.ks-col-adjust {
+/* Product stays visible when the wrapper scrolls: pin it left. Background must
+   match the row (WP core .striped alternates the odd rows). */
+.ks-status-table th.ks-col-product,
+.ks-status-table td.ks-col-product {
 	position: sticky;
-	right: 0;
+	left: 0;
+	z-index: 1;
 	background: #fff;
-	box-shadow: -8px 0 8px -8px rgba(0, 0, 0, .15);
+	box-shadow: 8px 0 8px -8px rgba(0, 0, 0, .15);
 }
 
-.ks-status-table.striped > tbody > tr:nth-child(odd) .ks-col-adjust {
+.ks-status-table.striped > tbody > tr:nth-child(odd) .ks-col-product {
 	background: #f6f7f7;
 }
 
-/* Keep a sensible minimum on the adjust column now that `fixed` is gone (the
-   inline form needs room); the product column takes natural width. */
-.ks-status-table .ks-col-adjust {
-	min-width: 260px;
-}
-
+.ks-status-table .ks-col-adjust,
 .ks-status-table .ks-col-transfer {
-	min-width: 560px;
+	white-space: nowrap;
 }
 
 .ks-neg {
@@ -175,7 +162,7 @@
 	margin: 1em 0;
 }
 
-.ks-movements-filters {
+.ks-filterbar {
 	display: flex;
 	flex-wrap: wrap;
 	gap: var(--ks-space);
@@ -186,15 +173,91 @@
 	padding: 10px 12px;
 }
 
-.ks-movements-filters .ks-date-label {
+.ks-filterbar .ks-filterbar-end {
+	margin-left: auto;
+}
+
+.ks-filterbar input[type="search"] {
+	flex: 1 1 180px;
+	min-width: 140px;
+}
+
+.ks-filterbar select {
+	max-width: 12em;
+}
+
+.ks-daterange {
 	display: inline-flex;
-	flex-direction: column;
-	font-size: 11px;
+	align-items: center;
+	gap: 4px;
+	white-space: nowrap;
+}
+
+.ks-daterange-sep {
 	color: var(--ks-muted);
 }
 
 .ks-export-row {
 	margin: 1em 0 0.5em;
+}
+
+#ks-moves-list[aria-busy="true"] {
+	opacity: .5;
+	transition: opacity .15s;
+}
+
+/* --- settings cards ----------------------------------------------------- */
+.ks-card {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 3px;
+	padding: 4px 16px 12px;
+	margin: 16px 0;
+	max-width: 60em;
+}
+
+.ks-card > h2 {
+	font-size: 14px;
+	margin: 12px 0 0;
+	padding-bottom: 8px;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.ks-card .form-table th {
+	padding-left: 0;
+}
+
+.ks-card .form-table td {
+	padding-top: 12px;
+	padding-bottom: 12px;
+}
+
+.ks-card .description {
+	color: var(--ks-muted);
+	font-size: 12px;
+	margin: 2px 0 0;
+}
+
+.ks-card-sub {
+	margin: 16px 0 6px;
+}
+
+.ks-radio {
+	display: block;
+	margin-bottom: .35em;
+}
+
+.ks-save-bar {
+	position: sticky;
+	bottom: 0;
+	max-width: 60em;
+	padding: 10px 0;
+	background: #f0f0f1;
+	border-top: 1px solid #dcdcde;
+}
+
+.ks-save-bar .button {
+	margin: 0;
 }
 
 .ks-settings-map {
@@ -234,9 +297,23 @@
 	width: 64px;
 }
 
+.ks-quick-adjust .ks-adjust-cost {
+	width: 72px;
+}
+
 .ks-quick-adjust .ks-adjust-note {
-	flex: 1 1 auto;
-	min-width: 90px;
+	width: 140px;
+}
+
+.ks-adjust-reason {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+}
+
+.ks-adjust-reason .ks-field-label {
+	flex-basis: 100%;
 }
 
 .ks-quick-adjust[title] {
@@ -275,13 +352,23 @@
 }
 
 .ks-quick-transfer-compact {
-	grid-template-columns: minmax(100px, 1fr) minmax(100px, 1fr) 62px minmax(100px, 1fr) auto;
-	align-items: end;
-	min-width: 560px;
+	display: flex;
+	gap: 4px;
+	align-items: center;
+	margin: 0;
 }
 
-.ks-quick-transfer-compact .ks-transfer-note {
-	grid-column: auto;
+.ks-quick-transfer-compact label span {
+	display: none;
+}
+
+.ks-quick-transfer-compact select {
+	width: auto;
+	max-width: 9em;
+}
+
+.ks-quick-transfer-compact .small-text {
+	width: 56px;
 }
 
 .ks-panel-transfer-product {

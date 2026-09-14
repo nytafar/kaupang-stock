@@ -36,7 +36,6 @@ use Kaupang\Stock\Transfers;
  */
 final class StatusPage {
 
-    private const PER_PAGE      = 50;
     private const ACT_ADJUST    = 'kaupang_stock_quick_adjust';
     public const ACT_TRANSFER   = 'kaupang_stock_quick_transfer';
     private const ACT_HEAL      = 'kaupang_stock_heal';
@@ -63,7 +62,6 @@ final class StatusPage {
 
         $search   = isset($_GET['s']) ? \sanitize_text_field(\wp_unslash((string) $_GET['s'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification
         $category = isset($_GET['product_cat']) ? (int) $_GET['product_cat'] : 0; // phpcs:ignore WordPress.Security.NonceVerification
-        $paged    = isset($_GET['paged']) ? max(1, (int) $_GET['paged']) : 1; // phpcs:ignore WordPress.Security.NonceVerification
 
         $lowLoc = 0;
         if (Locations::isMulti()) {
@@ -71,11 +69,10 @@ final class StatusPage {
             $lowLoc = Locations::isActive($rawLowLoc) ? $rawLowLoc : 0;
         }
 
-        $ids   = self::rowIds($search, $category, $lowLoc);
-        $total = count($ids);
-        $pages = (int) max(1, (int) ceil($total / self::PER_PAGE));
-        $paged = min($paged, $pages);
-        $slice = array_slice($ids, ($paged - 1) * self::PER_PAGE, self::PER_PAGE);
+        // All rows render; the filter bar narrows them client-side (admin.js)
+        // with the GET params as the no-JS fallback. Catalogs here are <100.
+        $slice = self::rowIds($search, $category, $lowLoc);
+        $cats  = self::categoryMap($slice);
 
         $balanceRows = Balances::rows($slice);
         $balances  = Balances::aggregateRows($slice);
@@ -93,9 +90,8 @@ final class StatusPage {
             <?php self::notices(); ?>
             <?php self::reconcileBanner(); ?>
 
-            <form method="get" class="ks-filters">
+            <form method="get" class="ks-filters ks-filterbar" data-ks-rowfilter="ks-status-table">
                 <input type="hidden" name="page" value="<?php echo \esc_attr(Menu::SLUG); ?>" />
-                <p class="search-box">
                     <label class="screen-reader-text" for="ks-status-search"><?php \esc_html_e('Search products', 'kaupang-stock'); ?></label>
                     <input type="search" id="ks-status-search" name="s" value="<?php echo \esc_attr($search); ?>" placeholder="<?php \esc_attr_e('Title or SKU…', 'kaupang-stock'); ?>" />
                     <?php self::categoryDropdown($category); ?>
@@ -107,33 +103,26 @@ final class StatusPage {
                             <?php endforeach; ?>
                         </select>
                     <?php endif; ?>
-                    <?php \submit_button(\__('Filter', 'kaupang-stock'), '', '', false); ?>
-                </p>
+                    <span class="ks-muted ks-rowfilter-count ks-filterbar-end" aria-live="polite"></span>
             </form>
 
+            <?php
+            $columns = self::columns();
+            $hidden  = array_fill_keys(\get_hidden_columns('toplevel_page_' . Menu::SLUG), true);
+            $colspan = count($columns);
+            ?>
             <div class="ks-tablewrap">
-            <table class="wp-list-table widefat striped ks-table ks-status-table">
+            <table id="ks-status-table" class="wp-list-table widefat striped ks-table ks-status-table">
                 <thead>
                     <tr>
-                        <th scope="col" class="ks-col-product"><?php \esc_html_e('Product', 'kaupang-stock'); ?></th>
-                        <th scope="col" class="ks-num"><?php \esc_html_e('On hand', 'kaupang-stock'); ?></th>
-                        <?php foreach ($locations as $location): ?>
-                            <th scope="col" class="ks-num ks-col-location"><?php echo \esc_html((string) $location['name']); ?></th>
+                        <?php foreach ($columns as $id => $label): ?>
+                            <th scope="col" id="<?php echo \esc_attr($id); ?>" class="manage-column column-<?php echo \esc_attr($id . self::colClass($id) . (isset($hidden[$id]) ? ' hidden' : '')); ?>"><?php echo \esc_html($label); ?></th>
                         <?php endforeach; ?>
-                        <th scope="col" class="ks-num"><?php \esc_html_e('Reserved', 'kaupang-stock'); ?></th>
-                        <th scope="col" class="ks-num"><?php \esc_html_e('Available', 'kaupang-stock'); ?></th>
-                        <th scope="col" class="ks-num"><?php \esc_html_e('Incoming', 'kaupang-stock'); ?></th>
-                        <th scope="col"><?php \esc_html_e('Last movement', 'kaupang-stock'); ?></th>
-                        <th scope="col"><?php \esc_html_e('Status', 'kaupang-stock'); ?></th>
-                        <?php if ($multi): ?>
-                            <th scope="col" class="ks-col-transfer"><?php \esc_html_e('Quick transfer', 'kaupang-stock'); ?></th>
-                        <?php endif; ?>
-                        <th scope="col" class="ks-col-adjust"><?php \esc_html_e('Quick adjust', 'kaupang-stock'); ?></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($slice)): ?>
-                        <tr><td colspan="<?php echo 8 + count($locations) + ($multi ? 1 : 0); ?>"><?php \esc_html_e('No stock-managed products yet.', 'kaupang-stock'); ?></td></tr>
+                        <tr><td colspan="<?php echo (int) $colspan; ?>"><?php \esc_html_e('No stock-managed products yet.', 'kaupang-stock'); ?></td></tr>
                     <?php else: foreach ($slice as $productId):
                         $inScope  = isset($managed[$productId]);
                         $row      = $balances[$productId] ?? null;
@@ -153,41 +142,52 @@ final class StatusPage {
                             ['page' => Menu::SLUG_MOVES, 'product_id' => $productId],
                             \admin_url('admin.php')
                         );
+                        $lowAt = [];
+                        foreach ($locations as $location) {
+                            if ($inScope && self::isLowStock($productId, (float) ($perLocation[(int) $location['id']]['on_hand'] ?? 0))) {
+                                $lowAt[] = (int) $location['id'];
+                            }
+                        }
+                        $cells = [];
+                        $cells['product'] = '<a href="' . \esc_url($movesUrl) . '">' . \esc_html(ProductSearch::label($productId)) . '</a>'
+                            . ($inScope ? '' : self::scopeChip($productId));
+                        // Chips go BEFORE the number so right-aligned figures stay in one column.
+                        $chips = self::statusChips($onHand, $productId, $negWarn, $inScope, $hasNegativeLocation);
+                        $cells['available'] = (strpos($chips, 'ks-chip') !== false ? $chips . ' ' : '') . \esc_html(self::qty($avail));
+                        $cells['on_hand'] = \esc_html(self::qty($onHand));
+                        foreach ($locations as $location) {
+                            $lid = (int) $location['id'];
+                            $locationOnHand = (float) ($perLocation[$lid]['on_hand'] ?? 0);
+                            $cells['loc_' . $lid] = (in_array($lid, $lowAt, true) ? '<span class="ks-chip ks-chip-warning" title="' . \esc_attr(sprintf(\__('Low at %s', 'kaupang-stock'), (string) $location['name'])) . '">' . \esc_html__('Low', 'kaupang-stock') . '</span> ' : '')
+                                . \esc_html(self::qty($locationOnHand));
+                        }
+                        $cells['reserved'] = \esc_html(self::qty($reserved));
+                        $cells['incoming'] = $inc > 0 ? \esc_html(self::qty($inc)) : '<span class="ks-muted">—</span>';
+                        ob_start();
+                        self::quickAdjustForm($productId, $canAdjust, $inScope, $multi);
+                        $cells['adjust'] = (string) ob_get_clean();
+                        if ($multi) {
+                            ob_start();
+                            self::transferForm($productId, $canAdjust && $inScope, true);
+                            $cells['transfer'] = (string) ob_get_clean();
+                        }
+                        $cells['last_move'] = self::lastMovementCell($lastMoves[$productId] ?? null);
                         ?>
-                        <tr>
-                            <td class="ks-col-product">
-                                <a href="<?php echo \esc_url($movesUrl); ?>"><?php echo \esc_html(ProductSearch::label($productId)); ?></a>
-                                <?php if (!$inScope): ?>
-                                    <?php echo self::scopeChip($productId); // escaped inside ?>
-                                <?php endif; ?>
-                            </td>
-                            <td class="ks-num<?php echo $onHand < 0 ? ' ks-neg' : ''; ?>"><?php echo \esc_html(self::qty($onHand)); ?></td>
-                            <?php foreach ($locations as $location):
-                                $locationOnHand = (float) ($perLocation[(int) $location['id']]['on_hand'] ?? 0);
+                        <tr data-search="<?php echo \esc_attr(mb_strtolower(ProductSearch::label($productId))); ?>"
+                            data-cat=",<?php echo \esc_attr(implode(',', $cats[$productId] ?? [])); ?>,"
+                            data-low=",<?php echo \esc_attr(implode(',', $lowAt)); ?>,">
+                            <?php foreach ($columns as $id => $label):
+                                $neg = ($id === 'on_hand' && $onHand < 0) || ($id === 'available' && $avail < 0)
+                                    || (strpos($id, 'loc_') === 0 && (float) ($perLocation[(int) substr($id, 4)]['on_hand'] ?? 0) < 0);
                             ?>
-                                <td class="ks-num<?php echo $locationOnHand < 0 ? ' ks-neg' : ''; ?>">
-                                    <?php echo \esc_html(self::qty($locationOnHand)); ?>
-                                    <?php if ($inScope && self::isLowStock($productId, $locationOnHand)): ?>
-                                        <span class="ks-chip ks-chip-warning ks-chip-loc-low" title="<?php echo \esc_attr(sprintf(\__('Low at %s', 'kaupang-stock'), (string) $location['name'])); ?>"><?php \esc_html_e('Low', 'kaupang-stock'); ?></span>
-                                    <?php endif; ?>
-                                </td>
+                                <td class="column-<?php echo \esc_attr($id . self::colClass($id) . ($neg ? ' ks-neg' : '') . (isset($hidden[$id]) ? ' hidden' : '')); ?>"><?php echo $cells[$id] ?? ''; // each cell escaped above ?></td>
                             <?php endforeach; ?>
-                            <td class="ks-num"><?php echo \esc_html(self::qty($reserved)); ?></td>
-                            <td class="ks-num"><?php echo \esc_html(self::qty($avail)); ?></td>
-                            <td class="ks-num"><?php echo $inc > 0 ? \esc_html(self::qty($inc)) : '—'; ?></td>
-                            <td><?php echo self::lastMovementCell($lastMoves[$productId] ?? null); // escaped inside ?></td>
-                            <td><?php echo self::statusChips($onHand, $productId, $negWarn, $inScope, $hasNegativeLocation); // escaped inside ?></td>
-                            <?php if ($multi): ?>
-                                <td class="ks-col-transfer"><?php self::transferForm($productId, $canAdjust && $inScope, true); ?></td>
-                            <?php endif; ?>
-                            <td class="ks-col-adjust"><?php self::quickAdjustForm($productId, $canAdjust, $inScope, $multi); ?></td>
                         </tr>
                     <?php endforeach; endif; ?>
                 </tbody>
             </table>
             </div>
 
-            <?php echo Screen::paginate($total, self::PER_PAGE, $paged); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped inside ?>
         </div>
         <?php
     }
@@ -214,7 +214,7 @@ final class StatusPage {
 
         $productId = isset($_POST['product_id']) ? (int) $_POST['product_id'] : 0;
         $delta     = Screen::parseDelta((string) ($_POST['delta'] ?? ''));
-        $note      = \sanitize_text_field(\wp_unslash((string) ($_POST['note'] ?? '')));
+        $note      = Screen::adjustNote();
         $key       = \sanitize_text_field((string) ($_POST['idem'] ?? ''));
         $locationId = 0;
         if (Locations::isMulti()) {
@@ -297,6 +297,48 @@ final class StatusPage {
         Screen::redirect(Menu::SLUG, ['ks_msg' => 'reconciled', 'ks_detail' => (string) count((array) ($report['issues'] ?? []))]);
     }
 
+    /* ------------------------------ Columns ------------------------------- */
+
+    /**
+     * Column order = leverage: what can be sold first, then where it is, then
+     * the actions. Registered on `manage_{screen}_columns` too, so core's
+     * Screen Options panel toggles them (per user, via `column-<id>` classes).
+     *
+     * @return array<string,string> id => label
+     */
+    public static function columns(): array {
+        $multi   = Locations::isMulti();
+        $columns = [
+            'product'   => \__('Product', 'kaupang-stock'),
+            'available' => \__('Available', 'kaupang-stock'),
+            'on_hand'   => \__('On hand', 'kaupang-stock'),
+        ];
+        if ($multi) {
+            foreach (Locations::all(true) as $location) {
+                $columns['loc_' . (int) $location['id']] = (string) $location['name'];
+            }
+        }
+        $columns['reserved'] = \__('Reserved', 'kaupang-stock');
+        $columns['incoming'] = \__('Incoming', 'kaupang-stock');
+        $columns['adjust']   = \__('Quick adjust', 'kaupang-stock');
+        if ($multi) {
+            $columns['transfer'] = \__('Quick transfer', 'kaupang-stock');
+        }
+        $columns['last_move'] = \__('Last movement', 'kaupang-stock');
+        return $columns;
+    }
+
+    /** Extra presentational classes per column id. */
+    private static function colClass(string $id): string {
+        if (in_array($id, ['available', 'on_hand', 'reserved', 'incoming'], true) || strpos($id, 'loc_') === 0) {
+            return ' ks-num';
+        }
+        if ($id === 'product') {
+            return ' ks-col-product';
+        }
+        return ' ks-col-' . str_replace('_', '-', $id);
+    }
+
     /* ------------------------------ Row set ------------------------------- */
 
     /**
@@ -369,6 +411,30 @@ final class StatusPage {
             $category
         ));
         return array_map('intval', (array) $hits);
+    }
+
+    /** @param int[] $ids @return array<int,int[]> product id → category term ids (variations inherit the parent's) */
+    private static function categoryMap(array $ids): array {
+        if (empty($ids)) {
+            return [];
+        }
+        global $wpdb;
+        $in   = implode(',', array_map('intval', $ids));
+        $rows = (array) $wpdb->get_results(
+            "SELECT p.ID, tt.term_id
+             FROM {$wpdb->posts} p
+             INNER JOIN {$wpdb->term_relationships} tr
+                     ON tr.object_id = IF(p.post_parent > 0, p.post_parent, p.ID)
+             INNER JOIN {$wpdb->term_taxonomy} tt
+                     ON tt.term_taxonomy_id = tr.term_taxonomy_id AND tt.taxonomy = 'product_cat'
+             WHERE p.ID IN ($in)",
+            ARRAY_A
+        );
+        $out = [];
+        foreach ($rows as $row) {
+            $out[(int) $row['ID']][] = (int) $row['term_id'];
+        }
+        return $out;
     }
 
     /** @param int[] $ids @return int[] sorted by product title */
@@ -534,11 +600,11 @@ final class StatusPage {
                     <?php endforeach; ?>
                 </select>
             <?php endif; ?>
-            <input type="number" name="delta" step="1" class="ks-adjust-delta" placeholder="±0" aria-label="<?php \esc_attr_e('Quantity change', 'kaupang-stock'); ?>"<?php echo $disabled; ?> />
+            <input type="number" name="delta" step="1" class="ks-adjust-delta" placeholder="±0" aria-label="<?php \esc_attr_e('Quantity change', 'kaupang-stock'); ?>" required<?php echo $disabled; ?> />
             <?php if (\Kaupang\Stock\Costing\Costing::enabled()): ?>
                 <input type="number" name="unit_cost" step="0.01" min="0" class="ks-adjust-cost" placeholder="<?php \esc_attr_e('à kr', 'kaupang-stock'); ?>" title="<?php \esc_attr_e('Unit cost ex-VAT (kr) — prices the cost layer when adding stock', 'kaupang-stock'); ?>" aria-label="<?php \esc_attr_e('Unit cost ex-VAT (kr)', 'kaupang-stock'); ?>"<?php echo $disabled; ?> />
             <?php endif; ?>
-            <input type="text" name="note" class="ks-adjust-note" placeholder="<?php \esc_attr_e('Note (required)', 'kaupang-stock'); ?>" maxlength="255" aria-label="<?php \esc_attr_e('Note', 'kaupang-stock'); ?>"<?php echo $disabled; ?> />
+            <?php Screen::adjustNoteFields(!$canAdjust); ?>
             <button type="submit" class="button button-small ks-adjust-submit"<?php echo $disabled; ?>><?php \esc_html_e('Save', 'kaupang-stock'); ?></button>
         </form>
         <?php
@@ -597,25 +663,27 @@ final class StatusPage {
             <input type="hidden" name="token" value="<?php echo \esc_attr(\wp_generate_uuid4()); ?>" />
         <?php endif; ?>
             <label><span><?php \esc_html_e('From', 'kaupang-stock'); ?></span>
-                <select name="source_location_id"<?php echo $bind . $disabled; ?>>
+                <select name="source_location_id" aria-label="<?php \esc_attr_e('From', 'kaupang-stock'); ?>"<?php echo $bind . $disabled; ?>>
                     <?php foreach ($locations as $location): $id = (int) $location['id']; ?>
                         <option value="<?php echo $id; ?>" <?php \selected($id, $sourceId); ?>><?php echo \esc_html((string) $location['name']); ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
             <label><span><?php \esc_html_e('To', 'kaupang-stock'); ?></span>
-                <select name="destination_location_id"<?php echo $bind . $disabled; ?>>
+                <select name="destination_location_id" aria-label="<?php \esc_attr_e('To', 'kaupang-stock'); ?>"<?php echo $bind . $disabled; ?>>
                     <?php foreach ($locations as $location): $id = (int) $location['id']; ?>
                         <option value="<?php echo $id; ?>" <?php \selected($id, $destinationId); ?>><?php echo \esc_html((string) $location['name']); ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
             <label><span><?php \esc_html_e('Qty', 'kaupang-stock'); ?></span>
-                <input type="number" name="quantity" step="1" min="1" class="small-text" required<?php echo $bind . $disabled; ?> />
+                <input type="number" name="quantity" step="1" min="1" class="small-text" placeholder="<?php \esc_attr_e('Qty', 'kaupang-stock'); ?>" aria-label="<?php \esc_attr_e('Qty', 'kaupang-stock'); ?>" required<?php echo $bind . $disabled; ?> />
             </label>
+            <?php if (!$compact): ?>
             <label class="ks-transfer-note"><span><?php \esc_html_e('Note', 'kaupang-stock'); ?></span>
                 <input type="text" name="note" maxlength="255" placeholder="<?php \esc_attr_e('Optional', 'kaupang-stock'); ?>"<?php echo $bind . $disabled; ?> />
             </label>
+            <?php endif; ?>
             <button type="submit" class="button button-small"<?php echo $bind . $disabled; ?>><?php \esc_html_e('Transfer', 'kaupang-stock'); ?></button>
         <?php if ($owned): ?>
         </div>

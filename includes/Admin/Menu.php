@@ -58,6 +58,11 @@ final class Menu {
     public static function menu(): void {
         $cap = Settings::capability();
 
+        // Core's Screen Options column toggles: the panel renders for any screen
+        // whose manage_{id}_columns filter returns columns; visibility is per
+        // user (column-<id> classes + user meta), no WP_List_Table needed.
+        \add_filter('manage_toplevel_page_' . self::SLUG . '_columns', [StatusPage::class, 'columns']);
+
         \add_menu_page(
             'Lager',
             'Lager',
@@ -178,6 +183,7 @@ final class Menu {
                 'adjust'        => \__('Adjust', 'kaupang-stock'),
                 'cancel'        => \__('Cancel', 'kaupang-stock'),
                 'noteRequired'  => \__('A note is required.', 'kaupang-stock'),
+                'noMatch'       => \__('No products match.', 'kaupang-stock'),
                 'reversePrompt' => \__('Reverse this movement? Enter a note (required):', 'kaupang-stock'),
                 'confirmReverse'=> \__('A note is required to reverse a movement.', 'kaupang-stock'),
                 'searching'     => \__('Searching…', 'kaupang-stock'),
