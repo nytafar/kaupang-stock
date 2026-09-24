@@ -43,6 +43,11 @@ final class Settings {
             'costing_enabled'        => false,
             // Stamp per-order-item COGS meta (analytics surface; see WcCogsBridge).
             'cogs_order_meta_enabled' => false,
+            // Purge a product's cached page on stock changes (Support\PageCache):
+            // off | status (stock status changes) | low_stock (status + quantity
+            // changes at or below the low-stock threshold). Independent of the
+            // ledger — runs even with stock_enabled off.
+            'page_cache_purge'       => 'off',
         ];
     }
 

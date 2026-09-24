@@ -242,7 +242,9 @@
 	margin: 16px 0 6px;
 }
 
-.ks-radio {
+/* Core's `.form-table td fieldset label { display: inline-block }` outranks a bare .ks-radio. */
+.ks-radio,
+.form-table td fieldset label.ks-radio {
 	display: block;
 	margin-bottom: .35em;
 }

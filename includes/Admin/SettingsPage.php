@@ -147,6 +147,7 @@ final class SettingsPage {
             'order_location_map'     => $locationMap,
             'costing_enabled'        => !empty($in['costing_enabled']),
             'cogs_order_meta_enabled' => !empty($in['cogs_order_meta_enabled']),
+            'page_cache_purge'       => in_array($in['page_cache_purge'] ?? '', ['status', 'low_stock'], true) ? $in['page_cache_purge'] : 'off',
         ];
     }
 
@@ -299,6 +300,39 @@ final class SettingsPage {
                             <label><input type="checkbox" name="<?php echo \esc_attr($opt); ?>[cogs_order_meta_enabled]" value="1" <?php \checked(!empty($s['cogs_order_meta_enabled'])); ?> />
                                 <?php \esc_html_e('Write FIFO cost onto order lines', 'kaupang-stock'); ?></label>
                             <p class="description"><?php \esc_html_e('Feeds WooCommerce’s Cost of goods sold when that feature is on.', 'kaupang-stock'); ?></p>
+                        </td>
+                    </tr>
+                </table>
+                </div>
+                <div class="ks-card">
+                <h2><?php \esc_html_e('Page cache', 'kaupang-stock'); ?></h2>
+                <table class="form-table" role="presentation">
+                    <tr>
+                        <th scope="row"><?php \esc_html_e('Purge on stock change', 'kaupang-stock'); ?></th>
+                        <td>
+                            <?php
+                            global $nginx_purger;
+                            $purge   = (string) ($s['page_cache_purge'] ?? 'off');
+                            $canPurge = is_object($nginx_purger);
+                            $choices = [
+                                'off'       => [\__('Off', 'kaupang-stock'), ''],
+                                'status'    => [\__('Stock status', 'kaupang-stock'), \__('sold out, back in stock, backorder', 'kaupang-stock')],
+                                'low_stock' => [\__('Stock status and low stock', 'kaupang-stock'), \__('also every quantity change at or below the low-stock threshold', 'kaupang-stock')],
+                            ];
+                            ?>
+                            <fieldset<?php echo $canPurge ? '' : ' disabled'; ?>>
+                                <?php foreach ($choices as $value => [$label, $hint]): ?>
+                                <label class="ks-radio">
+                                    <input type="radio" name="<?php echo \esc_attr($opt); ?>[page_cache_purge]" value="<?php echo \esc_attr($value); ?>" <?php \checked($purge, $value); ?> />
+                                    <strong><?php echo \esc_html($label); ?></strong><?php if ($hint !== ''): ?> <span class="description"><?php echo \esc_html($hint); ?></span><?php endif; ?>
+                                </label>
+                                <?php endforeach; ?>
+                            </fieldset>
+                            <?php if (!$canPurge): ?>
+                                <input type="hidden" name="<?php echo \esc_attr($opt); ?>[page_cache_purge]" value="<?php echo \esc_attr($purge); ?>" />
+                                <p class="description ks-warning"><?php \esc_html_e('Nginx Helper is not active, so there is no page cache to purge.', 'kaupang-stock'); ?></p>
+                            <?php endif; ?>
+                            <p class="description"><?php \esc_html_e('Stock changes from orders, refunds and Stock operations do not save the product, so Nginx Helper does not purge its page by itself. Uses WooCommerce’s low-stock threshold. Works with the stock ledger off.', 'kaupang-stock'); ?></p>
                         </td>
                     </tr>
                 </table>

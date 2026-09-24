@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Kaupang\Stock\Support;
 
+use Kaupang\Stock\Settings;
+
 /**
  * Purge a product's cached pages when its visible stock changes.
  *
@@ -10,10 +12,11 @@ namespace Kaupang\Stock\Support;
  * CRUD (orders, refunds, Lager adjustments), which fires no post hook, so a
  * cached product page kept saying "på lager" after it sold out.
  *
- * What the page shows decides what must purge:
- * - stock status (in stock / out of stock / backorder) — always;
- * - the quantity, only at or below the product's low-stock threshold (where
- *   "bare N igjen" shows), and never when woocommerce_stock_format is
+ * Setting page_cache_purge decides what purges:
+ * - 'status': stock status changes (in stock / out of stock / backorder);
+ * - 'low_stock': those, plus quantity changes where either the old or the new
+ *   quantity is at or below the product's low-stock threshold ("bare N igjen"
+ *   shows, or showed — a restock clears it). Never with stock format
  *   'no_amount'. Above the threshold a sale changes nothing on the page.
  *
  * IDs are collected and purged once at shutdown (an order touching several
@@ -26,11 +29,23 @@ final class PageCache {
     /** @var array<int,true> */
     private static array $queue = [];
 
+    /** @var array<int,int|float|null> Stock before the pending change, per product ID. */
+    private static array $before = [];
+
     public static function register(): void {
+        $mode = Settings::get('page_cache_purge');
+        if ('status' !== $mode && 'low_stock' !== $mode) {
+            return;
+        }
+
         \add_action('woocommerce_product_set_stock_status', [self::class, 'onStatus'], 10, 3);
         \add_action('woocommerce_variation_set_stock_status', [self::class, 'onStatus'], 10, 3);
 
-        if ('no_amount' !== \get_option('woocommerce_stock_format')) {
+        if ('low_stock' === $mode && 'no_amount' !== \get_option('woocommerce_stock_format')) {
+            // Both stock write paths (CRUD save, wc_update_product_stock) fire
+            // before_set_stock while get_data() still holds the old quantity.
+            \add_action('woocommerce_product_before_set_stock', [self::class, 'rememberStock']);
+            \add_action('woocommerce_variation_before_set_stock', [self::class, 'rememberStock']);
             \add_action('woocommerce_product_set_stock', [self::class, 'onStock']);
             \add_action('woocommerce_variation_set_stock', [self::class, 'onStock']);
         }
@@ -48,11 +63,17 @@ final class PageCache {
         }
     }
 
-    // ponytail: a restock from below the threshold to above it doesn't purge, so
-    // "bare N igjen" can linger until TTL; purge on old <= threshold if that matters.
+    public static function rememberStock(\WC_Product $product): void {
+        self::$before[$product->get_id()] = $product->get_data()['stock_quantity'] ?? null;
+    }
+
     public static function onStock(\WC_Product $product): void {
-        $stock = $product->get_stock_quantity();
-        if (null !== $stock && $stock <= \wc_get_low_stock_amount($product)) {
+        $low = \wc_get_low_stock_amount($product);
+        $new = $product->get_stock_quantity();
+        $old = self::$before[$product->get_id()] ?? null;
+        unset(self::$before[$product->get_id()]);
+
+        if ((null !== $new && $new <= $low) || (null !== $old && $old <= $low)) {
             self::queue($product);
         }
     }

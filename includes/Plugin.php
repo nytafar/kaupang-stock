@@ -59,6 +59,10 @@ final class Plugin {
             \WP_CLI::add_command('kaupang-stock', \Kaupang\Stock\Cli\Command::class);
         }
 
+        // Page-cache purge on stock changes: gated on its own setting, not the
+        // ledger — it reads no ledger state, so it runs with stock_enabled off.
+        PageCache::register();
+
         if (!Settings::enabled()) {
             return;
         }
@@ -66,10 +70,6 @@ final class Plugin {
         // The shadow side: rich hooks + claims + dirty registry + shutdown
         // absorber. Runs identically in shadow and active mode.
         Observer::register();
-
-        // Stock changes reach no post hook, so purge the product's cached pages
-        // here (status always; quantity unless the stock format hides it).
-        PageCache::register();
 
         // Daily invariant check (report-only; healing is operator-initiated).
         Reconciler::register();

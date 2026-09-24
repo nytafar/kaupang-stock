@@ -1955,3 +1955,27 @@ msgstr "Skriv FIFO-kostpris på ordrelinjer"
 
 msgid "Feeds WooCommerce’s Cost of goods sold when that feature is on."
 msgstr "Mater WooCommerce sin varekostnad når den funksjonen er på."
+
+msgid "Page cache"
+msgstr "Sidebuffer"
+
+msgid "Purge on stock change"
+msgstr "Tøm ved lagerendring"
+
+msgid "Off"
+msgstr "Av"
+
+msgid "sold out, back in stock, backorder"
+msgstr "utsolgt, på lager igjen, restordre"
+
+msgid "Stock status and low stock"
+msgstr "Lagerstatus og lavt lager"
+
+msgid "also every quantity change at or below the low-stock threshold"
+msgstr "også hver antallsendring på eller under grensen for lavt lager"
+
+msgid "Nginx Helper is not active, so there is no page cache to purge."
+msgstr "Nginx Helper er ikke aktiv, så det finnes ingen sidebuffer å tømme."
+
+msgid "Stock changes from orders, refunds and Stock operations do not save the product, so Nginx Helper does not purge its page by itself. Uses WooCommerce’s low-stock threshold. Works with the stock ledger off."
+msgstr "Lagerendringer fra ordre, refusjoner og Lager lagrer ikke produktet, så Nginx Helper tømmer ikke siden av seg selv. Bruker WooCommerce sin grense for lavt lager. Virker også med lagerboken av."
