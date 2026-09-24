@@ -11,6 +11,7 @@ use Kaupang\Stock\Costing\Costing;
 use Kaupang\Stock\Observe\Observer;
 use Kaupang\Stock\Reconcile\Reconciler;
 use Kaupang\Stock\Rest\Controller as RestController;
+use Kaupang\Stock\Support\PageCache;
 
 /**
  * Boot wiring — the one file to edit when registering a new module (suite
@@ -65,6 +66,10 @@ final class Plugin {
         // The shadow side: rich hooks + claims + dirty registry + shutdown
         // absorber. Runs identically in shadow and active mode.
         Observer::register();
+
+        // Stock changes reach no post hook, so purge the product's cached pages
+        // here (status always; quantity unless the stock format hides it).
+        PageCache::register();
 
         // Daily invariant check (report-only; healing is operator-initiated).
         Reconciler::register();
