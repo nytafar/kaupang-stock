@@ -11,6 +11,7 @@ All notable changes to Kaupang Stock. Format: [Keep a Changelog](https://keepach
 ### Changed
 - Admin styles follow the admin palette: tokens read `--ks-color-*`, then Harmonize `--hat-*`, then the old colour; the printable PO stays paper.
 - Suite kit v1: version-sync pre-commit hook (`tools/pre-commit`), this CHANGELOG, standard header (GitHub Plugin URI, WC tested up to 11.1).
+- Suite kit v2: `readme.txt` generated from header + README.md + CHANGELOG.md, `tools/release`.
 
 ### Fixed
 - tests: admin-ui-check skips the valuation bar assertion when costing is off.
