@@ -24,33 +24,33 @@
 }
 
 .ks-chip-draft {
-	background: #f0f0f1;
-	color: #50575e;
-	border-color: #dcdcde;
+	background: var(--ks-chip-bg);
+	color: var(--ks-chip-fg);
+	border-color: var(--ks-line);
 }
 
 .ks-chip-ordered {
-	background: #e5f0fb;
-	color: #0a4b78;
-	border-color: #b6d7f5;
+	background: var(--ks-info-bg);
+	color: var(--ks-info-fg);
+	border-color: var(--ks-info-line);
 }
 
 .ks-chip-partial {
-	background: #fcf3e3;
-	color: #8a6116;
-	border-color: #f0d9a8;
+	background: var(--ks-warning-bg);
+	color: var(--ks-warning-fg);
+	border-color: var(--ks-warning-line);
 }
 
 .ks-chip-received {
-	background: #e6f4ea;
-	color: #14663a;
-	border-color: #a7d7ba;
+	background: var(--ks-ok-bg);
+	color: var(--ks-ok-fg);
+	border-color: var(--ks-ok-line);
 }
 
 .ks-chip-cancelled {
-	background: #fbeaea;
-	color: #8a1f1f;
-	border-color: #f0b8b8;
+	background: var(--ks-danger-bg);
+	color: var(--ks-danger-fg);
+	border-color: var(--ks-danger-line);
 }
 
 .ks-inline-status {
@@ -138,17 +138,17 @@
 	white-space: nowrap;
 	position: sticky;
 	right: 0;
-	background: #fff;
-	box-shadow: -8px 0 8px -8px rgba(0, 0, 0, .15);
+	background: var(--ks-surface);
+	box-shadow: -8px 0 8px -8px var(--ks-shadow);
 }
 
 .ks-lines.striped > tbody > tr:nth-child(odd) .ks-line-actions {
-	background: #f6f7f7;
+	background: var(--ks-surface-alt);
 }
 
 .ks-danger,
 a.ks-danger {
-	color: #b32d2e;
+	color: var(--ks-neg);
 }
 
 .ks-add-line,
@@ -159,8 +159,8 @@ a.ks-danger {
 	gap: 0.8em;
 	margin-top: 0.5em;
 	padding: 0.8em;
-	background: #f6f7f7;
-	border: 1px solid #dcdcde;
+	background: var(--ks-surface-alt);
+	border: 1px solid var(--ks-line);
 	border-radius: 4px;
 }
 
@@ -187,7 +187,7 @@ a.ks-danger {
 }
 
 .ks-line-edit {
-	background: #fcf9e8;
+	background: var(--ks-warning-bg);
 }
 
 .ks-product-search {
@@ -210,7 +210,7 @@ a.ks-danger {
 /* Async-picker status line (fetch progress / no-results). */
 .ks-picker-status {
 	margin: 0.5em 0;
-	color: #50575e;
+	color: var(--ks-muted);
 }
 
 /* Structural widths moved off inline styles (spis-fiken convention). */
@@ -223,8 +223,8 @@ a.ks-danger {
 }
 
 .ks-add-line.ks-has-product {
-	border-color: var(--accent-color, #2271b1);
-	box-shadow: 0 0 0 1px var(--accent-color, #2271b1);
+	border-color: var(--ks-accent);
+	box-shadow: 0 0 0 1px var(--ks-accent);
 }
 
 /* --- receive grid -------------------------------------------------------- */
@@ -249,11 +249,11 @@ a.ks-danger {
 }
 
 .ks-receive-feedback.ks-ok {
-	color: #14663a;
+	color: var(--ks-ok-fg);
 }
 
 .ks-receive-feedback.ks-error {
-	color: #b32d2e;
+	color: var(--ks-neg);
 }
 
 .ks-line-feedback {
@@ -262,11 +262,11 @@ a.ks-danger {
 }
 
 .ks-line-feedback.ks-ok {
-	color: #14663a;
+	color: var(--ks-ok-fg);
 }
 
 .ks-line-feedback.ks-error {
-	color: #b32d2e;
+	color: var(--ks-neg);
 }
 
 /* --- confirm dialog ------------------------------------------------------ */
@@ -274,7 +274,7 @@ a.ks-danger {
 .ks-confirm {
 	max-width: 44em;
 	width: 90%;
-	border: 1px solid #c3c4c7;
+	border: 1px solid var(--ks-line);
 	border-radius: 6px;
 	padding: 1.5em;
 	box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
@@ -299,7 +299,7 @@ a.ks-danger {
 }
 
 .ks-confirm .ks-over {
-	color: #8a6116;
+	color: var(--ks-warning-fg);
 	font-weight: 600;
 }
 
@@ -324,8 +324,8 @@ a.ks-danger {
 	align-items: flex-end;
 	flex-wrap: wrap;
 	padding: 0.8em;
-	background: #f6f7f7;
-	border: 1px solid #dcdcde;
+	background: var(--ks-surface-alt);
+	border: 1px solid var(--ks-line);
 	border-radius: 4px;
 }
 
@@ -356,9 +356,9 @@ a.ks-danger {
 	max-width: 52em;
 	max-height: 18em;
 	overflow-y: auto;
-	border: 1px solid #dcdcde;
+	border: 1px solid var(--ks-line);
 	border-top: none;
-	background: #fff;
+	background: var(--ks-surface);
 }
 
 .ks-brreg-results li {
@@ -374,14 +374,14 @@ a.ks-danger {
 	padding: 0.5em 0.8em;
 	background: none;
 	border: 0;
-	border-bottom: 1px solid #f0f0f1;
+	border-bottom: 1px solid var(--ks-line-soft);
 	cursor: pointer;
 }
 
 .ks-brreg-hit:hover,
 .ks-brreg-hit:focus {
-	background: var(--accent-color, #2271b1);
-	color: #fff;
+	background: var(--ks-accent);
+	color: var(--ks-accent-ink);
 	outline: none;
 }
 
@@ -396,17 +396,18 @@ a.ks-danger {
 
 .ks-brreg-empty {
 	padding: 0.5em 0.8em;
-	color: #50575e;
+	color: var(--ks-muted);
 	font-style: italic;
 }
 
 .ks-brreg-attrib {
 	font-size: 0.9em;
-	color: #50575e;
+	color: var(--ks-muted);
 	margin: 0.5em 0 1em;
 }
 
 /* --- printable ordering list ------------------------------------------- */
+/* A sheet of paper: literal black-on-white on purpose, in every admin palette. */
 
 .ks-print-actions {
 	display: flex;

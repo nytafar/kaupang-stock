@@ -8,12 +8,9 @@
  */
 
 .ks-counts {
-	--ks-accent: var(--accent-color, #2271b1);
-	--ks-pos: var(--ks-color-pos, #1a7f37);
-	--ks-neg: var(--ks-color-neg, #b32d2e);
-	--ks-muted: var(--ks-color-muted, #646970);
-	--ks-border: var(--ks-color-border, #dcdcde);
-	--ks-flash-bg: var(--ks-color-flash, #f0f6fc);
+	/* Colours come from the body token block in admin.css. */
+	--ks-border: var(--ks-line);
+	--ks-flash-bg: var(--ks-color-flash, var(--hat-accent-tint, #f0f6fc));
 	--ks-radius: var(--border-radius-sm, 3px);
 	--ks-gap: var(--spacing-sm, 8px);
 }
@@ -28,17 +25,17 @@
 	line-height: 18px;
 	font-weight: 600;
 	vertical-align: middle;
-	background: #f0f0f1;
-	color: #3c434a;
+	background: var(--ks-chip-bg);
+	color: var(--ks-chip-fg);
 }
 
-.ks-counts .ks-chip--open { background: #e5f0fb; color: #0a4b78; }
-.ks-counts .ks-chip--review { background: #fcf3d6; color: #7a5c00; }
-.ks-counts .ks-chip--applied { background: #e6f3ea; color: #1a7f37; }
-.ks-counts .ks-chip--cancelled { background: #f2f2f2; color: #646970; }
+.ks-counts .ks-chip--open { background: var(--ks-info-bg); color: var(--ks-info-fg); }
+.ks-counts .ks-chip--review { background: var(--ks-warning-bg); color: var(--ks-warning-fg); }
+.ks-counts .ks-chip--applied { background: var(--ks-ok-bg); color: var(--ks-pos); }
+.ks-counts .ks-chip--cancelled { background: var(--ks-chip-bg); color: var(--ks-muted); }
 
 .ks-counts .ks-chip--recount {
-	background: #fbeaea;
+	background: var(--ks-danger-bg);
 	color: var(--ks-neg);
 	margin-left: 6px;
 }
@@ -56,7 +53,7 @@
 	border: 1px solid var(--ks-border);
 	border-radius: var(--ks-radius);
 	padding: var(--ks-gap);
-	background: #fff;
+	background: var(--ks-surface);
 	max-width: 40em;
 }
 
@@ -92,7 +89,7 @@
 	display: flex;
 	align-items: center;
 	gap: 12px;
-	background: #fff;
+	background: var(--ks-surface);
 	border: 2px solid var(--ks-accent);
 	border-radius: var(--ks-radius);
 	padding: 10px 12px;
@@ -115,7 +112,7 @@
 }
 
 .ks-scanbar__status--ok { color: var(--ks-pos); font-weight: 600; }
-.ks-scanbar__status--warn { color: #7a5c00; font-weight: 600; }
+.ks-scanbar__status--warn { color: var(--ks-warning-fg); font-weight: 600; }
 .ks-scanbar__status--error { color: var(--ks-neg); font-weight: 600; }
 
 .ks-sheet .ks-count-input { width: 5em; text-align: right; }
@@ -123,7 +120,7 @@
 /* Blind mode hides the expected column until "Vis forventet" is ticked. */
 .ks-capture--blind .ks-col-expected { display: none; }
 
-.ks-sheet tr.ks-row--recount td { background: #fdf3f3; }
+.ks-sheet tr.ks-row--recount td { background: var(--ks-danger-bg); }
 
 .ks-sheet tr.ks-flash td {
 	animation: ks-flash 0.6s ease-out;
@@ -159,11 +156,11 @@
 .ks-danger,
 .ks-counts .button.ks-danger { color: var(--ks-neg); }
 
-.ks-uncounted-note { color: #7a5c00; max-width: 60em; }
+.ks-uncounted-note { color: var(--ks-warning-fg); max-width: 60em; }
 
 /* ------------------------------- Drill-down --------------------------- */
 
-.ks-drill-cell { background: #f6f7f7; padding: 10px 16px !important; }
+.ks-drill-cell { background: var(--ks-surface-alt); padding: 10px 16px !important; }
 
 .ks-drill-table {
 	width: auto;

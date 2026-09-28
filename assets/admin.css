@@ -5,17 +5,37 @@
  * standalone and picks up the child theme's palette when present.
  */
 
-.ks-wrap {
-	--ks-accent: var(--accent-color, #2271b1);
-	--ks-pos: var(--ks-color-pos, #1a7f37);
-	--ks-neg: var(--ks-color-neg, #b32d2e);
-	--ks-warning-bg: var(--ks-color-warning-bg, #fcf3d7);
-	--ks-warning-fg: var(--ks-color-warning-fg, #8a6d1b);
-	--ks-danger-bg: var(--ks-color-danger-bg, #fcebea);
-	--ks-danger-fg: var(--ks-color-danger-fg, #b32d2e);
-	--ks-muted: var(--ks-color-muted, #757575);
-	--ks-chip-bg: var(--ks-color-chip-bg, #f0f0f1);
-	--ks-chip-fg: var(--ks-color-chip-fg, #50575e);
+/* On body, not .ks-wrap: the product/order meta boxes and the count screens
+   sit outside .ks-wrap, and Harmonize Admin Themes defines its --hat-* roles
+   on body (a :root block would freeze the fallbacks). Order per token: the
+   --ks-color-* override seam, then the Harmonize role, then plain wp-admin. */
+body {
+	--ks-accent: var(--wp-admin-theme-color, var(--accent-color, #2271b1));
+	--ks-accent-ink: var(--hat-accent-foreground, #fff);
+	--ks-pos: var(--ks-color-pos, var(--hat-success-text, #1a7f37));
+	--ks-neg: var(--ks-color-neg, var(--hat-danger, #b32d2e));
+	--ks-warning-bg: var(--ks-color-warning-bg, var(--hat-warning-tint, #fcf3d7));
+	--ks-warning-fg: var(--ks-color-warning-fg, var(--hat-warning-text, #8a6d1b));
+	--ks-warning-line: var(--hat-border, #f0d9a8);
+	--ks-danger-bg: var(--ks-color-danger-bg, var(--hat-danger-tint, #fcebea));
+	--ks-danger-fg: var(--ks-color-danger-fg, var(--hat-danger, #b32d2e));
+	--ks-danger-line: var(--hat-border, #f0b8b8);
+	--ks-ok-bg: var(--hat-success-tint, #edfaef);
+	--ks-ok-fg: var(--hat-success-text, #00753a);
+	--ks-ok-line: var(--hat-border, #a7d7ba);
+	--ks-info-bg: var(--hat-info-tint, #e5f0fb);
+	--ks-info-fg: var(--hat-info-text, #0a4b78);
+	--ks-info-line: var(--hat-border, #b6d7f5);
+	--ks-info-edge: var(--hat-info, #72aee6);
+	--ks-muted: var(--ks-color-muted, var(--hat-muted, #757575));
+	--ks-chip-bg: var(--ks-color-chip-bg, var(--hat-surface-alt, #f0f0f1));
+	--ks-chip-fg: var(--ks-color-chip-fg, var(--hat-muted, #50575e));
+	--ks-surface: var(--hat-surface, #fff);
+	--ks-surface-alt: var(--hat-surface-alt, #f6f7f7);
+	--ks-page: var(--hat-background, #f0f0f1);
+	--ks-line: var(--ks-color-border, var(--hat-border, #dcdcde));
+	--ks-line-soft: var(--hat-border, #f0f0f1);
+	--ks-shadow: var(--hat-shadow, rgba(0, 0, 0, .15));
 	--ks-space: var(--spacing-sm, 8px);
 }
 
@@ -66,12 +86,12 @@
 .ks-chip-muted {
 	background: transparent;
 	color: var(--ks-muted);
-	border: 1px solid #dcdcde;
+	border: 1px solid var(--ks-line);
 }
 
 .ks-chip-ok {
-	background: #edfaef;
-	color: #00753a;
+	background: var(--ks-ok-bg);
+	color: var(--ks-ok-fg);
 }
 
 .ks-chip-loc-low {
@@ -82,7 +102,7 @@
 .ks-opening-box {
 	margin: 16px 0;
 	padding: 4px 12px 12px;
-	border-left: 4px solid #72aee6;
+	border-left: 4px solid var(--ks-info-edge);
 }
 
 .ks-opening-box .ks-opening-table {
@@ -130,12 +150,12 @@
 	position: sticky;
 	left: 0;
 	z-index: 1;
-	background: #fff;
-	box-shadow: 8px 0 8px -8px rgba(0, 0, 0, .15);
+	background: var(--ks-surface);
+	box-shadow: 8px 0 8px -8px var(--ks-shadow);
 }
 
 .ks-status-table.striped > tbody > tr:nth-child(odd) .ks-col-product {
-	background: #f6f7f7;
+	background: var(--ks-surface-alt);
 }
 
 .ks-status-table .ks-col-adjust,
@@ -167,8 +187,8 @@
 	flex-wrap: wrap;
 	gap: var(--ks-space);
 	align-items: center;
-	background: #fff;
-	border: 1px solid #dcdcde;
+	background: var(--ks-surface);
+	border: 1px solid var(--ks-line);
 	border-radius: 3px;
 	padding: 10px 12px;
 }
@@ -208,8 +228,8 @@
 
 /* --- settings cards ----------------------------------------------------- */
 .ks-card {
-	background: #fff;
-	border: 1px solid #dcdcde;
+	background: var(--ks-surface);
+	border: 1px solid var(--ks-line);
 	border-radius: 3px;
 	padding: 4px 16px 12px;
 	margin: 16px 0;
@@ -220,7 +240,7 @@
 	font-size: 14px;
 	margin: 12px 0 0;
 	padding-bottom: 8px;
-	border-bottom: 1px solid #f0f0f1;
+	border-bottom: 1px solid var(--ks-line-soft);
 }
 
 .ks-card .form-table th {
@@ -254,8 +274,8 @@
 	bottom: 0;
 	max-width: 60em;
 	padding: 10px 0;
-	background: #f0f0f1;
-	border-top: 1px solid #dcdcde;
+	background: var(--ks-page);
+	border-top: 1px solid var(--ks-line);
 }
 
 .ks-save-bar .button {
@@ -375,7 +395,7 @@
 
 .ks-panel-transfer-product {
 	padding: 6px 0;
-	border-bottom: 1px solid #f0f0f1;
+	border-bottom: 1px solid var(--ks-line-soft);
 }
 
 /* --- collapsible panel -------------------------------------------------- */
@@ -386,8 +406,8 @@
 .ks-panel-body {
 	margin-top: 0.75em;
 	padding: 12px 16px;
-	background: #fff;
-	border: 1px solid #dcdcde;
+	background: var(--ks-surface);
+	border: 1px solid var(--ks-line);
 	border-radius: 3px;
 	max-width: 42em;
 }
@@ -455,7 +475,7 @@
 .ks-panel-figures th,
 .ks-panel-figures td {
 	padding: 3px 0;
-	border-bottom: 1px solid #f0f0f1;
+	border-bottom: 1px solid var(--ks-line-soft);
 }
 
 .ks-panel-figures th {
@@ -487,7 +507,7 @@
 .ks-panel-suppliers th,
 .ks-panel-suppliers td {
 	padding: 3px 4px;
-	border-bottom: 1px solid #f0f0f1;
+	border-bottom: 1px solid var(--ks-line-soft);
 	text-align: left;
 	vertical-align: top;
 }
@@ -495,7 +515,7 @@
 .ks-panel-moves td,
 .ks-panel-moves th {
 	padding: 3px 4px;
-	border-bottom: 1px solid #f0f0f1;
+	border-bottom: 1px solid var(--ks-line-soft);
 	vertical-align: top;
 }
 
@@ -503,7 +523,7 @@
 	text-align: left;
 	font-weight: 600;
 	color: inherit;
-	border-bottom: 1px solid #dcdcde;
+	border-bottom: 1px solid var(--ks-line);
 }
 
 .ks-panel-link {
@@ -518,5 +538,5 @@
 	text-align: left;
 	color: var(--ks-muted);
 	font-weight: 400;
-	border-bottom: 1px solid #dcdcde;
+	border-bottom: 1px solid var(--ks-line);
 }
