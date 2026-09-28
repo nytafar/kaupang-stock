@@ -158,6 +158,13 @@ Deliberately out of scope, each with a documented re-entry point in the plan:
 - **Fiken purchase (kjøp) booking** from POs, and **any storefront change** — the plugin is
   admin/CLI-only.
 
+## Releasing
+
+Suite kit v1 ([`docs/kit/README.md`](../docs/kit/README.md)): the header `Version:` in `kaupang-stock.php` is the one source;
+`tools/pre-commit` (`git config core.hooksPath tools`) syncs `KAUPANG_STOCK_VERSION` and refuses a bump without its
+`## [x.y.z]` section in `CHANGELOG.md`. Every behaviour change adds a line under `## [Unreleased]`; release = edit the
+header, rename Unreleased, commit, tag `vx.y.z`.
+
 ---
 
 *Author: Lasse Jellum / Nyta. Requires PHP 8.1, WordPress 6.7, WooCommerce 9.0 (HPOS-compatible).
