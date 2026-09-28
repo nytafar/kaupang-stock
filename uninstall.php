@@ -30,7 +30,7 @@ if (function_exists('as_unschedule_all_actions')) {
 
 /*
  * DELIBERATELY KEPT — the ledger tables (Bokføringsloven §13 retention posture,
- * the same stance as spis-fiken's uninstall.php). Deleting the plugin never
+ * the same stance as kaupang-fiken's uninstall.php). Deleting the plugin never
  * drops accounting data. To remove it by hand once retention has lapsed:
  *
  *   global $wpdb;

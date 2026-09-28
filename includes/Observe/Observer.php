@@ -59,7 +59,7 @@ final class Observer {
         \add_action('woocommerce_updated_product_stock', [self::class, 'markDirtyId']);
 
         // Cross-plugin claim seam: an external system about to move WC stock
-        // (e.g. spis-fiken mirroring a decrease made in Fiken) announces its
+        // (e.g. kaupang-fiken mirroring a decrease made in Fiken) announces its
         // attribution first, so the absorber labels the residual with it
         // instead of a bare `external`. Registry: kaupang-dev-context.md §4.
         \add_action('kaupang/stock/claim', [self::class, 'claimExternal'], 10, 2);

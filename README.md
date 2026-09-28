@@ -5,7 +5,7 @@ Kaupang suite (parent theme **Ousia** + child theme **myrvann**). The plugin exp
 seams; the child theme styles them.
 
 An append-only movement **ledger** is the source of truth for on-hand stock. WooCommerce's
-`_stock`, the product meta-lookup table, our own balances cache, and (via spis-fiken)
+`_stock`, the product meta-lookup table, our own balances cache, and (via kaupang-fiken)
 Fiken's `product.stock` are all *projections* of that ledger — provably re-derivable and
 drift-detected on a schedule, never blindly trusted.
 
@@ -105,7 +105,7 @@ dependency on any other suite plugin — soft deps are `class_exists`-guarded.
 
 | Contract | Kind | Meaning |
 |---|---|---|
-| `kaupang/stock/movement_recorded` | action (`Movement` DTO) | fired after commit; for site glue/exports. spis-fiken does **not** use it — it listens to core `woocommerce_product_set_stock` instead. |
+| `kaupang/stock/movement_recorded` | action (`Movement` DTO) | fired after commit; for site glue/exports. kaupang-fiken does **not** use it — it listens to core `woocommerce_product_set_stock` instead. |
 | `kaupang/stock/reasons` | filter | extend the movement reason registry. |
 | `kaupang/stock/allow_negative` | filter | refuse negative on-hand (default: allow, matching Woo oversell/backorder). |
 | `kaupang/stock/can_manage` | filter | capability override (default `manage_woocommerce`). |
@@ -116,7 +116,7 @@ tables are owned by their own modules, which write them directly: Counting, Purc
 Costing and Locations. `Kaupang\Brreg\Client` is used for supplier
 org-nr lookup when kaupang-brreg is active.
 
-The seam to **spis-fiken's** Fiken stock-push module is WooCommerce itself
+The seam to **kaupang-fiken's** Fiken stock-push module is WooCommerce itself
 (`woocommerce_product_set_stock` + `_stock`) — there is no direct edge between the two
 plugins, so each ships and works standalone.
 
@@ -127,7 +127,7 @@ Deleting the plugin removes only its options (`kaupang_stock_settings`,
 `kaupang_stock_activated_without_wc`) and unschedules the `kaupang_stock_reconcile` action.
 
 **All `{prefix}kaupang_stock_*` tables are kept** — the ledger is an accounting record under
-**Bokføringsloven §13** (the same posture as spis-fiken). To drop them by hand once
+**Bokføringsloven §13** (the same posture as kaupang-fiken). To drop them by hand once
 retention has lapsed (or on a throwaway dev DB):
 
 ```sql

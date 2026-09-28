@@ -82,7 +82,7 @@
    content's min size — that lets the Linjer card's wide table push the whole page
    wider (the .ks-tablewrap overflow-x can only scroll once its column is allowed to
    be narrower than the table). min-width:0 restores that, so the table scrolls
-   inside its wrap instead of widening the viewport (the spis-fiken pattern). */
+   inside its wrap instead of widening the viewport (the kaupang-fiken pattern). */
 .ks-po-header,
 .ks-po-lines {
 	min-width: 0;
@@ -213,7 +213,7 @@ a.ks-danger {
 	color: var(--ks-muted);
 }
 
-/* Structural widths moved off inline styles (spis-fiken convention). */
+/* Structural widths moved off inline styles (kaupang-fiken convention). */
 .ks-maxw-60 { max-width: 60em; }
 .ks-maxw-52 { max-width: 52em; }
 .ks-mt-lg { margin-top: 1.5em; }

@@ -137,7 +137,7 @@ body {
 }
 
 /* Wide tables scroll inside their own container instead of pushing the page
-   (same convention as spis-fiken's .spis-fiken-tablewrap). */
+   (same convention as kaupang-fiken's .kaupang-fiken-tablewrap). */
 .ks-tablewrap {
 	overflow-x: auto;
 	-webkit-overflow-scrolling: touch;
@@ -172,7 +172,7 @@ body {
 	display: inline-block;
 }
 
-/* Structural width helper (moved off an inline style; spis-fiken convention). */
+/* Structural width helper (moved off an inline style; kaupang-fiken convention). */
 .ks-maxw-52 {
 	max-width: 52em;
 }

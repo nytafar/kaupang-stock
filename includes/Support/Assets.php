@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Kaupang\Stock\Support;
 
 /**
- * Asset cache-busting helper (spis-fiken convention). The enqueue "version" is the
+ * Asset cache-busting helper (kaupang-fiken convention). The enqueue "version" is the
  * file's mtime, NOT the plugin release version: bumping KAUPANG_STOCK_VERSION is a
  * release concern, whereas a stylesheet edit must bust the browser cache the moment
  * it lands — mtime does exactly that, per file, with no version bookkeeping. Falls
