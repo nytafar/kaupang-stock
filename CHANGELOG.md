@@ -15,6 +15,7 @@ All notable changes to Kaupang Stock. Format: [Keep a Changelog](https://keepach
 
 ### Fixed
 - tests: admin-ui-check skips the valuation bar assertion when costing is off.
+- Order COGS: a paid order that no core path calculated COGS for (bare `wc_add_order_item()` channels such as the Zettle integration) now gets it once, at ledger cost where the ledger has one; an order that already has COGS is never recalculated. A line whose consumptions are only partly costed no longer understates: its uncosted quantity is priced at the line's blended costed cost. Check: `tests/cogs-fill-check.php`.
 
 ## [0.13.0] - 2026-09-15
 - Admin UI pass: settings cards, shared filter bars, translatable headings; stock status filter bar with live filter and toggleable columns.
