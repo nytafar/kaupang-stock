@@ -3,7 +3,7 @@ Contributors: lassejellum
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.13.0
+Stable tag: 0.14.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,6 +21,20 @@ Fiken's `product.stock` are all *projections* of that ledger — provably re-der
 drift-detected on a schedule, never blindly trusted.
 
 == Changelog ==
+
+= 0.14.0 – 2026-10-06 =
+
+**Added**
+* Page cache: purge a product's cached page when its visible stock changes (restocks too), behind a purge-on-stock-change setting.
+
+**Changed**
+* Admin styles follow the admin palette: tokens read `--ks-color-*`, then Harmonize `--hat-*`, then the old colour; the printable PO stays paper.
+* Suite kit v1: version-sync pre-commit hook (`tools/pre-commit`), this CHANGELOG, standard header (GitHub Plugin URI, WC tested up to 11.1).
+* Suite kit v2: `readme.txt` generated from header + README.md + CHANGELOG.md, `tools/release`.
+
+**Fixed**
+* tests: admin-ui-check skips the valuation bar assertion when costing is off.
+* Order COGS: a paid order that no core path calculated COGS for (bare `wc_add_order_item()` channels such as the Zettle integration) now gets it once, at ledger cost where the ledger has one; an order that already has COGS is never recalculated, and a ledger restamp changes only the lines with ledger value (other lines and refunds keep their stored cost). A line whose consumptions are only partly costed no longer understates: its uncosted quantity is priced at the line's blended costed cost. Check: `tests/cogs-fill-check.php`.
 
 = 0.13.0 – 2026-09-15 =
 

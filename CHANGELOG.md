@@ -5,6 +5,8 @@ All notable changes to Kaupang Stock. Format: [Keep a Changelog](https://keepach
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-06
+
 ### Added
 - Page cache: purge a product's cached page when its visible stock changes (restocks too), behind a purge-on-stock-change setting.
 

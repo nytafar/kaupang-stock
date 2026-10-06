@@ -2,14 +2,14 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Kaupang Stock 0.5.0\n"
+"Project-Id-Version: Kaupang Stock 0.14.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/kaupang-stock\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-07-12T00:20:12+00:00\n"
+"POT-Creation-Date: 2026-10-06T12:25:41+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: kaupang-stock\n"
@@ -21,7 +21,7 @@ msgstr ""
 
 #. Plugin URI of the plugin
 #: kaupang-stock.php
-msgid "https://jellum.net/kaupang-stock"
+msgid "https://github.com/nytafar/kaupang-stock"
 msgstr ""
 
 #. Description of the plugin
@@ -43,1399 +43,1754 @@ msgstr ""
 msgid "Kaupang Stock requires PHP 8.1 or newer."
 msgstr ""
 
-#: includes/Admin/CountsPage.php:107
-#: includes/Ledger/Reasons.php:81
-msgid "Varetelling"
+#: includes/Admin/CountsPage.php:109
+#: includes/Admin/Menu.php:131
+#: includes/Admin/SettingsPage.php:237
+#: includes/Admin/SettingsPage.php:240
+msgid "Stock counts"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:112
-msgid "Counts"
+#: includes/Admin/CountsPage.php:110
+msgid "New count"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:118
-#: includes/Admin/PurchasingPage.php:156
-#: includes/Admin/StatusPage.php:102
+#: includes/Admin/CountsPage.php:123
+#: includes/Admin/PurchasingPage.php:161
+#: includes/Admin/SettingsPage.php:349
 msgid "Status"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:119
-#: includes/Admin/CountsPage.php:165
+#: includes/Admin/CountsPage.php:124
+#: includes/Admin/CountsPage.php:169
 msgid "Scope"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:120
+#: includes/Admin/CountsPage.php:125
 msgid "Blind"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:121
+#: includes/Admin/CountsPage.php:126
 msgid "Progress"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:122
+#: includes/Admin/CountsPage.php:127
 msgid "Created"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:128
+#: includes/Admin/CountsPage.php:133
 msgid "No counts yet."
 msgstr ""
 
-#: includes/Admin/CountsPage.php:138
+#: includes/Admin/CountsPage.php:143
+#: includes/Admin/SettingsPage.php:361
 msgid "Yes"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:138
+#: includes/Admin/CountsPage.php:143
 msgid "No"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:142
-#: includes/Admin/CountsPage.php:372
+#: includes/Admin/CountsPage.php:147
+#: includes/Admin/CountsPage.php:376
 msgid "recount"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:159
-msgid "Ny telling"
-msgstr ""
-
-#: includes/Admin/CountsPage.php:168
+#: includes/Admin/CountsPage.php:172
 msgid "All stock-managed products"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:169
+#: includes/Admin/CountsPage.php:173
 msgid "One product category"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:170
+#: includes/Admin/CountsPage.php:174
 msgid "Manual selection"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:175
+#: includes/Admin/CountsPage.php:179
 msgid "Category"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:186
+#: includes/Admin/CountsPage.php:190
 msgid "Products"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:190
+#: includes/Admin/CountsPage.php:194
 msgid "Filter by name or SKU…"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:191
+#: includes/Admin/CountsPage.php:195
 msgid "Stock-managed products"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:200
+#: includes/Admin/CountsPage.php:204
 msgid "Only stock-managed products are listed."
 msgstr ""
 
-#: includes/Admin/CountsPage.php:205
+#: includes/Admin/CountsPage.php:209
 msgid "Blind count"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:209
+#: includes/Admin/CountsPage.php:213
 msgid "Hide the expected quantity while counting (recommended)."
 msgstr ""
 
-#: includes/Admin/CountsPage.php:214
-#: includes/Admin/MovementsPage.php:115
-#: includes/Admin/MovementsPage.php:648
-#: includes/Admin/PurchasingPage.php:242
-#: includes/Admin/PurchasingPage.php:806
-#: includes/Admin/StatusPage.php:455
+#: includes/Admin/CountsPage.php:218
+#: includes/Admin/MovementsPage.php:126
+#: includes/Admin/MovementsPage.php:639
+#: includes/Admin/PurchasingPage.php:251
+#: includes/Admin/PurchasingPage.php:988
+#: includes/Admin/Screen.php:115
+#: includes/Admin/StatusPage.php:683
 msgid "Note"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:219
+#: includes/Admin/CountsPage.php:223
 msgid "Create count"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:246
+#: includes/Admin/CountsPage.php:250
 #, php-format
 msgid "Varetelling #%d — capture"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:250
-#: includes/Admin/CountsPage.php:326
+#: includes/Admin/CountsPage.php:254
+#: includes/Admin/CountsPage.php:330
 msgid "All counts"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:255
+#: includes/Admin/CountsPage.php:259
 msgid "Vis forventet"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:257
-#: includes/Admin/CountsPage.php:717
+#: includes/Admin/CountsPage.php:261
+#: includes/Admin/CountsPage.php:614
 msgid "Til gjennomgang"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:263
+#: includes/Admin/CountsPage.php:267
 msgid "Scan or type a SKU, then Enter…"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:271
+#: includes/Admin/CountsPage.php:275
 msgid "SKU"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:272
-#: includes/Admin/CountsPage.php:355
-#: includes/Admin/MovementsPage.php:110
-#: includes/Admin/MovementsPage.php:641
-#: includes/Admin/OrderMetaBox.php:85
-#: includes/Admin/PurchasingPage.php:312
-#: includes/Admin/PurchasingPage.php:483
-#: includes/Admin/PurchasingPage.php:635
-#: includes/Admin/StatusPage.php:96
-#: includes/Admin/StatusPage.php:481
-#: includes/Admin/ValuationPage.php:97
-#: includes/Admin/ValuationPage.php:176
+#: includes/Admin/CountsPage.php:276
+#: includes/Admin/CountsPage.php:359
+#: includes/Admin/MovementsPage.php:120
+#: includes/Admin/MovementsPage.php:627
+#: includes/Admin/OrderMetaBox.php:93
+#: includes/Admin/ProductPanel.php:139
+#: includes/Admin/PurchasingPage.php:322
+#: includes/Admin/PurchasingPage.php:650
+#: includes/Admin/PurchasingPage.php:815
+#: includes/Admin/StatusPage.php:312
+#: includes/Admin/StatusPage.php:739
+#: includes/Admin/ValuationPage.php:94
+#: includes/Admin/ValuationPage.php:173
 msgid "Product"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:273
-#: includes/Admin/CountsPage.php:356
+#: includes/Admin/CountsPage.php:277
+#: includes/Admin/CountsPage.php:360
 msgid "Forventet"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:274
-#: includes/Admin/CountsPage.php:357
+#: includes/Admin/CountsPage.php:278
+#: includes/Admin/CountsPage.php:361
 msgid "Counted"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:322
+#: includes/Admin/CountsPage.php:326
 #: includes/Counting/Apply.php:169
 #, php-format
 msgid "Varetelling #%d"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:329
+#: includes/Admin/CountsPage.php:333
 msgid "Note:"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:334
+#: includes/Admin/CountsPage.php:338
 msgid "Reopen for counting"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:337
+#: includes/Admin/CountsPage.php:341
 msgid "Bruk telling"
-msgstr ""
-
-#: includes/Admin/CountsPage.php:340
-#, php-format
-msgid "%d line(s) need a recount or override before applying."
-msgstr ""
-
-#: includes/Admin/CountsPage.php:342
-msgid "Cancel count"
 msgstr ""
 
 #: includes/Admin/CountsPage.php:344
 #, php-format
+msgid "%d line(s) need a recount or override before applying."
+msgstr ""
+
+#: includes/Admin/CountsPage.php:346
+msgid "Cancel count"
+msgstr ""
+
+#: includes/Admin/CountsPage.php:348
+#, php-format
 msgid "Applied %s by %s."
 msgstr ""
 
-#: includes/Admin/CountsPage.php:358
+#: includes/Admin/CountsPage.php:362
 msgid "Differanse"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:379
+#: includes/Admin/CountsPage.php:383
 msgid "Movements since"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:381
+#: includes/Admin/CountsPage.php:385
 msgid "Override"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:393
+#: includes/Admin/CountsPage.php:397
 #, php-format
 msgid "%d line(s) have not been counted. They post nothing and will require a combined confirmation at apply."
 msgstr ""
 
-#: includes/Admin/CountsPage.php:411
+#: includes/Admin/CountsPage.php:415
 msgid "Import counted quantities (CSV)"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:412
+#: includes/Admin/CountsPage.php:416
 msgid "Upload the exported sheet with the counted column filled. Matching is by SKU (falling back to a product id column if present). The count lands in review — never applied directly."
 msgstr ""
 
-#: includes/Admin/CountsPage.php:418
+#: includes/Admin/CountsPage.php:422
 msgid "Upload"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:716
-#: includes/Admin/CountsPage.php:731
-#: includes/Admin/PurchasingPage.php:180
+#: includes/Admin/CountsPage.php:613
+#: includes/Admin/CountsPage.php:628
+#: includes/Admin/PurchasingPage.php:185
 msgid "Open"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:718
+#: includes/Admin/CountsPage.php:615
 msgid "Applied"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:719
+#: includes/Admin/CountsPage.php:616
 msgid "Cancelled"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:728
+#: includes/Admin/CountsPage.php:625
 msgid "Capture"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:729
+#: includes/Admin/CountsPage.php:626
 msgid "Review"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:739
+#: includes/Admin/CountsPage.php:636
 msgid "Cancel this count? This cannot be undone."
 msgstr ""
 
-#: includes/Admin/CountsPage.php:759
+#: includes/Admin/CountsPage.php:656
 #: includes/Admin/ValuationPage.php:234
 msgid "Export CSV"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:814
-#: includes/Admin/MovementsPage.php:737
+#: includes/Admin/CountsPage.php:693
+#: includes/Admin/MovementsPage.php:731
 msgid "system"
 msgstr ""
 
-#: includes/Admin/CountsPage.php:838
-msgid "You are not allowed to do this."
-msgstr ""
-
-#: includes/Admin/CountsPage.php:842
-msgid "Invalid request method."
-msgstr ""
-
-#: includes/Admin/CountsPage.php:866
+#: includes/Admin/CountsPage.php:719
 msgid "Count created. Start scanning below."
 msgstr ""
 
-#: includes/Admin/CountsPage.php:867
+#: includes/Admin/CountsPage.php:720
 msgid "The count was created but no stock-managed products matched the scope."
 msgstr ""
 
-#: includes/Admin/CountsPage.php:868
-msgid "Could not create the count."
-msgstr ""
-
-#: includes/Admin/CountsPage.php:869
+#: includes/Admin/CountsPage.php:721
 msgid "Count updated."
 msgstr ""
 
-#: includes/Admin/CountsPage.php:870
-msgid "That status change is not allowed."
-msgstr ""
-
-#: includes/Admin/CountsPage.php:871
-#: includes/Counting/Apply.php:45
-msgid "Count not found."
-msgstr ""
-
-#: includes/Admin/CountsPage.php:872
-msgid "This count can no longer be imported into."
-msgstr ""
-
-#: includes/Admin/CountsPage.php:873
-msgid "No CSV file was uploaded."
-msgstr ""
-
-#: includes/Admin/CountsPage.php:874
-msgid "The CSV could not be read."
-msgstr ""
-
 #. translators: %d: number of matched lines filled from the CSV.
-#: includes/Admin/CountsPage.php:877
+#: includes/Admin/CountsPage.php:724
 #, php-format
 msgid "%d line filled from the CSV. The count is now in review."
 msgid_plural "%d lines filled from the CSV. The count is now in review."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Admin/Menu.php:76
-#: includes/Admin/Menu.php:96
-#: includes/Admin/StatusPage.php:77
+#: includes/Admin/CountsPage.php:729
+msgid "Could not create the count."
+msgstr ""
+
+#: includes/Admin/CountsPage.php:730
+msgid "That status change is not allowed."
+msgstr ""
+
+#: includes/Admin/CountsPage.php:731
+#: includes/Counting/Apply.php:45
+msgid "Count not found."
+msgstr ""
+
+#: includes/Admin/CountsPage.php:732
+msgid "This count can no longer be imported into."
+msgstr ""
+
+#: includes/Admin/CountsPage.php:733
+msgid "No CSV file was uploaded."
+msgstr ""
+
+#: includes/Admin/CountsPage.php:734
+msgid "The CSV could not be read."
+msgstr ""
+
+#: includes/Admin/Menu.php:81
+#: includes/Admin/Menu.php:101
+#: includes/Admin/SettingsPage.php:319
+#: includes/Admin/StatusPage.php:88
 msgid "Stock status"
 msgstr ""
 
-#: includes/Admin/Menu.php:84
-#: includes/Admin/Menu.php:147
+#: includes/Admin/Menu.php:89
+#: includes/Admin/Menu.php:152
 msgid "Settings"
 msgstr ""
 
-#: includes/Admin/Menu.php:105
-#: includes/Admin/MovementsPage.php:46
+#: includes/Admin/Menu.php:110
+#: includes/Admin/MovementsPage.php:50
 msgid "Movements"
 msgstr ""
 
-#: includes/Admin/Menu.php:115
+#: includes/Admin/Menu.php:120
 msgid "Stock value"
 msgstr ""
 
-#: includes/Admin/Menu.php:126
-#: includes/Admin/SettingsPage.php:185
-msgid "Stock counts"
-msgstr ""
-
-#: includes/Admin/Menu.php:137
-#: includes/Admin/PurchasingPage.php:133
-#: includes/Admin/SettingsPage.php:178
+#: includes/Admin/Menu.php:142
+#: includes/Admin/PurchasingPage.php:138
+#: includes/Admin/PurchasingPage.php:149
+#: includes/Admin/SettingsPage.php:230
 msgid "Purchasing"
 msgstr ""
 
-#: includes/Admin/Menu.php:178
+#: includes/Admin/Menu.php:183
 msgid "Adjust"
 msgstr ""
 
-#: includes/Admin/Menu.php:179
-#: includes/Admin/PurchasingPage.php:81
-#: includes/Admin/PurchasingPage.php:364
-#: includes/Admin/PurchasingPage.php:818
+#: includes/Admin/Menu.php:184
+#: includes/Admin/PurchasingPage.php:83
+#: includes/Admin/PurchasingPage.php:353
+#: includes/Admin/PurchasingPage.php:1000
 msgid "Cancel"
 msgstr ""
 
-#: includes/Admin/Menu.php:180
-#: includes/Admin/MovementsPage.php:505
+#: includes/Admin/Menu.php:185
+#: includes/Admin/MovementsPage.php:535
 msgid "A note is required."
 msgstr ""
 
-#: includes/Admin/Menu.php:181
+#: includes/Admin/Menu.php:186
+msgid "No products match."
+msgstr ""
+
+#: includes/Admin/Menu.php:187
 msgid "Reverse this movement? Enter a note (required):"
 msgstr ""
 
-#: includes/Admin/Menu.php:182
+#: includes/Admin/Menu.php:188
 msgid "A note is required to reverse a movement."
 msgstr ""
 
-#: includes/Admin/Menu.php:183
+#: includes/Admin/Menu.php:189
 msgid "Searching…"
 msgstr ""
 
-#: includes/Admin/Menu.php:184
-#: includes/Admin/PurchasingPage.php:393
+#: includes/Admin/Menu.php:190
+#: includes/Admin/PurchasingPage.php:491
 msgid "No products found."
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:79
+#: includes/Admin/MovementsPage.php:52
+msgid "New adjustment"
+msgstr ""
+
+#: includes/Admin/MovementsPage.php:92
 msgid "Export CSV (current filter)"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:100
+#: includes/Admin/MovementsPage.php:110
 msgid "Back to movements"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:101
+#: includes/Admin/MovementsPage.php:111
 msgid "Batch"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:103
+#: includes/Admin/MovementsPage.php:113
 msgid "No movements in this batch."
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:109
-#: includes/Admin/MovementsPage.php:640
-#: includes/Admin/OrderMetaBox.php:84
+#: includes/Admin/MovementsPage.php:119
+#: includes/Admin/MovementsPage.php:626
+#: includes/Admin/OrderMetaBox.php:92
 msgid "Time"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:112
-#: includes/Admin/MovementsPage.php:643
+#: includes/Admin/MovementsPage.php:121
+#: includes/Admin/MovementsPage.php:174
+#: includes/Admin/MovementsPage.php:429
+#: includes/Admin/MovementsPage.php:630
+#: includes/Admin/PurchasingPage.php:699
+#: includes/Admin/SettingsPage.php:264
+#: includes/Admin/StatusPage.php:597
+#: includes/Admin/ValuationPage.php:174
+msgid "Location"
+msgstr ""
+
+#: includes/Admin/MovementsPage.php:123
+#: includes/Admin/MovementsPage.php:634
 msgid "Balance after"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:113
-#: includes/Admin/MovementsPage.php:239
-#: includes/Admin/MovementsPage.php:644
-#: includes/Admin/OrderMetaBox.php:87
-#: includes/Admin/ValuationPage.php:270
+#: includes/Admin/MovementsPage.php:124
+#: includes/Admin/MovementsPage.php:194
+#: includes/Admin/MovementsPage.php:270
+#: includes/Admin/MovementsPage.php:635
+#: includes/Admin/OrderMetaBox.php:95
+#: includes/Admin/Screen.php:109
+#: includes/Admin/ValuationPage.php:267
 #: includes/Admin/ValuationPage.php:365
 msgid "Reason"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:114
-#: includes/Admin/MovementsPage.php:645
-#: includes/Admin/PurchasingPage.php:159
+#: includes/Admin/MovementsPage.php:125
+#: includes/Admin/MovementsPage.php:636
+#: includes/Admin/PurchasingPage.php:164
 msgid "Reference"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:146
-msgid "New adjustment"
-msgstr ""
-
-#: includes/Admin/MovementsPage.php:150
+#: includes/Admin/MovementsPage.php:159
 msgid "Adjustments write to WooCommerce stock and require active mode. Switch to active mode in settings first."
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:158
+#: includes/Admin/MovementsPage.php:167
 msgid "Product (title, SKU or ID)"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:164
-#: includes/Admin/StatusPage.php:451
+#: includes/Admin/MovementsPage.php:181
+#: includes/Admin/StatusPage.php:603
 msgid "Quantity change"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:170
-#: includes/Admin/StatusPage.php:455
-msgid "Note (required)"
+#: includes/Admin/MovementsPage.php:188
+#: includes/Admin/PurchasingPage.php:345
+#: includes/Admin/PurchasingPage.php:527
+#: includes/Admin/PurchasingPage.php:656
+#: includes/Admin/StatusPage.php:605
+#: includes/Admin/ValuationPage.php:97
+msgid "Unit cost ex-VAT (kr)"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:176
+#: includes/Admin/MovementsPage.php:189
+#: includes/Admin/StatusPage.php:605
+msgid "à kr"
+msgstr ""
+
+#: includes/Admin/MovementsPage.php:189
+#: includes/Admin/StatusPage.php:605
+msgid "Unit cost ex-VAT (kr) — prices the cost layer when adding stock"
+msgstr ""
+
+#: includes/Admin/MovementsPage.php:199
 msgid "Occurred date (optional, up to 90 days back)"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:181
+#: includes/Admin/MovementsPage.php:204
 msgid "Record adjustment"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:237
+#: includes/Admin/MovementsPage.php:267
 msgid "Product title, SKU or ID"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:245
+#: includes/Admin/MovementsPage.php:276
 msgid "Reference type"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:250
-msgid "Actor ID"
+#: includes/Admin/MovementsPage.php:282
+#: includes/Admin/MovementsPage.php:637
+msgid "Actor"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:251
-#: includes/Admin/ValuationPage.php:260
-msgid "From"
-msgstr ""
-
-#: includes/Admin/MovementsPage.php:254
-#: includes/Admin/ValuationPage.php:262
-msgid "To"
-msgstr ""
-
-#: includes/Admin/MovementsPage.php:257
-#: includes/Admin/StatusPage.php:88
+#: includes/Admin/MovementsPage.php:288
 msgid "Filter"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:258
+#: includes/Admin/MovementsPage.php:289
 msgid "Reset"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:343
-#: includes/Admin/MovementsPage.php:519
-#: includes/Admin/PurchasingPage.php:1021
-#: includes/Admin/StatusPage.php:625
-#: includes/Admin/ValuationPage.php:391
-#: includes/Admin/ValuationPage.php:411
-msgid "You do not have permission to do this."
-msgstr ""
-
-#: includes/Admin/MovementsPage.php:420
+#: includes/Admin/MovementsPage.php:460
 msgid "Order"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:433
+#: includes/Admin/MovementsPage.php:473
 #, php-format
 msgid "PO #%d, line"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:433
+#: includes/Admin/MovementsPage.php:473
 msgid "PO line"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:444
+#: includes/Admin/MovementsPage.php:484
 #, php-format
 msgid "Count #%d, line"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:444
+#: includes/Admin/MovementsPage.php:484
 msgid "Count line"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:449
+#: includes/Admin/MovementsPage.php:489
 msgid "Movement"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:493
+#: includes/Admin/MovementsPage.php:529
 msgid "Adjustment recorded."
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:494
+#: includes/Admin/MovementsPage.php:530
 msgid "Movement reversed."
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:501
+#: includes/Admin/MovementsPage.php:533
 msgid "Could not resolve a product from that value."
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:503
-#: includes/Admin/StatusPage.php:563
+#: includes/Admin/MovementsPage.php:534
+#: includes/Admin/StatusPage.php:819
 msgid "Enter a non-zero quantity change."
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:507
+#: includes/Admin/MovementsPage.php:536
 msgid "A valid movement is required."
 msgstr ""
 
 #. translators: %s: ledger error
 #. translators: %s: ledger error message
-#: includes/Admin/MovementsPage.php:511
-#: includes/Admin/StatusPage.php:569
+#: includes/Admin/MovementsPage.php:539
+#: includes/Admin/StatusPage.php:829
 #, php-format
 msgid "Could not record the movement: %s"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:512
-#: includes/Admin/StatusPage.php:570
+#: includes/Admin/MovementsPage.php:540
+#: includes/Admin/StatusPage.php:825
+#: includes/Admin/StatusPage.php:830
 msgid "unknown error"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:646
-msgid "Actor"
-msgstr ""
-
-#: includes/Admin/MovementsPage.php:647
+#: includes/Admin/MovementsPage.php:638
 msgid "Via"
 msgstr ""
 
 #. translators: %s: system creation time
-#: includes/Admin/MovementsPage.php:705
-#: includes/Admin/StatusPage.php:385
+#: includes/Admin/MovementsPage.php:696
+#: includes/Admin/StatusPage.php:530
 #, php-format
 msgid "Recorded %s"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:778
+#: includes/Admin/MovementsPage.php:772
 msgid "Reverse"
 msgstr ""
 
-#: includes/Admin/MovementsPage.php:790
+#: includes/Admin/MovementsPage.php:784
 msgid "No movements match the current filter."
 msgstr ""
 
-#: includes/Admin/OrderMetaBox.php:38
-#: includes/Admin/OrderMetaBox.php:53
-#: includes/Admin/ProductPanel.php:32
+#: includes/Admin/OrderMetaBox.php:45
+#: includes/Admin/OrderMetaBox.php:60
+#: includes/Admin/ProductPanel.php:34
 msgid "Stock (Lager)"
 msgstr ""
 
-#: includes/Admin/OrderMetaBox.php:78
+#: includes/Admin/OrderMetaBox.php:86
 msgid "No stock movements for this order."
 msgstr ""
 
-#: includes/Admin/OrderMetaBox.php:88
+#: includes/Admin/OrderMetaBox.php:96
 msgid "Balance"
 msgstr ""
 
-#: includes/Admin/OrderMetaBox.php:140
+#: includes/Admin/OrderMetaBox.php:128
+msgid "Stock location"
+msgstr ""
+
+#: includes/Admin/OrderMetaBox.php:130
+msgid "Automatic routing (until first withdrawal)"
+msgstr ""
+
+#: includes/Admin/OrderMetaBox.php:137
+msgid "Changes apply only to future stock withdrawals. Moving an existing withdrawal is handled as a transfer."
+msgstr ""
+
+#: includes/Admin/OrderMetaBox.php:208
 msgid "Cost of goods (FIFO)"
 msgstr ""
 
-#: includes/Admin/OrderMetaBox.php:148
-#: includes/Admin/ValuationPage.php:212
+#: includes/Admin/OrderMetaBox.php:216
+#: includes/Admin/ValuationPage.php:211
 msgid "Total"
 msgstr ""
 
-#: includes/Admin/ProductPanel.php:47
+#: includes/Admin/ProductPanel.php:49
 msgid "Save the product first to see stock."
 msgstr ""
 
-#: includes/Admin/ProductPanel.php:76
-#: includes/Admin/ProductPanel.php:101
-#: includes/Admin/StatusPage.php:97
-#: includes/Admin/StatusPage.php:483
+#: includes/Admin/ProductPanel.php:78
+#: includes/Admin/ProductPanel.php:105
+#: includes/Admin/PurchasingPage.php:435
+#: includes/Admin/StatusPage.php:314
+#: includes/Admin/StatusPage.php:741
 msgid "On hand"
 msgstr ""
 
-#: includes/Admin/ProductPanel.php:77
-#: includes/Admin/StatusPage.php:98
+#: includes/Admin/ProductPanel.php:79
+#: includes/Admin/StatusPage.php:321
 msgid "Reserved"
 msgstr ""
 
-#: includes/Admin/ProductPanel.php:78
-#: includes/Admin/StatusPage.php:99
+#: includes/Admin/ProductPanel.php:80
+#: includes/Admin/StatusPage.php:313
 msgid "Available"
 msgstr ""
 
-#: includes/Admin/ProductPanel.php:88
+#: includes/Admin/ProductPanel.php:92
 msgid "No variations."
 msgstr ""
 
-#: includes/Admin/ProductPanel.php:95
+#: includes/Admin/ProductPanel.php:99
 msgid "No stock-managed variations."
 msgstr ""
 
-#: includes/Admin/ProductPanel.php:100
+#: includes/Admin/ProductPanel.php:104
 msgid "Variation"
 msgstr ""
 
-#: includes/Admin/ProductPanel.php:120
+#: includes/Admin/ProductPanel.php:121
+#: includes/Admin/ProductPanel.php:192
+#: includes/Admin/StatusPage.php:325
+msgid "Quick transfer"
+msgstr ""
+
+#: includes/Admin/ProductPanel.php:136
+msgid "Supplier products"
+msgstr ""
+
+#: includes/Admin/ProductPanel.php:141
+#: includes/Admin/PurchasingPage.php:160
+#: includes/Admin/PurchasingPage.php:238
+#: includes/Admin/PurchasingPage.php:820
+msgid "Supplier"
+msgstr ""
+
+#: includes/Admin/ProductPanel.php:142
+msgid "Supplier identity"
+msgstr ""
+
+#: includes/Admin/ProductPanel.php:168
 msgid "No movements recorded yet."
 msgstr ""
 
-#: includes/Admin/ProductPanel.php:123
+#: includes/Admin/ProductPanel.php:171
 msgid "Recent movements"
 msgstr ""
 
-#: includes/Admin/ProductPanel.php:145
+#: includes/Admin/ProductPanel.php:201
 msgid "View all movements →"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:78
+#: includes/Admin/PurchasingPage.php:80
 msgid "Confirm over-receipt"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:79
+#: includes/Admin/PurchasingPage.php:81
 msgid "These lines exceed the remaining quantity. Receiving anyway is allowed (supplier overs are normal):"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:80
+#: includes/Admin/PurchasingPage.php:82
 msgid "Receive anyway"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:82
-#: includes/Purchasing/Receiving.php:231
+#: includes/Admin/PurchasingPage.php:84
+#: includes/Purchasing/Receiving.php:238
 msgid "Goods received."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:83
+#: includes/Admin/PurchasingPage.php:85
 msgid "Something went wrong. Please try again."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:84
-#: includes/Admin/PurchasingPage.php:313
-#: includes/Admin/PurchasingPage.php:484
-#: includes/Admin/PurchasingPage.php:636
+#: includes/Admin/PurchasingPage.php:86
+#: includes/Admin/PurchasingPage.php:325
+#: includes/Admin/PurchasingPage.php:651
+#: includes/Admin/PurchasingPage.php:816
 msgid "Ordered"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:85
-#: includes/Admin/PurchasingPage.php:314
-#: includes/Admin/PurchasingPage.php:485
-#: includes/Admin/PurchasingPage.php:637
+#: includes/Admin/PurchasingPage.php:87
+#: includes/Admin/PurchasingPage.php:326
+#: includes/Admin/PurchasingPage.php:652
+#: includes/Admin/PurchasingPage.php:817
 msgid "Received"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:86
-#: includes/Admin/PurchasingPage.php:315
-#: includes/Admin/PurchasingPage.php:486
-#: includes/Admin/PurchasingPage.php:638
+#: includes/Admin/PurchasingPage.php:88
+#: includes/Admin/PurchasingPage.php:327
+#: includes/Admin/PurchasingPage.php:653
+#: includes/Admin/PurchasingPage.php:818
 #: includes/Admin/ValuationPage.php:333
 msgid "Remaining"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:87
+#: includes/Admin/PurchasingPage.php:89
 msgid "Entered"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:88
+#: includes/Admin/PurchasingPage.php:90
 msgid "Enter a quantity on at least one line."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:90
-#: includes/Admin/PurchasingPage.php:407
+#: includes/Admin/PurchasingPage.php:92
+#: includes/Admin/PurchasingPage.php:457
+#: includes/Admin/PurchasingPage.php:508
 msgid "Add"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:91
+#: includes/Admin/PurchasingPage.php:93
 msgid "No companies found."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:135
+#: includes/Admin/PurchasingPage.php:140
 msgid "Purchasing (Innkjøp) is not enabled. Turn it on under Lager → Innstillinger."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:145
-#: includes/Admin/PurchasingPage.php:212
+#: includes/Admin/PurchasingPage.php:150
+#: includes/Admin/PurchasingPage.php:218
 msgid "New purchase order"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:154
-#: includes/Admin/PurchasingPage.php:641
+#: includes/Admin/PurchasingPage.php:151
+#: includes/Admin/PurchasingPage.php:806
+msgid "Inbound"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:152
+#: includes/Admin/PurchasingPage.php:861
+msgid "Suppliers"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:159
+#: includes/Admin/PurchasingPage.php:563
+#: includes/Admin/PurchasingPage.php:821
 msgid "PO"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:157
-#: includes/Admin/PurchasingPage.php:281
-#: includes/Admin/PurchasingPage.php:590
+#: includes/Admin/PurchasingPage.php:162
+#: includes/Admin/PurchasingPage.php:290
+#: includes/Admin/PurchasingPage.php:770
 msgid "Lines"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:158
-#: includes/Admin/PurchasingPage.php:238
-#: includes/Admin/PurchasingPage.php:639
+#: includes/Admin/PurchasingPage.php:163
+#: includes/Admin/PurchasingPage.php:247
+#: includes/Admin/PurchasingPage.php:819
 msgid "ETA"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:165
+#: includes/Admin/PurchasingPage.php:170
 msgid "No purchase orders yet."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:201
-#: includes/Admin/PurchasingPage.php:439
-#: includes/Admin/PurchasingPage.php:1181
-#: includes/Purchasing/Receiving.php:61
+#: includes/Admin/PurchasingPage.php:206
+#: includes/Admin/PurchasingPage.php:545
+#: includes/Admin/PurchasingPage.php:606
+#: includes/Admin/PurchasingPage.php:1224
+#: includes/Admin/PurchasingPage.php:1509
+#: includes/Purchasing/Receiving.php:62
 msgid "Purchase order not found."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:217
-#: includes/Admin/PurchasingPage.php:627
-#: includes/Admin/PurchasingPage.php:682
+#: includes/Admin/PurchasingPage.php:223
+#: includes/Admin/PurchasingPage.php:560
+msgid "Ordering list"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:226
+#: includes/Admin/PurchasingPage.php:807
+#: includes/Admin/PurchasingPage.php:862
 msgid "Back to list"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:233
+#: includes/Admin/PurchasingPage.php:231
+#: includes/Admin/ValuationPage.php:206
+msgid "Details"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:242
+#: includes/Admin/PurchasingPage.php:566
 msgid "Supplier reference"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:246
+#: includes/Admin/PurchasingPage.php:255
 msgid "The order is placed — line changes append to this note trail rather than editing locked lines."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:251
+#: includes/Admin/PurchasingPage.php:260
 msgid "Create draft"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:251
+#: includes/Admin/PurchasingPage.php:260
 msgid "Save details"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:256
+#: includes/Admin/PurchasingPage.php:265
 msgid "Place this order? Lines will be locked; further changes append to the note."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:260
+#: includes/Admin/PurchasingPage.php:269
 msgid "Place order"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:270
+#: includes/Admin/PurchasingPage.php:279
 msgid "Cancel this purchase order? Any received stock stays; the remainder is written off."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:274
+#: includes/Admin/PurchasingPage.php:283
 msgid "Cancel order"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:285
+#: includes/Admin/PurchasingPage.php:295
 msgid "Add product"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:287
+#: includes/Admin/PurchasingPage.php:297
 msgid "Adding a product already on the order merges into that line (its quantity is increased)."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:292
+#: includes/Admin/PurchasingPage.php:302
 msgid "Save the draft first, then add product lines."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:316
+#: includes/Admin/PurchasingPage.php:323
+#: includes/Admin/PurchasingPage.php:432
+msgid "Supplier product"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:324
+#: includes/Admin/PurchasingPage.php:347
+#: includes/Admin/PurchasingPage.php:433
+#: includes/Admin/PurchasingPage.php:529
+#: includes/Admin/PurchasingPage.php:573
+msgid "Supplier SKU"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:328
 msgid "Unit cost ex-VAT"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:322
-msgid "No lines yet."
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:339
-#: includes/Admin/PurchasingPage.php:712
-msgid "Edit"
-msgstr ""
-
 #: includes/Admin/PurchasingPage.php:343
-msgid "Remove this line?"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:343
-msgid "Remove"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:359
-#: includes/Admin/PurchasingPage.php:424
-#: includes/Admin/ValuationPage.php:177
-#: includes/Admin/ValuationPage.php:271
+#: includes/Admin/PurchasingPage.php:525
+#: includes/Admin/StatusPage.php:679
+#: includes/Admin/StatusPage.php:680
+#: includes/Admin/ValuationPage.php:175
+#: includes/Admin/ValuationPage.php:268
 #: includes/Admin/ValuationPage.php:332
 #: includes/Admin/ValuationPage.php:366
 msgid "Qty"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:361
-#: includes/Admin/PurchasingPage.php:426
-#: includes/Admin/PurchasingPage.php:489
-#: includes/Admin/StatusPage.php:453
-#: includes/Admin/ValuationPage.php:100
-msgid "Unit cost ex-VAT (kr)"
+#: includes/Admin/PurchasingPage.php:349
+#: includes/Admin/PurchasingPage.php:531
+#: includes/Admin/PurchasingPage.php:572
+msgid "Supplier product name"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:363
+#: includes/Admin/PurchasingPage.php:352
 msgid "Save line"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:387
+#: includes/Admin/PurchasingPage.php:370
+msgid "No lines yet."
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:397
+#: includes/Admin/PurchasingPage.php:892
+msgid "Edit"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:402
+msgid "Remove this line?"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:402
+msgid "Remove"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:419
+msgid "Choose a supplier to use its product catalog."
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:425
+msgid "Add from supplier catalog"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:427
+msgid "The supplier catalog is empty. Add a product below and enter the supplier identity to start it."
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:434
+msgid "Our product"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:436
+#: includes/Admin/StatusPage.php:322
+msgid "Incoming"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:485
 msgid "Search product by name or SKU…"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:388
-#: includes/Admin/PurchasingPage.php:750
+#: includes/Admin/PurchasingPage.php:486
+#: includes/Admin/PurchasingPage.php:930
 msgid "Search"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:421
+#: includes/Admin/PurchasingPage.php:522
 msgid "Product (SKU or id)"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:423
+#: includes/Admin/PurchasingPage.php:524
 msgid "Pick above, or type a SKU / product id"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:428
+#: includes/Admin/PurchasingPage.php:533
 msgid "Add line"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:455
+#: includes/Admin/PurchasingPage.php:555
+#: includes/Admin/PurchasingPage.php:622
 msgid "Back to order"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:460
+#: includes/Admin/PurchasingPage.php:556
+msgid "Print / Save as PDF"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:564
+#: includes/Admin/ValuationPage.php:336
+#: includes/Admin/ValuationPage.php:363
+msgid "Date"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:574
+msgid "Our product name"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:575
+msgid "Our SKU"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:576
+msgid "Qty ordered"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:627
 msgid "This purchase order is not open for receiving."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:467
+#: includes/Admin/PurchasingPage.php:634
 msgid "Receiving writes stock and requires active mode. It is disabled while the ledger runs in shadow mode — enable active mode under Lager → Innstillinger."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:476
+#: includes/Admin/PurchasingPage.php:643
 msgid "Quantities are pre-filled with what remains. Adjust for a partial delivery, then confirm. The server re-checks each remaining quantity at submit."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:487
+#: includes/Admin/PurchasingPage.php:654
 msgid "Receive now"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:519
+#: includes/Admin/PurchasingPage.php:686
 msgid "Actual unit cost ex-VAT for THIS delivery — pre-filled from the PO line; adjust if the invoice differs."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:531
-#: includes/Admin/PurchasingPage.php:589
+#: includes/Admin/PurchasingPage.php:706
+msgid "Which location these goods arrive at. Partial receipts of the same order can go to different locations."
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:711
+#: includes/Admin/PurchasingPage.php:769
 msgid "Received at"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:535
+#: includes/Admin/PurchasingPage.php:715
 msgid "When the goods physically arrived. Defaults to now; set it back for \"the goods came last week\"."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:542
+#: includes/Admin/PurchasingPage.php:722
 msgid "Receive goods"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:584
+#: includes/Admin/PurchasingPage.php:764
 msgid "Receipts"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:591
+#: includes/Admin/PurchasingPage.php:771
 msgid "Total qty"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:610
+#: includes/Admin/PurchasingPage.php:790
 msgid "View in movements"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:629
+#: includes/Admin/PurchasingPage.php:809
 msgid "Every open purchase-order line across all orders — the single \"what is coming\" answer."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:646
+#: includes/Admin/PurchasingPage.php:826
 msgid "Nothing incoming."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:689
-#: includes/Admin/PurchasingPage.php:769
+#: includes/Admin/PurchasingPage.php:869
+#: includes/Admin/PurchasingPage.php:951
+#: includes/Admin/SettingsPage.php:347
 msgid "Name"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:690
-#: includes/Admin/PurchasingPage.php:786
+#: includes/Admin/PurchasingPage.php:870
+#: includes/Admin/PurchasingPage.php:968
 msgid "Org. nr"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:691
-#: includes/Admin/PurchasingPage.php:774
+#: includes/Admin/PurchasingPage.php:871
+#: includes/Admin/PurchasingPage.php:956
 msgid "Country"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:692
-#: includes/Admin/PurchasingPage.php:796
+#: includes/Admin/PurchasingPage.php:872
+#: includes/Admin/PurchasingPage.php:978
 msgid "Email"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:693
-#: includes/Admin/PurchasingPage.php:801
+#: includes/Admin/PurchasingPage.php:873
+#: includes/Admin/PurchasingPage.php:983
 msgid "Phone"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:694
-#: includes/Admin/PurchasingPage.php:811
-#: includes/Admin/SettingsPage.php:169
+#: includes/Admin/PurchasingPage.php:874
+#: includes/Admin/PurchasingPage.php:993
+#: includes/Admin/SettingsPage.php:201
+#: includes/Admin/SettingsPage.php:362
 msgid "Active"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:700
+#: includes/Admin/PurchasingPage.php:880
 msgid "No suppliers yet."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:715
+#: includes/Admin/PurchasingPage.php:895
+#: includes/Admin/SettingsPage.php:367
 msgid "Deactivate"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:715
+#: includes/Admin/PurchasingPage.php:895
+#: includes/Admin/SettingsPage.php:367
 msgid "Activate"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:736
+#: includes/Admin/PurchasingPage.php:916
 msgid "Edit supplier"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:736
+#: includes/Admin/PurchasingPage.php:916
 msgid "New supplier"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:745
+#: includes/Admin/PurchasingPage.php:925
 msgid "Search Brønnøysund (name or org. nr)"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:748
+#: includes/Admin/PurchasingPage.php:928
 msgid "Company name or 9-digit org. nr…"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:751
+#: includes/Admin/PurchasingPage.php:932
 #, php-format
 msgid "Looks the company up in %s and fills the name and org. nr."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:753
+#: includes/Admin/PurchasingPage.php:935
 msgid "Search results"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:756
+#: includes/Admin/PurchasingPage.php:938
 #, php-format
 msgid "Filled from %s."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:757
+#: includes/Admin/PurchasingPage.php:939
 msgid "Source"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:791
+#: includes/Admin/PurchasingPage.php:973
 msgid "Norwegian 9-digit organisation number (MOD11-validated)."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:813
+#: includes/Admin/PurchasingPage.php:995
 msgid "Available for new purchase orders"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:816
+#: includes/Admin/PurchasingPage.php:998
 msgid "Save supplier"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:816
+#: includes/Admin/PurchasingPage.php:998
 msgid "Add supplier"
 msgstr ""
 
 #. translators: 1: product label, 2: requested qty
-#: includes/Admin/PurchasingPage.php:890
+#: includes/Admin/PurchasingPage.php:1072
 #, php-format
 msgid "Endring etter bestilling avvist: %1$s → %2$s (linjer er låst)."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1029
-msgid "— none —"
+#: includes/Admin/PurchasingPage.php:1147
+msgid "Pick a product, or enter a valid SKU / product id."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1036
-msgid "inactive"
+#: includes/Admin/PurchasingPage.php:1159
+#: includes/Admin/PurchasingPage.php:1195
+msgid "Enter a quantity of at least 1."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1169
-msgid "Draft purchase order created."
+#: includes/Admin/PurchasingPage.php:1161
+#: includes/Admin/PurchasingPage.php:1197
+msgid "The line could not be saved."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1170
-msgid "Purchase order saved."
+#: includes/Admin/PurchasingPage.php:1165
+msgid "Merged into the existing line."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1171
-msgid "Order placed. Lines are now locked."
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:1172
-msgid "Purchase order cancelled. Any received stock was kept."
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:1173
+#: includes/Admin/PurchasingPage.php:1165
+#: includes/Admin/PurchasingPage.php:1501
 msgid "Line added."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1174
-msgid "Product already on the order — its quantity was increased."
+#: includes/Admin/PurchasingPage.php:1179
+#: includes/Admin/PurchasingPage.php:1211
+msgid "That line was not found on this order."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1175
+#: includes/Admin/PurchasingPage.php:1199
+#: includes/Admin/PurchasingPage.php:1503
 msgid "Line saved."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1176
+#: includes/Admin/PurchasingPage.php:1214
+#: includes/Admin/PurchasingPage.php:1504
 msgid "Line removed."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1177
+#: includes/Admin/PurchasingPage.php:1220
+#: includes/Rest/Controller.php:349
+msgid "Purchasing is not enabled."
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:1227
+msgid "This order is placed — its lines are locked."
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:1343
+msgid "— none —"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:1350
+msgid "inactive"
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:1497
+msgid "Draft purchase order created."
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:1498
+msgid "Purchase order saved."
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:1499
+msgid "Order placed. Lines are now locked."
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:1500
+msgid "Purchase order cancelled. Any received stock was kept."
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:1502
+msgid "Product already on the order — its quantity was increased."
+msgstr ""
+
+#: includes/Admin/PurchasingPage.php:1505
 msgid "Supplier saved."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1178
+#: includes/Admin/PurchasingPage.php:1506
 msgid "Company found — the name was filled in below."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1182
+#: includes/Admin/PurchasingPage.php:1510
 msgid "Could not save. Please try again."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1183
+#: includes/Admin/PurchasingPage.php:1511
 msgid "Could not place the order — add at least one line to a draft first."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1184
+#: includes/Admin/PurchasingPage.php:1512
 msgid "Could not save the line."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1185
+#: includes/Admin/PurchasingPage.php:1513
 msgid "Pick a product first."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1186
+#: includes/Admin/PurchasingPage.php:1514
 msgid "The order is placed — lines are locked. The change was noted on the order instead."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1187
+#: includes/Admin/PurchasingPage.php:1515
 msgid "A supplier name is required."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1188
+#: includes/Admin/PurchasingPage.php:1516
 msgid "That organisation number failed the MOD11 check."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1189
+#: includes/Admin/PurchasingPage.php:1517
 msgid "No company found for that organisation number (or the registry was unavailable)."
 msgstr ""
 
-#. translators: 1: number of products seeded, 2: total stock-managed products
-#: includes/Admin/SettingsPage.php:89
-#, php-format
-msgid "Stock ledger enabled. Seeded %1$d of %2$d stock-managed products."
+#: includes/Admin/Screen.php:29
+msgid "You do not have permission to do this."
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:141
-msgid "Stock — settings"
+#: includes/Admin/Screen.php:33
+msgid "Invalid request method."
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:143
-msgid "The ledger is the source of truth for stock; every other number is a projection of it. Turn the ledger on in shadow mode first, prove reconciliation is clean over real traffic, then switch to active mode so adjustments, receipts and counts write through to WooCommerce."
+#: includes/Admin/Screen.php:110
+msgid "Reason…"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:152
-msgid "Stock ledger"
+#: includes/Admin/Screen.php:127
+msgid "Period…"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:155
-msgid "Enable ledger-backed stock management"
+#: includes/Admin/Screen.php:128
+msgid "Today"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:156
-msgid "Turning this on seeds an opening balance for every stock-managed product and starts recording every WooCommerce stock change. Turning it off stops the observer; recorded history is kept."
+#: includes/Admin/Screen.php:129
+msgid "Last 7 days"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:160
-msgid "Mode"
+#: includes/Admin/Screen.php:130
+msgid "Last 30 days"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:165
-msgid "Shadow"
+#: includes/Admin/Screen.php:131
+msgid "This month"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:165
-msgid "observe and record only; owned operations do not write to WooCommerce. Run this first."
+#: includes/Admin/Screen.php:132
+msgid "Last month"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:169
-msgid "adjustments, receipts and counts write through to WooCommerce stock."
+#: includes/Admin/Screen.php:133
+msgid "This year"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:173
-msgid "Active mode is on: owned stock operations now change WooCommerce _stock. Only switch to active once a shadow run has reconciled cleanly."
+#: includes/Admin/Screen.php:134
+msgid "All time"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:181
-msgid "Enable suppliers, purchase orders and receiving (Innkjøp)"
+#: includes/Admin/Screen.php:138
+msgid "Period"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:188
-msgid "Enable stock counting (Varetelling)"
+#: includes/Admin/Screen.php:143
+#: includes/Admin/StatusPage.php:665
+#: includes/Admin/StatusPage.php:666
+msgid "From"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:192
-msgid "Recount threshold (%)"
-msgstr ""
-
-#: includes/Admin/SettingsPage.php:196
-msgid "Count lines whose variance exceeds this percentage are flagged for recount before the count can be applied."
-msgstr ""
-
-#: includes/Admin/SettingsPage.php:200
-msgid "Negative stock"
-msgstr ""
-
-#: includes/Admin/SettingsPage.php:203
-msgid "Show a warning chip on Lagerstatus when on-hand is negative"
-msgstr ""
-
-#: includes/Admin/SettingsPage.php:207
-msgid "Cost tracking (FIFO)"
-msgstr ""
-
-#: includes/Admin/SettingsPage.php:210
-msgid "Track cost of goods with FIFO cost layers (Lagerverdi)"
-msgstr ""
-
-#: includes/Admin/SettingsPage.php:211
-msgid "Receipts and cost-entered adjustments create cost layers; sales consume them oldest-first. Enabling stamps a starting point — enter opening unit costs on the Lagerverdi screen afterwards. Works in shadow mode, but receipts (purchase orders) require active mode."
-msgstr ""
-
-#: includes/Admin/SettingsPage.php:215
-msgid "Order COGS"
-msgstr ""
-
-#: includes/Admin/SettingsPage.php:218
-msgid "Stamp each order line with its FIFO cost (for margin analytics)"
-msgstr ""
-
-#: includes/Admin/SettingsPage.php:219
-msgid "Writes the consumed cost onto the order line meta once stock is reduced. The WooCommerce “Cost of goods sold” feature must be enabled for the native COGS fields; the plugin’s own øre-exact meta is written regardless."
-msgstr ""
-
-#: includes/Admin/StatusPage.php:85
-msgid "Search products"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:86
-msgid "Title or SKU…"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:100
-msgid "Incoming"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:101
-msgid "Last movement"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:103
-msgid "Quick adjust"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:108
-msgid "No stock-managed products yet."
-msgstr ""
-
-#: includes/Admin/StatusPage.php:150
-msgid "Stock"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:153
-msgid "The stock ledger is not enabled yet."
-msgstr ""
-
-#: includes/Admin/StatusPage.php:154
-msgid "Open settings to enable it."
-msgstr ""
-
-#: includes/Admin/StatusPage.php:403
-msgid "Negative"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:406
-msgid "Low stock"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:430
-msgid "deleted"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:432
-msgid "not stock managed"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:442
-msgid "Switch to active mode in settings to adjust stock."
-msgstr ""
-
-#: includes/Admin/StatusPage.php:453
-msgid "à kr"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:453
-msgid "Unit cost ex-VAT (kr) — prices the cost layer when adding stock"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:456
-#: includes/Admin/ValuationPage.php:130
-msgid "Save"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:473
-msgid "Reconciliation found stock discrepancies."
-msgstr ""
-
-#: includes/Admin/StatusPage.php:482
-msgid "Ledger sum"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:485
-msgid "Lookup"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:486
-msgid "Owned tail"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:500
-msgid "yes"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:500
-msgid "no"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:506
-msgid "Heal"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:526
-msgid "Run check now"
-msgstr ""
-
-#: includes/Admin/StatusPage.php:542
-msgid "Stock adjusted."
-msgstr ""
-
-#. translators: %s: heal outcome
-#: includes/Admin/StatusPage.php:546
-#, php-format
-msgid "Heal complete: %s."
-msgstr ""
-
-#. translators: %d: number of discrepancies
-#: includes/Admin/StatusPage.php:554
-#, php-format
-msgid "Reconciliation complete: %d discrepancy found."
-msgid_plural "Reconciliation complete: %d discrepancies found."
-msgstr[0] ""
-msgstr[1] ""
-
-#: includes/Admin/StatusPage.php:557
-msgid "Reconciliation complete: no discrepancies."
-msgstr ""
-
-#: includes/Admin/StatusPage.php:561
-msgid "A valid product is required."
-msgstr ""
-
-#: includes/Admin/StatusPage.php:565
-msgid "A note is required for an adjustment."
-msgstr ""
-
-#: includes/Admin/StatusPage.php:585
-msgid "All categories"
+#: includes/Admin/Screen.php:145
+#: includes/Admin/StatusPage.php:672
+#: includes/Admin/StatusPage.php:673
+msgid "To"
 msgstr ""
 
 #. translators: %d: total item count
-#: includes/Admin/StatusPage.php:613
+#: includes/Admin/Screen.php:213
 #, php-format
 msgid "%d item"
 msgid_plural "%d items"
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Admin/ValuationPage.php:69
-#: includes/Admin/ValuationPage.php:77
+#. translators: 1: number of products seeded, 2: total stock-managed products
+#: includes/Admin/SettingsPage.php:98
+#, php-format
+msgid "Stock ledger enabled. Seeded %1$d of %2$d stock-managed products."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:165
+msgid "Stock — settings"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:170
+msgid "Location added."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:171
+msgid "Location renamed."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:172
+msgid "Default location changed."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:173
+msgid "Location status changed."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:175
+msgid "Could not change the location."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:181
+msgid "Ledger"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:184
+msgid "Stock ledger"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:187
+msgid "Record every stock change in the ledger"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:188
+msgid "Seeds opening balances on first enable. History is kept when turned off."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:192
+msgid "Mode"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:197
+msgid "Shadow"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:197
+msgid "record only, nothing written to WooCommerce"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:201
+msgid "adjustments, receipts and counts write to WooCommerce stock"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:205
+msgid "Active: stock operations now change WooCommerce stock."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:210
+msgid "Negative stock"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:213
+msgid "Flag negative on-hand on Stock status"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:217
+msgid "Allow adjustments and transfers to take a location below zero"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:227
+msgid "Modules"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:233
+msgid "Suppliers, purchase orders and receiving"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:244
+msgid "Recount threshold (%)"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:248
+msgid "Lines off by more than this are flagged for recount."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:256
+msgid "Order routing"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:259
+msgid "Map created_via"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:261
+msgid "Orders from these channels draw stock from the chosen location."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:263
+msgid "created_via"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:287
+msgid "Costing"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:290
+msgid "Cost tracking (FIFO)"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:293
+msgid "Track cost of goods (FIFO)"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:294
+msgid "Enter opening unit costs on Stock value after enabling."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:298
+msgid "Order COGS"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:301
+msgid "Write FIFO cost onto order lines"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:302
+msgid "Feeds WooCommerce’s Cost of goods sold when that feature is on."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:308
+msgid "Page cache"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:311
+msgid "Purge on stock change"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:318
+msgid "Off"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:319
+msgid "sold out, back in stock, backorder"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:320
+msgid "Stock status and low stock"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:320
+msgid "also every quantity change at or below the low-stock threshold"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:333
+msgid "Nginx Helper is not active, so there is no page cache to purge."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:335
+msgid "Stock changes from orders, refunds and Stock operations do not save the product, so Nginx Helper does not purge its page by itself. Uses WooCommerce’s low-stock threshold. Works with the stock ledger off."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:344
+msgid "Stock locations"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:348
+msgid "Default"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:350
+msgid "Actions"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:359
+msgid "Rename"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:362
+msgid "Inactive"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:365
+msgid "Set default"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:372
+#: includes/Admin/SettingsPage.php:378
+msgid "Add location"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:376
+msgid "Location name"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:377
+msgid "Make default"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:95
+msgid "Search products"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:96
+msgid "Title or SKU…"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:100
+msgid "Any low status"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:102
+#: includes/Admin/StatusPage.php:161
+#, php-format
+msgid "Low at %s"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:125
+msgid "No stock-managed products yet."
+msgstr ""
+
+#: includes/Admin/StatusPage.php:161
+msgid "Low"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:199
+msgid "Stock"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:202
+msgid "The stock ledger is not enabled yet."
+msgstr ""
+
+#: includes/Admin/StatusPage.php:203
+msgid "Open settings to enable it."
+msgstr ""
+
+#: includes/Admin/StatusPage.php:323
+msgid "Quick adjust"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:327
+msgid "Last movement"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:548
+msgid "Negative"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:551
+msgid "Low stock"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:575
+msgid "deleted"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:577
+msgid "not stock managed"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:587
+msgid "Switch to active mode in settings to adjust stock."
+msgstr ""
+
+#: includes/Admin/StatusPage.php:608
+#: includes/Admin/ValuationPage.php:127
+msgid "Save"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:647
+msgid "Switch to active mode in settings to transfer stock."
+msgstr ""
+
+#: includes/Admin/StatusPage.php:684
+msgid "Optional"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:687
+msgid "Transfer"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:731
+msgid "Reconciliation found stock discrepancies."
+msgstr ""
+
+#: includes/Admin/StatusPage.php:740
+msgid "Ledger sum"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:743
+msgid "Lookup"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:744
+msgid "Owned tail"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:758
+msgid "yes"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:758
+msgid "no"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:764
+msgid "Heal"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:784
+msgid "Run check now"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:799
+msgid "Stock adjusted."
+msgstr ""
+
+#: includes/Admin/StatusPage.php:800
+msgid "Stock transferred."
+msgstr ""
+
+#. translators: %s: heal outcome
+#: includes/Admin/StatusPage.php:803
+#, php-format
+msgid "Heal complete: %s."
+msgstr ""
+
+#. translators: %d: number of discrepancies
+#: includes/Admin/StatusPage.php:810
+#, php-format
+msgid "Reconciliation complete: %d discrepancy found."
+msgid_plural "Reconciliation complete: %d discrepancies found."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/Admin/StatusPage.php:813
+msgid "Reconciliation complete: no discrepancies."
+msgstr ""
+
+#: includes/Admin/StatusPage.php:818
+msgid "A valid product is required."
+msgstr ""
+
+#: includes/Admin/StatusPage.php:820
+msgid "A note is required for an adjustment."
+msgstr ""
+
+#: includes/Admin/StatusPage.php:821
+msgid "Enter a positive whole transfer quantity."
+msgstr ""
+
+#. translators: %s: transfer error message
+#: includes/Admin/StatusPage.php:824
+#, php-format
+msgid "Could not transfer stock: %s"
+msgstr ""
+
+#: includes/Admin/StatusPage.php:846
+msgid "All categories"
+msgstr ""
+
+#: includes/Admin/ValuationPage.php:66
+#: includes/Admin/ValuationPage.php:74
 msgid "Stock value (Lagerverdi)"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:78
+#: includes/Admin/ValuationPage.php:75
 msgid "Cost tracking is not enabled. Turn it on under Lager → Innstillinger."
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:93
+#: includes/Admin/ValuationPage.php:90
 msgid "Opening costs missing"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:94
+#: includes/Admin/ValuationPage.php:91
 msgid "these products had stock when cost tracking was enabled. Enter what one unit cost (ex-VAT) so the value on hand is complete; sales made in the meantime settle automatically."
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:98
+#: includes/Admin/ValuationPage.php:95
 msgid "Qty at start"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:99
+#: includes/Admin/ValuationPage.php:96
 msgid "Last PO cost"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:159
+#: includes/Admin/ValuationPage.php:156
 msgid "Value as of"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:161
-#: includes/Admin/ValuationPage.php:264
+#: includes/Admin/ValuationPage.php:158
+#: includes/Admin/ValuationPage.php:261
 msgid "Show"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:163
+#: includes/Admin/ValuationPage.php:160
 msgid "Now"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:169
+#: includes/Admin/ValuationPage.php:166
 msgid "Order COGS stamping is on, but WooCommerce’s “Cost of goods sold” feature is disabled — only the plugin’s own øre meta is being written. Enable the feature under WooCommerce → Settings → Advanced → Features for the native fields."
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:178
+#: includes/Admin/ValuationPage.php:176
 msgid "Avg cost"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:179
+#: includes/Admin/ValuationPage.php:177
 msgid "Value"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:180
+#: includes/Admin/ValuationPage.php:178
 msgid "Flags"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:185
+#: includes/Admin/ValuationPage.php:183
 msgid "No cost layers yet — receive goods with a cost, add stock with “à kr”, or enter opening costs."
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:198
+#: includes/Admin/ValuationPage.php:197
 #, php-format
 msgid "Uncosted %s"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:201
+#: includes/Admin/ValuationPage.php:200
 #, php-format
 msgid "Estimate %s"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:204
+#: includes/Admin/ValuationPage.php:203
 #, php-format
 msgid "Provisional %s"
-msgstr ""
-
-#: includes/Admin/ValuationPage.php:207
-msgid "Details"
 msgstr ""
 
 #. translators: 1: products with value, 2: products holding uncosted stock
@@ -1448,41 +1803,41 @@ msgstr ""
 msgid "Cost of goods sold"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:272
+#: includes/Admin/ValuationPage.php:269
 msgid "COGS"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:273
+#: includes/Admin/ValuationPage.php:270
 msgid "Uncosted qty"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:277
+#: includes/Admin/ValuationPage.php:274
 msgid "No consumption in the period."
 msgstr ""
 
 #. translators: 1: opening value, 2: inbound value, 3: COGS, 4: closing value
-#: includes/Admin/ValuationPage.php:295
+#: includes/Admin/ValuationPage.php:292
 #, php-format
 msgid "Opening %1$s + inbound %2$s − COGS %3$s = closing %4$s"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:302
+#: includes/Admin/ValuationPage.php:299
 msgid "Ties out to the øre"
 msgstr ""
 
 #. translators: %s: gap amount
-#: includes/Admin/ValuationPage.php:306
+#: includes/Admin/ValuationPage.php:303
 #, php-format
 msgid "Gap %s — expected with uncosted stock in the period"
 msgstr ""
 
 #. translators: %s: product label
-#: includes/Admin/ValuationPage.php:321
+#: includes/Admin/ValuationPage.php:319
 #, php-format
 msgid "Cost layers — %s"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:324
+#: includes/Admin/ValuationPage.php:323
 msgid "Back to stock value"
 msgstr ""
 
@@ -1503,11 +1858,6 @@ msgstr ""
 msgid "Ref"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:336
-#: includes/Admin/ValuationPage.php:363
-msgid "Date"
-msgstr ""
-
 #: includes/Admin/ValuationPage.php:345
 msgid "Estimate"
 msgstr ""
@@ -1524,15 +1874,15 @@ msgstr ""
 msgid "Cost"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:464
+#: includes/Admin/ValuationPage.php:466
 msgid "Opening cost saved — value on hand updated."
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:467
+#: includes/Admin/ValuationPage.php:468
 msgid "Enter a non-negative unit cost in kr."
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:470
+#: includes/Admin/ValuationPage.php:469
 msgid "Could not save the opening cost."
 msgstr ""
 
@@ -1564,7 +1914,11 @@ msgstr ""
 msgid "Correction"
 msgstr ""
 
-#: includes/Admin/ValuationPage.php:508
+#: includes/Admin/ValuationPage.php:492
+msgid "Transfer out"
+msgstr ""
+
+#: includes/Admin/ValuationPage.php:509
 #, php-format
 msgid "corrects layer #%d"
 msgstr ""
@@ -1617,141 +1971,183 @@ msgstr ""
 msgid "All stock-managed products (%d)"
 msgstr ""
 
-#: includes/Ledger/Reasons.php:77
+#: includes/Counting/Import.php:25
+msgid "The CSV is empty."
+msgstr ""
+
+#. translators: %s: the SKU column value that matched no product
+#: includes/Counting/Import.php:60
+#, php-format
+msgid "No product matched SKU “%s”."
+msgstr ""
+
+#: includes/Ledger/Reasons.php:90
+msgid "Damaged"
+msgstr ""
+
+#: includes/Ledger/Reasons.php:91
+msgid "Own use"
+msgstr ""
+
+#: includes/Ledger/Reasons.php:92
+msgid "Sample"
+msgstr ""
+
+#: includes/Ledger/Reasons.php:93
+msgid "Count correction"
+msgstr ""
+
+#: includes/Ledger/Reasons.php:94
+msgid "Found"
+msgstr ""
+
+#: includes/Ledger/Reasons.php:95
+msgid "Other"
+msgstr ""
+
+#: includes/Ledger/Reasons.php:107
 msgid "Salg"
 msgstr ""
 
-#: includes/Ledger/Reasons.php:78
+#: includes/Ledger/Reasons.php:108
 msgid "Salg tilbakeført"
 msgstr ""
 
-#: includes/Ledger/Reasons.php:79
+#: includes/Ledger/Reasons.php:109
 msgid "Refusjon (tilbake på lager)"
 msgstr ""
 
-#: includes/Ledger/Reasons.php:80
+#: includes/Ledger/Reasons.php:110
 msgid "Varemottak"
 msgstr ""
 
-#: includes/Ledger/Reasons.php:82
+#: includes/Ledger/Reasons.php:111
+msgid "Flytting inn"
+msgstr ""
+
+#: includes/Ledger/Reasons.php:112
+msgid "Flytting ut"
+msgstr ""
+
+#: includes/Ledger/Reasons.php:113
+msgid "Varetelling"
+msgstr ""
+
+#: includes/Ledger/Reasons.php:114
 msgid "Justering"
 msgstr ""
 
-#: includes/Ledger/Reasons.php:83
+#: includes/Ledger/Reasons.php:115
 msgid "Reversering"
 msgstr ""
 
-#: includes/Ledger/Reasons.php:84
+#: includes/Ledger/Reasons.php:116
 msgid "Ordrelinje-endring"
 msgstr ""
 
-#: includes/Ledger/Reasons.php:85
+#: includes/Ledger/Reasons.php:117
 msgid "Admin-endring"
 msgstr ""
 
-#: includes/Ledger/Reasons.php:86
+#: includes/Ledger/Reasons.php:118
 msgid "REST API"
 msgstr ""
 
-#: includes/Ledger/Reasons.php:87
+#: includes/Ledger/Reasons.php:119
 msgid "Import"
 msgstr ""
 
-#: includes/Ledger/Reasons.php:88
+#: includes/Ledger/Reasons.php:120
 msgid "Inngående saldo"
 msgstr ""
 
-#: includes/Ledger/Reasons.php:89
+#: includes/Ledger/Reasons.php:121
 msgid "Ekstern endring"
 msgstr ""
 
-#: includes/Plugin.php:33
+#: includes/Plugin.php:34
 msgid "Kaupang Stock requires WooCommerce to be active."
 msgstr ""
 
-#: includes/Purchasing/PurchaseOrders.php:279
+#: includes/Purchasing/PurchaseOrders.php:284
 msgid "Kladd"
 msgstr ""
 
-#: includes/Purchasing/PurchaseOrders.php:280
+#: includes/Purchasing/PurchaseOrders.php:285
 msgid "Bestilt"
 msgstr ""
 
-#: includes/Purchasing/PurchaseOrders.php:281
+#: includes/Purchasing/PurchaseOrders.php:286
 msgid "Delvis mottatt"
 msgstr ""
 
-#: includes/Purchasing/PurchaseOrders.php:282
+#: includes/Purchasing/PurchaseOrders.php:287
 msgid "Mottatt"
 msgstr ""
 
-#: includes/Purchasing/PurchaseOrders.php:283
+#: includes/Purchasing/PurchaseOrders.php:288
 msgid "Kansellert"
 msgstr ""
 
-#: includes/Purchasing/Receiving.php:66
+#: includes/Purchasing/Receiving.php:67
 msgid "A receive token is required."
 msgstr ""
 
-#: includes/Purchasing/Receiving.php:80
+#: includes/Purchasing/Receiving.php:87
 msgid "This purchase order is not open for receiving (it must be ordered)."
 msgstr ""
 
-#: includes/Purchasing/Receiving.php:94
+#: includes/Purchasing/Receiving.php:101
 msgid "Receiving writes stock and requires active mode. Enable active mode under Lager → Innstillinger."
 msgstr ""
 
-#: includes/Purchasing/Receiving.php:125
+#: includes/Purchasing/Receiving.php:132
 msgid "A submitted line does not belong to this purchase order."
 msgstr ""
 
-#: includes/Purchasing/Receiving.php:171
+#: includes/Purchasing/Receiving.php:178
 msgid "Nothing to receive — enter a quantity on at least one line."
 msgstr ""
 
-#: includes/Purchasing/Receiving.php:185
+#: includes/Purchasing/Receiving.php:192
 msgid "Some lines exceed the remaining quantity. Confirm to receive anyway (over-receipt is allowed)."
 msgstr ""
 
-#: includes/Rest/Controller.php:269
-#: includes/Rest/Controller.php:311
+#: includes/Rest/Controller.php:249
+#: includes/Rest/Controller.php:291
 msgid "Counting is not enabled."
 msgstr ""
 
-#: includes/Rest/Controller.php:279
+#: includes/Rest/Controller.php:259
 msgid "Provide either counted or increment."
 msgstr ""
 
-#: includes/Rest/Controller.php:295
+#: includes/Rest/Controller.php:275
 msgid "That line cannot be updated (it may not exist, or its count is not open for counting)."
 msgstr ""
 
-#: includes/Rest/Controller.php:316
+#: includes/Rest/Controller.php:296
 msgid "A note is required to override a flagged line."
 msgstr ""
 
-#: includes/Rest/Controller.php:321
+#: includes/Rest/Controller.php:301
 msgid "Line not found."
 msgstr ""
 
-#: includes/Rest/Controller.php:325
+#: includes/Rest/Controller.php:305
 msgid "Overrides are only possible while the count is in review."
 msgstr ""
 
-#: includes/Rest/Controller.php:330
+#: includes/Rest/Controller.php:310
 msgid "Could not override the line."
 msgstr ""
 
 #. translators: 1: line id, 2: product label, 3: user display name, 4: note.
-#: includes/Rest/Controller.php:337
+#: includes/Rest/Controller.php:317
 #, php-format
 msgid "[override] line #%1$d, %2$s, %3$s: %4$s"
 msgstr ""
 
-#: includes/Rest/Controller.php:369
-msgid "Purchasing is not enabled."
-msgstr ""
-
-#: includes/Rest/Controller.php:376
+#: includes/Rest/Controller.php:356
 msgid "The receiving module is not available yet."
 msgstr ""
