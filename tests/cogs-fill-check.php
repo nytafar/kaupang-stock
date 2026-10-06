@@ -7,13 +7,18 @@ PHP_SAPI === 'cli' || exit;
  *      _product_id/_qty meta afterwards, then completed + payment_complete)
  *      gets COGS from the product's WC value;
  *  (b) an order that already carries COGS is not recalculated when it turns
- *      paid, and a filled order is not recalculated again (idempotent);
+ *      paid, and a filled order is not recalculated again (idempotent); in an
+ *      order with a ledger line, a later restamp changes only that line: the
+ *      non-ledger line and a partial refund keep their stored cost;
  *  (c) a line whose consumptions are only partly costed is not understated:
  *      the uncosted qty is priced at the line's blended costed cost, and a
  *      NULL provisional settled by a costed backfill nets to zero uncosted.
  *
- *   sudo -u myrvann wp --path=/var/www/staging.myrvann.no/htdocs eval-file \
- *       wp-content/plugins/kaupang-stock/tests/cogs-fill-check.php
+ *   sudo -u <sysuser> wp --path=/var/www/<site>/htdocs eval-file \
+ *       /var/www/<site>/htdocs/wp-content/plugins/kaupang-stock/tests/cogs-fill-check.php
+ *
+ * e.g. sysuser myrvann, site staging.myrvann.no. eval-file resolves a relative
+ * path against the shell's cwd, not --path, so pass the absolute path.
  *
  * WRITES (staging/dev only, refuses production): throwaway orders (deleted
  * again), a durable KSTEST-COGS-FILL product (not stock-managed), and one fresh
@@ -63,7 +68,8 @@ Settings::flushCache();
 // caches stay), then register only the bridge.
 $quiet = static function (): array {
     $removed = [];
-    $hooks = ['woocommerce_pre_payment_complete', 'woocommerce_payment_complete', 'woocommerce_new_order', 'woocommerce_reduce_order_stock'];
+    $hooks = ['woocommerce_pre_payment_complete', 'woocommerce_payment_complete', 'woocommerce_new_order', 'woocommerce_reduce_order_stock',
+        'woocommerce_order_refunded', 'woocommerce_refund_created', 'woocommerce_order_partially_refunded', 'woocommerce_order_fully_refunded'];
     foreach ($GLOBALS['wp_filter'] as $h => $hook) {
         if (!str_starts_with((string) $h, 'woocommerce_order_status_') && !in_array($h, $hooks, true)) {
             continue;
@@ -217,12 +223,57 @@ try {
     $aLine   = $oaFresh->get_item($aItem);
     $check('(c) øre meta stamped 10000', (string) $aLine->get_meta(WcCogsBridge::META_ORE, true) === '10000', (string) $aLine->get_meta(WcCogsBridge::META_ORE, true));
     $check('(c) WC-native line COGS 100.00 kr', abs($aLine->get_cogs_value() - 100.0) < 0.001, (string) $aLine->get_cogs_value());
+
+    /* (b) mixed order: a restamp changes only the ledger line --------------- */
+    // Checkout-style order: one stock-managed line (no WC cost; ledger 60.00 kr)
+    // + two of the fill product at 40.00. COGS calculated at creation.
+    $setCost($fillId, 40.0);
+    Costing::stash('kstest:cogs:' . $run . ':in3', 6000);
+    Ledger::adjust($freshId, 1, 'KSTEST COGS mixed in', null, 'kstest:cogs:' . $run . ':in3', $loc);
+    $mixed = wc_create_order(['status' => 'pending']);
+    $ledgerLine = $mixed->add_product(wc_get_product($freshId), 1);
+    $plainLine  = $mixed->add_product(wc_get_product($fillId), 2);
+    $mixed->calculate_totals();
+    $mixed->save();
+    $mid = $mixed->get_id();
+    $orders[] = $mid;
+    wc_reduce_stock_levels($mid);  // sale → fold → bridge marks the order …
+    Costing::sweep();
+    WcCogsBridge::stampTouched();  // … and shutdown restamps it
+    $mixed = $fresh($mid);
+    $check('(b) mixed order after the sale: ledger 60.00 + 2 × 40.00 = 140.00', abs($mixed->get_cogs_total_value() - 140.0) < 0.001, (string) $mixed->get_cogs_total_value());
+    $refund = wc_create_refund([
+        'order_id'   => $mid,
+        'amount'     => 100,
+        'line_items' => [$plainLine => ['qty' => 1, 'refund_total' => 100]],
+    ]);
+    $check('(b) partial refund of one plain unit created', $refund instanceof WC_Order_Refund, is_wp_error($refund) ? $refund->get_error_message() : '');
+    $refundLine = $refund instanceof WC_Order_Refund ? (int) current($refund->get_items('line_item'))->get_id() : 0;
+    $check('(b) order net 100.00 after the refund', abs($fresh($mid)->get_cogs_total_value() - 100.0) < 0.001, (string) $fresh($mid)->get_cogs_total_value());
+
+    $setCost($fillId, 70.0); // today's cost moves
+    $mixed = $fresh($mid);
+    $mixed->set_status('completed'); // paid event days later → restamp (ledger line present)
+    $mixed->save();
+    WcCogsBridge::stampTouched();
+    $mixed = $fresh($mid);
+    $plain = $mixed->get_item($plainLine);
+    $rItem = $refundLine > 0 ? WC_Order_Factory::get_order_item($refundLine) : null;
+    $check('(b) restamp keeps the non-ledger line at 80.00 (not today\'s 140.00)', $plain && abs($plain->get_cogs_value() - 80.0) < 0.001, $plain ? (string) $plain->get_cogs_value() : 'no line');
+    $check('(b) and the ledger line at 60.00', abs($mixed->get_item($ledgerLine)->get_cogs_value() - 60.0) < 0.001, (string) $mixed->get_item($ledgerLine)->get_cogs_value());
+    $check('(b) the refund line\'s stored cost is -40.00', $rItem && abs($rItem->get_cogs_value() + 40.0) < 0.001, $rItem ? (string) $rItem->get_cogs_value() : 'no refund line');
+    // The total is where a restamp would re-price the refund (refund items are
+    // recalculated in memory, never re-saved): 60 + 80 - 40, old code 60 + 140 - 70.
+    $check('(b) order net stays 100.00: the refund counts at its stored -40.00 (old: 130)', abs($mixed->get_cogs_total_value() - 100.0) < 0.001, (string) $mixed->get_cogs_total_value());
 } catch (Throwable $e) {
     $check('unexpected throw', false, $e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine());
 } finally {
     foreach ($orders as $id) {
         $o = wc_get_order($id);
         if ($o) {
+            foreach ($o->get_refunds() as $r) {
+                $r->delete(true);
+            }
             $o->delete(true);
         }
     }

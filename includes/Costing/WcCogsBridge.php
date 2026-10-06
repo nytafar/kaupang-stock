@@ -53,6 +53,9 @@ final class WcCogsBridge {
 
     private static bool $armed = false;
 
+    /** True while restampOrder() recalculates: lines without ledger value keep their stored COGS. */
+    private static bool $keepStored = false;
+
     public static function register(): void {
         if (!Costing::enabled() || !Settings::get('cogs_order_meta_enabled')) {
             return;
@@ -119,7 +122,8 @@ final class WcCogsBridge {
      * Write the øre meta on every line with ledger consumptions, then let WC
      * recalculate its native COGS fields (the item filter serves our values).
      * An order with no ledger line and no COGS yet gets its first calculation
-     * (the fill); one that already has COGS and no ledger line is left alone.
+     * (the fill); one that already has COGS and no ledger line is left alone,
+     * and in one with ledger lines only those lines (and the total) change.
      * Idempotent; callable from CLI/UI to refresh after true-ups.
      */
     public static function restampOrder(int $orderId): void {
@@ -145,15 +149,24 @@ final class WcCogsBridge {
             return;
         }
         // WC-native fields: recalculate through core so the item filter serves
-        // the ledger values into _cogs_value / _cogs_total_value.
-        if ($stamped) {
-            $order->calculate_cogs_total_value();
-            $order->save();
-            return;
-        }
-        // Fill: first calculation for an order no core path calculated.
-        if (!self::hasCogs($order) && $order->calculate_cogs_total_value() != 0.0) {
-            $order->save(); // a zero result has nothing to persist (WC stores 0 as no meta)
+        // the ledger values into _cogs_value / _cogs_total_value. Core
+        // recalculates every line and every refund line; under $keepStored the
+        // filter hands back the stored value for any line without ledger value
+        // (non-stock-managed, all-uncosted, refund lines keyed by the refund
+        // id), so only ledger lines can change.
+        self::$keepStored = true;
+        try {
+            if ($stamped) {
+                $order->calculate_cogs_total_value();
+                $order->save();
+                return;
+            }
+            // Fill: first calculation for an order no core path calculated.
+            if (!self::hasCogs($order) && $order->calculate_cogs_total_value() != 0.0) {
+                $order->save(); // a zero result has nothing to persist (WC stores 0 as no meta)
+            }
+        } finally {
+            self::$keepStored = false;
         }
     }
 
@@ -181,6 +194,11 @@ final class WcCogsBridge {
     /**
      * `woocommerce_calculated_order_item_cogs_value` — replace core's
      * product-field snapshot with the ledger's consumed cost when it exists.
+     * During our own restamp a line without ledger value keeps the COGS it
+     * already has stored, so a restamp never swaps historical cost for today's
+     * product cost. Core's own recalculations (admin Recalculate, refund
+     * creation) keep core's behaviour for such lines, so an admin quantity
+     * edit is still re-priced.
      *
      * @param float|null $value core's calculated value
      * @param \WC_Order_Item $item
@@ -196,7 +214,18 @@ final class WcCogsBridge {
             return $value;
         }
         $ore = self::ledgerCogsOreForItem($orderId, $itemId);
-        return $ore !== null ? $ore / 100 : $value;
+        if ($ore !== null) {
+            return $ore / 100;
+        }
+        if (self::$keepStored) {
+            // get_data() holds the loaded (stored) props, not pending changes;
+            // null = nothing stored (never calculated, or 0.0) → core's value.
+            $stored = $item->get_data()['cogs_value'] ?? null;
+            if ($stored !== null) {
+                return (float) $stored;
+            }
+        }
+        return $value;
     }
 
     /**
