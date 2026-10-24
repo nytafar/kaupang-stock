@@ -20,6 +20,7 @@ final class Absorber {
 
     private static bool $registered = false;
 
+    /** Called by DirtyRegistry::markDirty(): only a request that moved stock adds the shutdown hook. */
     public static function register(): void {
         if (self::$registered) {
             return;

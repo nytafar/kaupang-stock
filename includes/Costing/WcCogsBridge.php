@@ -56,21 +56,20 @@ final class WcCogsBridge {
     /** True while restampOrder() recalculates: lines without ledger value keep their stored COGS. */
     private static bool $keepStored = false;
 
-    public static function register(): void {
-        if (!Costing::enabled() || !Settings::get('cogs_order_meta_enabled')) {
-            return;
-        }
-        // Serve ledger truth into WC's item-level COGS calculation (fires
-        // whenever core recalculates an order's COGS, incl. our own restamp).
-        \add_filter('woocommerce_calculated_order_item_cogs_value', [self::class, 'serveItemCogs'], 10, 2);
-        // After the costing fold (priority 10 on the same action).
-        \add_action('kaupang/stock/movement_recorded', [self::class, 'onMovement'], 20);
-        // Channel-agnostic fill for orders no core path calculated COGS for.
-        \add_action('woocommerce_payment_complete', [self::class, 'onPaid'], 10, 1);
-        \add_action('woocommerce_order_status_changed', [self::class, 'onPaid'], 10, 3);
+    /**
+     * The bridge's flag. Its hooks (Plugin::boot(): the item-COGS filter,
+     * movement_recorded after the fold, payment_complete + status_changed for
+     * the channel-agnostic fill) are registered everywhere; each handler
+     * returns unchanged unless this holds.
+     */
+    public static function active(): bool {
+        return Costing::enabled() && (bool) Settings::get('cogs_order_meta_enabled');
     }
 
     public static function onMovement(Movement $movement): void {
+        if (!self::active()) {
+            return;
+        }
         if ($movement->refType !== 'order' || $movement->refId === null) {
             return;
         }
@@ -86,6 +85,9 @@ final class WcCogsBridge {
      * @param string|null $to null from payment_complete
      */
     public static function onPaid($orderId, $from = '', $to = null): void {
+        if (!self::active()) {
+            return;
+        }
         if ($to !== null && !in_array($to, \wc_get_is_paid_statuses(), true)) {
             return;
         }
@@ -205,7 +207,7 @@ final class WcCogsBridge {
      * @return float|null
      */
     public static function serveItemCogs($value, $item) {
-        if (!$item instanceof \WC_Order_Item_Product) {
+        if (!self::active() || !$item instanceof \WC_Order_Item_Product) {
             return $value;
         }
         $orderId = (int) $item->get_order_id();

@@ -67,6 +67,28 @@ Purge caches after flag changes: `wp --path=… nginx-helper purge-all --allow-r
 Embedded: a "Lager" panel on the product edit screen and a read-only movements meta box on
 the order edit screen — provenance is always one click away.
 
+## Load map
+
+`Plugin::boot()` only adds hooks with class-string callbacks (conventions §5A); a module's file loads when its event
+fires. No storefront output, no `tools/load-budget.php`: the default budget applies (2 files, no assets, no autoloaded
+option). Check: `tools/check.php` (below), storefront: `wp kaupang-assets audit --plugins=kaupang-stock --budget`.
+
+| Context | Loads | Assets | Autoloaded options |
+|---|---|---|---|
+| Guest page view (every page type, incl. cart/checkout renders that fire `rest_api_init`) | main file, `Plugin` | none | none |
+| A stock/order event (checkout, Store API, admin order edit, refund, REST, cron/AS, CLI) | the listening handler (`Observe\Observer`, `Support\PageCache`, `Costing\WcCogsBridge`) + `Settings`; ledger classes when `stock_enabled`; `Observe\Absorber` on shutdown after the first dirty product | none | none (settings: one object-cache read) |
+| REST `kaupang-stock/v1/*` | `Rest\Controller` on dispatch (routes are registered from `Plugin`; `can()` refuses while disabled) | none | none |
+| Action Scheduler | `Reconcile\Reconciler` on `kaupang_stock_reconcile` and on the daily `action_scheduler_ensure_recurring_actions` | none | none |
+| wp-admin screens (not admin-ajax) | `Admin\Menu` + its pages; product/order panels when enabled; `Schema` upgrade on `admin_init` | `kaupang-stock-admin` (+ `-counting`, `-purchasing`) on its own screens only | none |
+| WP-CLI | `Cli\Command` | none | none |
+
+`kaupang_stock_settings` and `kaupang_stock_schema_version` are not autoloaded (schema v6 moves existing rows; it runs
+on the next wp-admin page load after a deploy). The daily reconcile is scheduled (unique) from Action Scheduler's
+ensure hook, after every settings write and on activation — never on a request path.
+
+Check: `sudo -u <sysuser> wp --path=/var/www/<site>/htdocs eval-file /var/www/<site>/htdocs/wp-content/plugins/kaupang-stock/tools/check.php`
+(read-only: flags through option filters, no movement written, nothing scheduled; exits non-zero on failure).
+
 ## CLI
 
 The command is registered whether or not the plugin is enabled, so `status`/`verify` work

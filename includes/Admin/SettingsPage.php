@@ -17,7 +17,7 @@ use Kaupang\Stock\Settings;
  * traffic, then flip `mode` to `active` so owned operations may write through.
  *
  * CRITICAL: when stock_enabled transitions false→true, the option-transition
- * watcher (watch(), hooked on add_option_/update_option_ for the key) runs the
+ * watcher (Plugin::boot(), hooked on add_option_/update_option_ for the key) runs the
  * enable-time seeding sweep (Seeder::sweep()) AFTER the option is persisted, so
  * Lagerstatus and the reconciler are complete from the moment the feature turns
  * on. The sweep must NOT run inside sanitize(): update_option() sanitizes
@@ -45,13 +45,9 @@ final class SettingsPage {
      * Option-transition watcher — registered unconditionally from Plugin::boot()
      * (the enable transition happens while the plugin is otherwise dormant, and
      * programmatic flips via Settings::update() / WP-CLI must seed too).
+     *
+     * @param mixed $value
      */
-    public static function watch(): void {
-        \add_action('add_option_' . Settings::OPTION_KEY, [self::class, 'optionAdded'], 10, 2);
-        \add_action('update_option_' . Settings::OPTION_KEY, [self::class, 'optionUpdated'], 10, 2);
-    }
-
-    /** @param mixed $value */
     public static function optionAdded(string $option, $value): void {
         self::maybeSeed([], is_array($value) ? $value : []);
     }

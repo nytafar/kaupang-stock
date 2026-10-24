@@ -30,6 +30,7 @@ final class DirtyRegistry {
             return; // our own write-through — the ledger already moved in step
         }
         self::$dirty[$managedId] = true;
+        Absorber::register(); // arms the shutdown true-up (idempotent); a request with no dirty product never loads it
     }
 
     /**

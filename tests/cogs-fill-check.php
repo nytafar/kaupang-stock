@@ -88,7 +88,9 @@ $quiet = static function (): array {
     return $removed;
 };
 $removed = $quiet();
-WcCogsBridge::register();
+// $quiet() detached the bridge's own status/payment hooks too: re-add only those.
+add_action('woocommerce_payment_complete', [WcCogsBridge::class, 'onPaid'], 10, 1);
+add_action('woocommerce_order_status_changed', [WcCogsBridge::class, 'onPaid'], 10, 3);
 
 $orders   = [];
 $freshId  = 0;

@@ -35,15 +35,6 @@ final class Costing {
         return Settings::enabled() && (bool) Settings::get('costing_enabled');
     }
 
-    public static function register(): void {
-        if (!self::enabled()) {
-            return;
-        }
-        \add_action('kaupang/stock/movement_recorded', [self::class, 'onMovement']);
-        // Order-COGS stamping for margin analytics (own flag inside register()).
-        WcCogsBridge::register();
-    }
-
     /* ------------------------------ Facade -------------------------------- */
 
     /**

@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Kaupang\Stock;
 
 /**
- * Single autoloaded option, static request-cache — the suite's settings contract.
+ * Single non-autoloaded option (read only where a handler runs), static request-cache — the suite's settings contract.
  *
  * Every flag defaults false/safe: a fresh activation records nothing and shows
  * only the settings screen until stock_enabled is switched on. `mode` starts in
@@ -68,7 +68,7 @@ final class Settings {
     public static function update(array $patch): void {
         $merged = array_replace(self::all(), $patch);
         self::$cache = $merged;
-        \update_option(self::OPTION_KEY, $merged, true);
+        \update_option(self::OPTION_KEY, $merged, false);
     }
 
     public static function flushCache(): void {

@@ -25,7 +25,8 @@ final class Schema {
     // v4: supplier_products — supplier-specific product identity/catalog used
     //     by the purchase-order editor and printable ordering list.
     // v5: locations.active — soft-deactivation for multi-location routing.
-    public const VERSION        = 5;
+    // v6: no table change; settings + this marker move off autoload (Track 4).
+    public const VERSION        = 6;
     public const VERSION_OPTION = 'kaupang_stock_schema_version';
 
     public static function movements(): string {
@@ -287,12 +288,14 @@ final class Schema {
             ], ['%d', '%s', '%d', '%d']);
         }
 
-        \update_option(self::VERSION_OPTION, self::VERSION, true);
+        \update_option(self::VERSION_OPTION, self::VERSION, false);
+        // v6: settings + version marker off autoload (no storefront request reads them).
+        \wp_set_option_autoload_values([Settings::OPTION_KEY => false, self::VERSION_OPTION => false]);
     }
 
     /**
      * Version-gated upgrade runner, hooked on admin_init (mirrors fiken's
-     * maybeUpgradeStorage throttle — the option compare is one autoloaded read).
+     * maybeUpgradeStorage throttle — the option compare is one non-autoloaded read, admin only).
      */
     public static function maybeUpgrade(): void {
         if ((int) \get_option(self::VERSION_OPTION, 0) < self::VERSION) {

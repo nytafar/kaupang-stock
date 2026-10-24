@@ -353,7 +353,7 @@ try {
         }
     }
     if ($hadSettings) {
-        update_option(Settings::OPTION_KEY, $storedSettings, true);
+        update_option(Settings::OPTION_KEY, $storedSettings, false);
     } else {
         delete_option(Settings::OPTION_KEY);
     }

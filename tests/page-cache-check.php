@@ -33,26 +33,32 @@ $hooks = [
     'woocommerce_product_before_set_stock' => 'rememberStock', 'woocommerce_variation_before_set_stock' => 'rememberStock',
     'woocommerce_product_set_stock' => 'onStock', 'woocommerce_variation_set_stock' => 'onStock',
 ];
-$unhook = static function () use ($hooks): void {
-    foreach ($hooks as $hook => $method) {
-        remove_action($hook, [PageCache::class, $method]);
-    }
-};
+// Hooks are registered everywhere (Plugin::boot()); the mode gates the handlers.
+foreach ($hooks as $hook => $method) {
+    $assert(false !== has_action($hook, [PageCache::class, $method]), "$hook registered");
+}
+$modeFilter = static fn(string $mode) => static fn($v) => array_replace(is_array($v) ? $v : [], ['page_cache_purge' => $mode]);
 
-// Registration per mode, via an option filter (nothing is written).
-foreach (['off' => [false, false], 'status' => [true, false], 'low_stock' => [true, true]] as $mode => [$status, $stock]) {
-    $filter = static fn($v) => array_replace(is_array($v) ? $v : [], ['page_cache_purge' => $mode]);
+// Per mode, via an option filter (nothing is written).
+foreach (['off' => '', 'status' => 'status', 'low_stock' => 'low_stock'] as $mode => $effective) {
+    $filter = $modeFilter($mode);
     add_filter('option_' . Settings::OPTION_KEY, $filter);
     Settings::flushCache();
-    $unhook();
-    PageCache::register();
-    $assert($status === (false !== has_action('woocommerce_product_set_stock_status', [PageCache::class, 'onStatus'])), "$mode: status hook");
-    $assert($stock === (false !== has_action('woocommerce_product_set_stock', [PageCache::class, 'onStock'])), "$mode: quantity hook");
+    $noAmount = static fn() => 'no_amount';
+    add_filter('pre_option_woocommerce_stock_format', $noAmount);
+    $assert(PageCache::mode() === ('low_stock' === $effective ? 'status' : $effective), "$mode: no_amount drops quantity purges");
+    remove_filter('pre_option_woocommerce_stock_format', $noAmount);
+    $assert(PageCache::mode() === $effective || 'no_amount' === get_option('woocommerce_stock_format'), "$mode: effective mode");
+    PageCache::flush();
+    PageCache::onStatus($id, $product->get_stock_status(), $product);
+    $assert(('' !== $effective) === (PageCache::flush() === [$id]), "$mode: status change purges only when on");
     remove_filter('option_' . Settings::OPTION_KEY, $filter);
 }
+
+// The quantity rules run in low_stock mode whatever the site's own setting.
+$lowFilter = $modeFilter('low_stock');
+add_filter('option_' . Settings::OPTION_KEY, $lowFilter);
 Settings::flushCache();
-$unhook();
-PageCache::register(); // back to the site's own mode
 
 // Quantity rule on in-memory products: purge when the old or new quantity is
 // at or below the low-stock threshold.
@@ -71,6 +77,8 @@ PageCache::flush();
 $assert($change($low + 5, $low + 1) === [], "sale above threshold ($low) does not purge");
 $assert($change($low + 1, $low) === [$id], "sale reaching threshold ($low) purges");
 $assert($change($low, $low + 10) === [$id], "restock from threshold ($low) purges");
+remove_filter('option_' . Settings::OPTION_KEY, $lowFilter);
+Settings::flushCache();
 
 if ('off' === $siteMode) {
     WP_CLI::success('page-cache: rules ok (site setting is off; end-to-end skipped).');

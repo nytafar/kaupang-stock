@@ -33,39 +33,9 @@ final class Observer {
     /** @var array<int,array<int,array<int,array{qty:float,item_id:int}>>> */
     private static array $refundQtyQueues = [];
 
-    public static function register(): void {
-        // Rich hooks — fire after the item's _stock write.
-        \add_action('woocommerce_reduce_order_item_stock', [self::class, 'onReduceOrderItemStock'], 10, 3);
-        \add_action('woocommerce_restore_order_item_stock', [self::class, 'onRestoreOrderItemStock'], 10, 4);
-        \add_action('woocommerce_restock_refunded_item', [self::class, 'onRestockRefundedItem'], 10, 5);
-
-        // Claims — write paths that announce themselves. Observe-only: the
-        // prevent filter is returned unchanged (§0 principle 3 — mirror, never
-        // fight; vetoing would desync core's stock_reduced bookkeeping).
-        \add_filter('woocommerce_prevent_adjust_line_item_product_stock', [self::class, 'claimOrderItemEdit'], 10, 3);
-        \add_action('woocommerce_product_quick_edit_save', [self::class, 'claimAdminEdit']);
-        \add_action('woocommerce_product_bulk_edit_save', [self::class, 'claimAdminEdit']);
-        \add_action('woocommerce_admin_process_product_object', [self::class, 'claimAdminEdit']);
-        \add_action('woocommerce_admin_process_variation_object', [self::class, 'claimAdminEdit'], 10, 1);
-        \add_action('woocommerce_rest_insert_product_object', [self::class, 'claimRest'], 10, 1);
-        \add_action('woocommerce_rest_insert_product_variation_object', [self::class, 'claimRest'], 10, 1);
-        \add_action('woocommerce_product_import_inserted_product_object', [self::class, 'claimImport'], 10, 1);
-
-        // Dirty marking — the one pair that fires on EVERY core write path
-        // (including the $updating=true raw-SQL one), plus the id-only safety
-        // net for hypothetical direct data-store callers.
-        \add_action('woocommerce_product_set_stock', [self::class, 'markDirtyProduct']);
-        \add_action('woocommerce_variation_set_stock', [self::class, 'markDirtyProduct']);
-        \add_action('woocommerce_updated_product_stock', [self::class, 'markDirtyId']);
-
-        // Cross-plugin claim seam: an external system about to move WC stock
-        // (e.g. kaupang-fiken mirroring a decrease made in Fiken) announces its
-        // attribution first, so the absorber labels the residual with it
-        // instead of a bare `external`. Registry: kaupang-dev-context.md §4.
-        \add_action('kaupang/stock/claim', [self::class, 'claimExternal'], 10, 2);
-
-        Absorber::register();
-    }
+    // Hooks: registered everywhere from Plugin::boot() (rich hooks, claims,
+    // dirty marking, the kaupang/stock/claim seam). Every handler returns at
+    // once while stock_enabled is off: safely() and claimExternal() check it.
 
     /**
      * `do_action('kaupang/stock/claim', $managedId, $claim)` — file a claim on
@@ -78,6 +48,9 @@ final class Observer {
      */
     public static function claimExternal($managedId, $claim = []): void {
         try {
+            if (!Settings::enabled()) {
+                return;
+            }
             $managedId = (int) $managedId;
             $claim     = is_array($claim) ? $claim : [];
             if ($managedId <= 0) {
@@ -381,9 +354,12 @@ final class Observer {
         return \Kaupang\Stock\Ledger\Balances::defaultLocationId();
     }
 
-    /** Observer code never throws into core's flow. */
+    /** Observer code never throws into core's flow, and records nothing while the ledger is off. */
     private static function safely(callable $fn, string $context): void {
         try {
+            if (!Settings::enabled()) {
+                return;
+            }
             $fn();
         } catch (\Throwable $e) {
             Logger::error('observer_error', ['context' => $context, 'error' => $e->getMessage()]);

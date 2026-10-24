@@ -128,7 +128,6 @@ try {
         'allow_negative_locations' => true,
     ]);
     Costing::stampAnchorIfMissing();
-    Costing::register();
 
     // Reusable fixture: bring every active projection back to zero through the
     // public ledger before this run starts.
@@ -301,7 +300,7 @@ try {
     wp_set_current_user($originalUserId);
 
     if ($hadSettings) {
-        update_option(Settings::OPTION_KEY, $storedSettings, true);
+        update_option(Settings::OPTION_KEY, $storedSettings, false);
     } else {
         delete_option(Settings::OPTION_KEY);
     }

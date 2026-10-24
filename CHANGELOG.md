@@ -5,6 +5,13 @@ All notable changes to Kaupang Stock. Format: [Keep a Changelog](https://keepach
 
 ## [Unreleased]
 
+### Changed
+- Loading (stock#13, FE-03, FE-07): boot only adds hooks with class-string handlers; a guest page view loads the main file and `Plugin` (was 11 files). Woo stock/order handlers, the COGS bridge and the page-cache purge stay registered in every context and check their flags when they run; the shutdown absorber arms on the first dirty product; REST routes are registered from `Plugin` (the controller loads on dispatch and refuses while the ledger is off).
+- The daily reconcile is scheduled from Action Scheduler's `action_scheduler_ensure_recurring_actions`, after settings writes and on activation (unique), no longer on public `init`; a leftover action on a disabled install records nothing.
+- `kaupang_stock_settings` and `kaupang_stock_schema_version` are no longer autoloaded (schema v6 migrates existing rows on the next wp-admin load; every write is explicit).
+- Admin screens boot only on wp-admin pages, not on admin-ajax.
+- `tools/check.php`: loading check (5A, autoload, every Woo event reaching its handler, reconcile scheduling, REST, admin assets on a foreign screen).
+
 ## [0.14.0] - 2026-10-06
 
 ### Added

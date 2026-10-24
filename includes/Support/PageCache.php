@@ -32,23 +32,17 @@ final class PageCache {
     /** @var array<int,int|float|null> Stock before the pending change, per product ID. */
     private static array $before = [];
 
-    public static function register(): void {
+    /**
+     * The effective purge mode: 'status', 'low_stock' or '' (off). Quantity
+     * purges never apply with stock format 'no_amount'. The hooks are
+     * registered everywhere from Plugin::boot(); each handler checks this.
+     */
+    public static function mode(): string {
         $mode = Settings::get('page_cache_purge');
-        if ('status' !== $mode && 'low_stock' !== $mode) {
-            return;
+        if ('low_stock' === $mode) {
+            return 'no_amount' === \get_option('woocommerce_stock_format') ? 'status' : 'low_stock';
         }
-
-        \add_action('woocommerce_product_set_stock_status', [self::class, 'onStatus'], 10, 3);
-        \add_action('woocommerce_variation_set_stock_status', [self::class, 'onStatus'], 10, 3);
-
-        if ('low_stock' === $mode && 'no_amount' !== \get_option('woocommerce_stock_format')) {
-            // Both stock write paths (CRUD save, wc_update_product_stock) fire
-            // before_set_stock while get_data() still holds the old quantity.
-            \add_action('woocommerce_product_before_set_stock', [self::class, 'rememberStock']);
-            \add_action('woocommerce_variation_before_set_stock', [self::class, 'rememberStock']);
-            \add_action('woocommerce_product_set_stock', [self::class, 'onStock']);
-            \add_action('woocommerce_variation_set_stock', [self::class, 'onStock']);
-        }
+        return 'status' === $mode ? 'status' : '';
     }
 
     /**
@@ -57,6 +51,9 @@ final class PageCache {
      * @param \WC_Product|null $product
      */
     public static function onStatus($id, $status, $product = null): void {
+        if ('' === self::mode()) {
+            return;
+        }
         $product = $product instanceof \WC_Product ? $product : \wc_get_product((int) $id);
         if ($product) {
             self::queue($product);
@@ -64,10 +61,16 @@ final class PageCache {
     }
 
     public static function rememberStock(\WC_Product $product): void {
+        if ('low_stock' !== self::mode()) {
+            return;
+        }
         self::$before[$product->get_id()] = $product->get_data()['stock_quantity'] ?? null;
     }
 
     public static function onStock(\WC_Product $product): void {
+        if ('low_stock' !== self::mode()) {
+            return;
+        }
         $low = \wc_get_low_stock_amount($product);
         $new = $product->get_stock_quantity();
         $old = self::$before[$product->get_id()] ?? null;

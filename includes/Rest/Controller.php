@@ -13,8 +13,10 @@ use Kaupang\Stock\Settings;
 use Kaupang\Stock\Support\ProductSearch;
 
 /**
- * The plugin's REST controller — namespace kaupang-stock/v1, wired from
- * Plugin.php. Every route's permission_callback is the plugin capability
+ * The plugin's REST controller — namespace kaupang-stock/v1. The route table
+ * lives in Plugin::restRoutes() (class-string callbacks), so this class loads
+ * only when one of its routes is dispatched, never on a Store API call or a
+ * cart/checkout render that merely fires rest_api_init. Every route's permission_callback is the plugin capability
  * (Settings::capability(), the kaupang/stock/can_manage seam); per-user calls MUST
  * carry the wp_rest nonce as X-WP-Nonce (suite gotcha #1 — the admin JS reads it
  * off the localized KaupangStock global).
@@ -31,120 +33,13 @@ use Kaupang\Stock\Support\ProductSearch;
  */
 final class Controller {
 
-    private const NS = 'kaupang-stock/v1';
-
-    public static function register(): void {
-        \add_action('rest_api_init', [self::class, 'routes']);
-    }
-
-    public static function routes(): void {
-        \register_rest_route(self::NS, '/movements', [
-            'methods'             => 'GET',
-            'callback'            => [self::class, 'movements'],
-            'permission_callback' => [self::class, 'can'],
-            'args'                => [
-                'product_id' => ['type' => 'integer', 'required' => false],
-                'location_id' => ['type' => 'integer', 'required' => false],
-                'ref_type'   => ['type' => 'string', 'required' => false],
-                'ref_id'     => ['type' => 'integer', 'required' => false],
-                'batch'      => ['type' => 'string', 'required' => false],
-                'reason'     => ['type' => 'string', 'required' => false],
-                'since'      => ['type' => 'string', 'required' => false],
-                'page'       => ['type' => 'integer', 'required' => false],
-                'per_page'   => ['type' => 'integer', 'required' => false],
-            ],
-        ]);
-
-        \register_rest_route(self::NS, '/count-lines/(?P<id>\d+)', [
-            'methods'             => 'POST',
-            'callback'            => [self::class, 'countLine'],
-            'permission_callback' => [self::class, 'can'],
-            'args'                => [
-                'id'        => ['type' => 'integer', 'required' => true],
-                'counted'   => ['type' => 'number', 'required' => false],
-                'increment' => ['type' => 'number', 'required' => false],
-            ],
-        ]);
-
-        \register_rest_route(self::NS, '/count-lines/(?P<id>\d+)/override', [
-            'methods'             => 'POST',
-            'callback'            => [self::class, 'countLineOverride'],
-            'permission_callback' => [self::class, 'can'],
-            'args'                => [
-                'id'   => ['type' => 'integer', 'required' => true],
-                'note' => ['type' => 'string', 'required' => true],
-            ],
-        ]);
-
-        \register_rest_route(self::NS, '/counts/(?P<id>\d+)/apply', [
-            'methods'             => 'POST',
-            'callback'            => [self::class, 'countApply'],
-            'permission_callback' => [self::class, 'can'],
-            'args'                => [
-                'id'        => ['type' => 'integer', 'required' => true],
-                'confirmed' => ['type' => 'boolean', 'required' => false],
-            ],
-        ]);
-
-        \register_rest_route(self::NS, '/products', [
-            'methods'             => 'GET',
-            'callback'            => [self::class, 'products'],
-            'permission_callback' => [self::class, 'can'],
-            'args'                => [
-                'term' => ['type' => 'string', 'required' => true],
-            ],
-        ]);
-
-        \register_rest_route(self::NS, '/supplier-search', [
-            'methods'             => 'GET',
-            'callback'            => [self::class, 'supplierSearch'],
-            'permission_callback' => [self::class, 'can'],
-            'args'                => [
-                'q' => ['type' => 'string', 'required' => true],
-            ],
-        ]);
-
-        \register_rest_route(self::NS, '/receive', [
-            'methods'             => 'POST',
-            'callback'            => [self::class, 'receive'],
-            'permission_callback' => [self::class, 'can'],
-            'args'                => [
-                'po_id'       => ['type' => 'integer', 'required' => true],
-                'token'       => ['type' => 'string', 'required' => true],
-                'lines'       => ['type' => 'object', 'required' => true],
-                'occurred_at' => ['type' => 'string', 'required' => false],
-                'confirmed'   => ['type' => 'boolean', 'required' => false],
-                'costs'       => ['type' => 'object', 'required' => false],
-                'location_id' => ['type' => 'integer', 'required' => false],
-            ],
-        ]);
-
-        // Async draft-PO line editing. Callbacks live in the admin PurchasingPage
-        // (they share its line helpers + row rendering); registered here because
-        // that page only boots under is_admin() and REST is not admin context.
-        $page = '\\Kaupang\\Stock\\Admin\\PurchasingPage';
-        \register_rest_route(self::NS, '/po/(?P<po>\d+)/lines', [
-            'methods'             => 'POST',
-            'callback'            => [$page, 'restAddLine'],
-            'permission_callback' => [self::class, 'can'],
-        ]);
-        \register_rest_route(self::NS, '/po/(?P<po>\d+)/lines/(?P<line>\d+)', [
-            [
-                'methods'             => 'POST',
-                'callback'            => [$page, 'restEditLine'],
-                'permission_callback' => [self::class, 'can'],
-            ],
-            [
-                'methods'             => 'DELETE',
-                'callback'            => [$page, 'restDeleteLine'],
-                'permission_callback' => [self::class, 'can'],
-            ],
-        ]);
-    }
-
-    /** Uniform permission gate for every route. */
+    /**
+     * Uniform permission gate for every route. The routes are registered on
+     * every REST request (no settings read at rest_api_init), so the master
+     * switch is enforced here: disabled = no access, as when they were absent.
+     */
     public static function can(): bool {
-        return \current_user_can(Settings::capability());
+        return Settings::enabled() && \current_user_can(Settings::capability());
     }
 
     /**

@@ -32,11 +32,11 @@ final class Reconciler {
     public const AS_GROUP      = 'kaupang-stock';
     public const REPORT_OPTION = 'kaupang_stock_last_reconcile';
 
-    public static function register(): void {
-        \add_action(self::HOOK, [self::class, 'runScheduled']);
-        \add_action('init', [self::class, 'ensureScheduled'], 20);
-    }
-
+    /**
+     * Arm the daily run when the ledger is on. Hooked (Plugin::boot()) on
+     * action_scheduler_ensure_recurring_actions (daily, inside AS), after every
+     * settings write, and called from activation — never on a request path.
+     */
     public static function ensureScheduled(): void {
         if (!Settings::enabled() || !function_exists('as_has_scheduled_action')) {
             return;
@@ -47,12 +47,18 @@ final class Reconciler {
                 DAY_IN_SECONDS,
                 self::HOOK,
                 [],
-                self::AS_GROUP
+                self::AS_GROUP,
+                true
             );
         }
     }
 
     public static function runScheduled(): void {
+        // The hook is registered everywhere; a leftover action on a disabled
+        // install reports nothing (it used to have no callback at all).
+        if (!Settings::enabled()) {
+            return;
+        }
         try {
             $report = self::run();
             if (!empty($report['issues'])) {

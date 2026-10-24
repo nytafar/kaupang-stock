@@ -29,5 +29,9 @@ final class Activation {
         if (!class_exists('WooCommerce')) {
             \add_option('kaupang_stock_activated_without_wc', 1, '', false);
         }
+
+        // First schedule of the daily reconcile on a re-activation with the
+        // ledger already on (a no-op while disabled; settings save arms it).
+        Reconcile\Reconciler::ensureScheduled();
     }
 }
