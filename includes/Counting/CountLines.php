@@ -3,8 +3,10 @@ declare(strict_types=1);
 
 namespace Kaupang\Stock\Counting;
 
+use Kaupang\Stock\Locations;
 use Kaupang\Stock\Schema;
 use Kaupang\Stock\Settings;
+use Kaupang\Stock\Support\ProductSearch;
 
 /**
  * Count LINE write logic (§6.3 capture/review). Three ways a line's `counted`
@@ -19,7 +21,9 @@ use Kaupang\Stock\Settings;
  *    counted line of one location of a count.
  *
  * Set and increment stamp counted_by/counted_at and recompute the recount flag
- * against the variance threshold; clear empties all three and the flag. The
+ * against the variance threshold; clear empties all three and the flag. In
+ * review a clear is recorded on the count's note trail, and clearing a line
+ * flagged for recount needs a note, as an override does. The
  * override path (accepting a flagged value as-is) writes a trail note, not
  * `counted` — a fresh count pass is the only thing that changes what was counted
  * (who-counted-what integrity).
@@ -93,34 +97,78 @@ final class CountLines {
      * recount flag cleared. Open or review only. Returns the fresh row, or null
      * when not writable.
      *
+     * In review the clear is part of the record, like an override: it appends a
+     * trail entry to the count note (who, which line, what it held, the note),
+     * and a line flagged for recount needs a note, as accepting it would. Both
+     * are decided under the count lock, on the status the write commits in.
+     *
      * @return array<string,mixed>|null
+     * @throws NoteRequiredException in review, for a flagged line with a blank note (nothing written)
      */
-    public static function clear(int $lineId): ?array {
-        return self::guarded($lineId, self::WRITABLE, static function () use ($lineId): bool {
+    public static function clear(int $lineId, string $note = ''): ?array {
+        $note  = trim($note);
+        $trail = null;
+        $row   = self::guarded($lineId, self::WRITABLE, static function (string $status) use ($lineId, $note, &$trail): bool {
             global $wpdb;
             $table = Schema::countLines();
+            if ($status === Counts::STATUS_REVIEW) {
+                $line = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d FOR UPDATE", $lineId), ARRAY_A);
+                if (is_array($line) && $line['counted'] !== null) {
+                    if ((int) $line['recount'] === 1 && $note === '') {
+                        throw new NoteRequiredException(\__('This line is flagged for recount. A note is required to mark it uncounted.', 'kaupang-stock'));
+                    }
+                    $trail = $line;
+                }
+            }
             return $wpdb->query($wpdb->prepare(
                 "UPDATE $table SET counted = NULL, counted_by = NULL, counted_at = NULL, recount = 0 WHERE id = %d",
                 $lineId
             )) !== false;
         });
+        if ($row !== null && $trail !== null) {
+            Counts::appendNote((int) $trail['count_id'], sprintf(
+                /* translators: 1: line id, 2: product label (with location), 3: user display name, 4: the counted quantity that was cleared. */
+                \__('[uncounted] line #%1$d, %2$s, %3$s: was %4$s', 'kaupang-stock'),
+                $lineId,
+                self::trailLabel($trail),
+                self::trailWho(),
+                self::qty((float) $trail['counted'])
+            ) . ($note !== '' ? ' — ' . $note : ''));
+        }
+        return $row;
     }
 
     /**
      * Clear every counted line of one location of a count (a whole location
      * scanned into the wrong column, or a location deactivated since creation).
      * Returns how many lines were cleared, or null when the count is not open|
-     * review.
+     * review. In review it leaves one trail entry, and needs a note when one of
+     * the lines is flagged for recount (see clear()).
+     *
+     * @throws NoteRequiredException in review, when a flagged line is among them and the note is blank
      */
-    public static function clearLocation(int $countId, int $locationId): ?int {
+    public static function clearLocation(int $countId, int $locationId, string $note = ''): ?int {
         if (!Settings::get('counting_enabled')) {
             return null;
         }
+        $note    = trim($note);
         $cleared = null;
-        $ok = self::withCountLock($countId, self::WRITABLE, static function () use ($countId, $locationId, &$cleared): bool {
+        $inReview = false;
+        $ok = self::withCountLock($countId, self::WRITABLE, static function (string $status) use ($countId, $locationId, $note, &$cleared, &$inReview): bool {
             global $wpdb;
             $table = Schema::countLines();
-            $n     = $wpdb->query($wpdb->prepare(
+            if ($status === Counts::STATUS_REVIEW) {
+                $inReview = true;
+                $flagged  = (int) $wpdb->get_var($wpdb->prepare(
+                    "SELECT COUNT(*) FROM $table WHERE count_id = %d AND location_id = %d AND counted IS NOT NULL AND recount = 1 FOR UPDATE",
+                    $countId,
+                    $locationId
+                ));
+                if ($flagged > 0 && $note === '') {
+                    throw new NoteRequiredException(\__('Some of these lines are flagged for recount. A note is required to mark them uncounted.', 'kaupang-stock'));
+                }
+            }
+            $n = $wpdb->query($wpdb->prepare(
                 "UPDATE $table SET counted = NULL, counted_by = NULL, counted_at = NULL, recount = 0
                   WHERE count_id = %d AND location_id = %d AND counted IS NOT NULL",
                 $countId,
@@ -129,7 +177,40 @@ final class CountLines {
             $cleared = $n === false ? null : (int) $n;
             return $n !== false;
         });
+        if ($ok && $inReview && $cleared > 0) {
+            Counts::appendNote($countId, sprintf(
+                /* translators: 1: location name, 2: number of lines, 3: user display name. */
+                \_n('[uncounted] %1$s: %2$d line, %3$s', '[uncounted] %1$s: %2$d lines, %3$s', (int) $cleared, 'kaupang-stock'),
+                Locations::name($locationId),
+                (int) $cleared,
+                self::trailWho()
+            ) . ($note !== '' ? ' — ' . $note : ''));
+        }
         return $ok ? $cleared : null;
+    }
+
+    /**
+     * The product label a trail entry names a line by; in a multi-location count
+     * the line is one location of the product, so the location is named too.
+     *
+     * @param array<string,mixed> $line
+     */
+    public static function trailLabel(array $line): string {
+        $label = ProductSearch::label((int) $line['product_id']);
+        if (Counts::isMulti((int) $line['count_id'])) {
+            $label .= ' @ ' . Locations::name(Counts::lineLocation($line));
+        }
+        return $label;
+    }
+
+    /** The current user as a trail entry names them. */
+    public static function trailWho(): string {
+        $user = \wp_get_current_user();
+        return $user instanceof \WP_User && $user->display_name !== '' ? $user->display_name : ('#' . \get_current_user_id());
+    }
+
+    private static function qty(float $n): string {
+        return abs($n - round($n)) < 1e-9 ? (string) (int) round($n) : rtrim(rtrim(number_format($n, 3, '.', ''), '0'), '.');
     }
 
     /**
@@ -202,7 +283,7 @@ final class CountLines {
      * the moment the write commits. Returns the fresh row, or null.
      *
      * @param string[]        $statuses
-     * @param callable():bool $write
+     * @param callable(string):bool $write gets the status the write commits in
      * @return array<string,mixed>|null
      */
     private static function guarded(int $lineId, array $statuses, callable $write): ?array {
@@ -227,7 +308,7 @@ final class CountLines {
      * write that starts after the claim reads `applying`.
      *
      * @param string[]        $statuses
-     * @param callable():bool $write
+     * @param callable(string):bool $write gets the status read under the lock; may throw (rolled back, rethrown)
      */
     private static function withCountLock(int $countId, array $statuses, callable $write): bool {
         global $wpdb;
@@ -237,7 +318,7 @@ final class CountLines {
                 'SELECT status FROM ' . Schema::counts() . ' WHERE id = %d LOCK IN SHARE MODE',
                 $countId
             ));
-            if ($status === null || !in_array((string) $status, $statuses, true) || !$write()) {
+            if ($status === null || !in_array((string) $status, $statuses, true) || !$write((string) $status)) {
                 $wpdb->query('ROLLBACK');
                 return false;
             }

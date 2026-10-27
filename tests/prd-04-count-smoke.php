@@ -25,6 +25,8 @@
  *  - a count whose line insert fails throws and leaves no partial count;
  *  - a counted line (and a whole location) can be set back to uncounted while
  *    open or in review, which also clears the deactivated-location refusal;
+ *  - in review a clear writes a trail entry, and needs a note when the line
+ *    (or one of the location's lines) is flagged for recount;
  *  - the apply claim: a scan that lands before the claim is posted, a scan
  *    after the claim is refused (REST 409), a fresh claim refuses a second
  *    apply and every write, a stale one is taken over, a ledger failure
@@ -58,6 +60,7 @@ use Kaupang\Stock\Counting\Apply;
 use Kaupang\Stock\Counting\CountLines;
 use Kaupang\Stock\Counting\Counts;
 use Kaupang\Stock\Counting\Import;
+use Kaupang\Stock\Counting\NoteRequiredException;
 use Kaupang\Stock\Ledger\Balances;
 use Kaupang\Stock\Ledger\Ledger;
 use Kaupang\Stock\Ledger\Reasons;
@@ -432,8 +435,39 @@ try {
     CountSheet::review(Counts::find($c7));
     $html = (string) ob_get_clean();
     $assert(strpos($html, 'ks-clear-btn') !== false && strpos($html, 'ks-clear-loc-btn') !== false, 'multi review offers "Mark uncounted" per counted line and per location');
-    $row = CountLines::clear($lAs);
-    $assert($row !== null && $row['counted'] === null, 'a counted line can be cleared in review');
+    $assert(trim((string) Counts::find($c7)['note']) === '', 'clearing while open leaves no trail entry');
+    // In review a clear is recorded, and a line flagged for recount needs a note.
+    $wpdb->update(Schema::countLines(), ['recount' => 1], ['id' => $lAs], ['%d'], ['%d']);
+    $threw = false;
+    try {
+        CountLines::clear($lAs);
+    } catch (NoteRequiredException $e) {
+        $threw = true;
+    }
+    $assert($threw && $near((float) $lineOf($c7, $a, $store)['counted'], 5.0), 'review: clearing a flagged line without a note throws and writes nothing');
+    $r = $rest('count-lines/' . $lAs, ['clear' => true]);
+    $assert($r->get_status() === 400 && ($r->get_data()['code'] ?? '') === 'note_required', 'REST: the same without a note is a 400 note_required');
+    $r = $rest('count-lines/' . $lAs, ['clear' => true, 'note' => 'KSTEST scanned into the wrong shelf']);
+    $trail = (string) Counts::find($c7)['note'];
+    $assert($r->get_status() === 200 && $r->get_data()['line']['counted'] === null, 'REST: with a note the flagged line is cleared');
+    $assert(strpos($trail, '[uncounted] line #' . $lAs . ', ') !== false && strpos($trail, ' @ ' . Locations::name($store)) !== false && strpos($trail, 'was 5') !== false && strpos($trail, 'KSTEST scanned into the wrong shelf') !== false, 'and the trail records the line, its location, what it held and the note');
+    CountLines::setCounted($lBs, 2);
+    $row = CountLines::clear($lBs);
+    $assert($row !== null && $row['counted'] === null && strpos((string) Counts::find($c7)['note'], '[uncounted] line #' . $lBs . ', ') !== false, 'an unflagged line clears in review without a note and still leaves a trail entry');
+    CountLines::setCounted($lAs, 5);
+    CountLines::setCounted($lBs, 1);
+    $wpdb->update(Schema::countLines(), ['recount' => 1], ['id' => $lBs], ['%d'], ['%d']);
+    $threw = false;
+    try {
+        CountLines::clearLocation($c7, $store);
+    } catch (NoteRequiredException $e) {
+        $threw = true;
+    }
+    $assert($threw && $lineOf($c7, $b, $store)['counted'] !== null, 'review: clearing a location with a flagged line needs a note');
+    $r = $rest('counts/' . $c7 . '/clear', ['location_id' => $store]);
+    $assert($r->get_status() === 400 && ($r->get_data()['code'] ?? '') === 'note_required', 'REST: location clear without a note is a 400 note_required');
+    $r = $rest('counts/' . $c7 . '/clear', ['location_id' => $store, 'note' => 'KSTEST store recounted tomorrow']);
+    $assert($r->get_status() === 200 && (int) $r->get_data()['cleared'] === 2 && strpos((string) Counts::find($c7)['note'], 'KSTEST store recounted tomorrow') !== false, 'with a note the location is cleared and the trail says so');
 
     // The way out of the deactivated-location refusal: clear, then apply.
     CountLines::setCounted($lAs, 5);

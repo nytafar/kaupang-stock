@@ -458,6 +458,8 @@ final class CountSheet {
             /* translators: 1: location name (placeholder filled in JS). */
             'clearLocation'   => \__('Mark every counted line at %1$s as uncounted?', 'kaupang-stock'),
             'clearLine'       => \__('Mark this line as uncounted?', 'kaupang-stock'),
+            'clearFlagged'    => \__('This line is flagged for recount. Marking it uncounted is recorded on the count. Enter a note (required):', 'kaupang-stock'),
+            'clearNote'       => \__('Some of these lines are flagged for recount. Marking them uncounted is recorded on the count. Enter a note (required):', 'kaupang-stock'),
             'cleared'         => \__('Marked uncounted.', 'kaupang-stock'),
         ];
     }

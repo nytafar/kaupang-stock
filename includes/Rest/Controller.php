@@ -6,6 +6,7 @@ namespace Kaupang\Stock\Rest;
 use Kaupang\Stock\Counting\Apply;
 use Kaupang\Stock\Counting\CountLines;
 use Kaupang\Stock\Counting\Counts;
+use Kaupang\Stock\Counting\NoteRequiredException;
 use Kaupang\Stock\Ledger\Movements;
 use Kaupang\Stock\Locations;
 use Kaupang\Stock\Purchasing\Suppliers;
@@ -135,10 +136,11 @@ final class Controller {
     /* ------------------------------ Count lines --------------------------- */
 
     /**
-     * POST /count-lines/{id} {counted?, increment?, clear?}. Gated on
+     * POST /count-lines/{id} {counted?, increment?, clear?, note?}. Gated on
      * counting_enabled and a parent count in {open, review}. `increment` is the
      * atomic scanner op; `counted` is an absolute set; `clear: true` sets the line
-     * back to uncounted. Returns the updated line row (with recount flag
+     * back to uncounted (in review: a trail entry, and `note` is required for a
+     * line flagged for recount — 400 note_required without it). Returns the updated line row (with recount flag
      * recomputed inside CountLines). 409 when the count is not open for counting
      * any more — including an apply that has already read the lines.
      */
@@ -161,7 +163,12 @@ final class Controller {
         // The write ops themselves re-check writability (line exists, count open|
         // review) under the count lock and return null when the line is not writable.
         if ($clear) {
-            $row = CountLines::clear($lineId);
+            $note = \sanitize_text_field((string) ($params['note'] ?? $req->get_param('note') ?? ''));
+            try {
+                $row = CountLines::clear($lineId, $note);
+            } catch (NoteRequiredException $e) {
+                return new \WP_Error('note_required', $e->getMessage(), ['status' => 400]);
+            }
         } elseif ($hasIncr) {
             $by  = (float) ($params['increment'] ?? $req->get_param('increment'));
             $row = CountLines::increment($lineId, $by);
@@ -212,19 +219,12 @@ final class Controller {
             return new \WP_Error('not_review', \__('Overrides are only possible while the count is in review.', 'kaupang-stock'), ['status' => 409]);
         }
 
-        $user  = \wp_get_current_user();
-        $who   = $user instanceof \WP_User && $user->display_name !== '' ? $user->display_name : ('#' . \get_current_user_id());
-        // Multi-location count: the line is one location of the product — name it.
-        $label = ProductSearch::label((int) $line['product_id']);
-        if (Counts::isMulti((int) $line['count_id'])) {
-            $label .= ' @ ' . Locations::name(Counts::lineLocation($line));
-        }
         $entry = sprintf(
             /* translators: 1: line id, 2: product label, 3: user display name, 4: note. */
             \__('[override] line #%1$d, %2$s, %3$s: %4$s', 'kaupang-stock'),
             $lineId,
-            $label,
-            $who,
+            CountLines::trailLabel($line),
+            CountLines::trailWho(),
             $note
         );
         Counts::appendNote((int) $line['count_id'], $entry);
@@ -233,8 +233,9 @@ final class Controller {
     }
 
     /**
-     * POST /counts/{id}/clear {location_id}. Every counted line of that location
-     * back to uncounted (open or review only): the way out of a location
+     * POST /counts/{id}/clear {location_id, note?}. Every counted line of that location
+     * back to uncounted (open or review only; in review a trail entry, and a note
+     * when one of them is flagged for recount): the way out of a location
      * scanned into by mistake, or of counted lines on a location deactivated
      * since the count was created. Returns how many lines were cleared.
      */
@@ -250,7 +251,12 @@ final class Controller {
         if (!isset(Counts::locations($countId)[$locationId])) {
             return new \WP_Error('location_not_in_count', \__('That location is not part of this count.', 'kaupang-stock'), ['status' => 400]);
         }
-        $cleared = CountLines::clearLocation($countId, $locationId);
+        $note = \sanitize_text_field((string) ($req->get_param('note') ?? ''));
+        try {
+            $cleared = CountLines::clearLocation($countId, $locationId, $note);
+        } catch (NoteRequiredException $e) {
+            return new \WP_Error('note_required', $e->getMessage(), ['status' => 400]);
+        }
         if ($cleared === null) {
             return new \WP_Error(
                 'line_not_writable',

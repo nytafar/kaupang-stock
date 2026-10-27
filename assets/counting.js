@@ -456,9 +456,37 @@
 		}
 	}
 
+	/** Prompt for a required note; null when cancelled or left blank. */
+	function askNote(message) {
+		var note = window.prompt(message);
+		if (note === null) { return null; }
+		note = note.trim();
+		if (note === '') {
+			window.alert(t('noteRequired', 'A note is required.'));
+			return null;
+		}
+		return note;
+	}
+
+	/**
+	 * POST a clear; when the server says a note is required (a flagged line in
+	 * review, also one flagged since the page loaded), ask for it and retry once.
+	 */
+	function postClear(path, body, noteMessage) {
+		return api(path, 'POST', body).then(function (resp) {
+			if (!resp.ok && resp.data && resp.data.code === 'note_required' && !body.note) {
+				var note = askNote(noteMessage);
+				if (note === null) { return { ok: false, status: 0, data: null, cancelled: true }; }
+				return api(path, 'POST', Object.assign({}, body, { note: note }));
+			}
+			return resp;
+		});
+	}
+
 	/**
 	 * The location heading's "Mark uncounted": every counted line of that
-	 * location back to uncounted (confirm first), then reload the sheet.
+	 * location back to uncounted (confirm first, or a note when the review
+	 * shows a flagged line there), then reload the sheet.
 	 */
 	function bindClearLocation(root, report) {
 		var countId = root.getAttribute('data-count-id');
@@ -467,16 +495,24 @@
 			if (!btn) { return; }
 			ev.preventDefault();
 			var name = btn.getAttribute('data-loc-name') || '';
-			if (!window.confirm(t('clearLocation', 'Mark every counted line at %1$s as uncounted?').replace('%1$s', name))) {
+			var locId = btn.getAttribute('data-loc-id');
+			var noteMsg = t('clearNote', 'Some of these lines are flagged for recount. Marking them uncounted is recorded on the count. Enter a note (required):');
+			var body = { location_id: Number(locId) };
+			if (root.querySelector('.ks-cell-diff[data-loc="' + locId + '"] .ks-chip--recount')) {
+				var note = askNote(noteMsg);
+				if (note === null) { return; }
+				body.note = note;
+			} else if (!window.confirm(t('clearLocation', 'Mark every counted line at %1$s as uncounted?').replace('%1$s', name))) {
 				return;
 			}
 			btn.disabled = true;
-			api('counts/' + countId + '/clear', 'POST', { location_id: Number(btn.getAttribute('data-loc-id')) }).then(function (resp) {
+			postClear('counts/' + countId + '/clear', body, noteMsg).then(function (resp) {
 				if (resp.ok && resp.data) {
 					window.location.reload();
 					return;
 				}
 				btn.disabled = false;
+				if (resp.cancelled) { return; }
 				var msg = (resp.data && resp.data.message) || t('saveFailed', 'Could not save.');
 				if (report) { report(msg, 'error'); } else { window.alert(msg); }
 			});
@@ -550,21 +586,33 @@
 			});
 		});
 
-		// Mark one counted line (a location's cell) uncounted, then reload so the
-		// counters, chips and apply gate are recomputed server-side.
+		// Mark one counted line (the row, or a location's cell) uncounted, then
+		// reload so the counters, chips, note trail and apply gate are
+		// recomputed server-side. A line flagged for recount needs a note, as
+		// an override does; the server records the clear on the count.
 		root.addEventListener('click', function (ev) {
 			var btn = ev.target.closest ? ev.target.closest('.ks-clear-btn') : null;
 			if (!btn) { return; }
 			var cell = btn.closest('[data-line-id]');
 			var lineId = cell && cell.getAttribute('data-line-id');
-			if (!lineId || !window.confirm(t('clearLine', 'Mark this line as uncounted?'))) { return; }
+			if (!lineId) { return; }
+			var noteMsg = t('clearFlagged', 'This line is flagged for recount. Marking it uncounted is recorded on the count. Enter a note (required):');
+			var body = { clear: true };
+			if (cell.querySelector('.ks-chip--recount')) {
+				var note = askNote(noteMsg);
+				if (note === null) { return; }
+				body.note = note;
+			} else if (!window.confirm(t('clearLine', 'Mark this line as uncounted?'))) {
+				return;
+			}
 			btn.disabled = true;
-			api('count-lines/' + lineId, 'POST', { clear: true }).then(function (resp) {
+			postClear('count-lines/' + lineId, body, noteMsg).then(function (resp) {
 				if (resp.ok && resp.data && resp.data.line) {
 					window.location.reload();
 					return;
 				}
 				btn.disabled = false;
+				if (resp.cancelled) { return; }
 				window.alert((resp.data && resp.data.message) || t('saveFailed', 'Could not save.'));
 			});
 		});

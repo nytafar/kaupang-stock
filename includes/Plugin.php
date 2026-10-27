@@ -177,6 +177,7 @@ final class Plugin {
                 'counted'   => ['type' => 'number', 'required' => false],
                 'increment' => ['type' => 'number', 'required' => false],
                 'clear'     => ['type' => 'boolean', 'required' => false],
+                'note'      => ['type' => 'string', 'required' => false],
             ],
         ]);
 
@@ -197,6 +198,7 @@ final class Plugin {
             'args'                => [
                 'id'          => ['type' => 'integer', 'required' => true],
                 'location_id' => ['type' => 'integer', 'required' => true, 'minimum' => 1],
+                'note'        => ['type' => 'string', 'required' => false],
             ],
         ]);
 
