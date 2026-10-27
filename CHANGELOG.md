@@ -5,6 +5,8 @@ All notable changes to Kaupang Stock. Format: [Keep a Changelog](https://keepach
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-27
+
 ### Added
 - Stock counting per location (PRD-04 §2): a count covers every active location, one line per product × location with `expected` = that location's on-hand (0 where the product has never been). Apply stays one `Ledger::recordBatch()` with the same `count_line:{id}:apply` keys, each intent on its line's location; drift is checked per location. In a multi-location count a location with no counted line is one "not counted" issue, and the apply response carries a per-location summary. Counted lines on a location deactivated since the count was created refuse the apply with a message, before the ledger. A one-location count behaves as before.
 - Schema v7: `count_lines.location_id` and a `(count_id, product_id, location_id)` unique key. Existing lines (open counts included) backfill to the default location; the old `count_product` key is dropped explicitly (dbDelta keeps keys it does not know). Runs on the next wp-admin load, idempotent.
