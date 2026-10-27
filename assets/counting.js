@@ -21,11 +21,14 @@
  * site (localStorage); a hidden location's lines simply stay uncounted. "Teller i"
  * picks which visible location a scan increments: automatic when one is visible;
  * with several visible it starts unchosen on a device that never picked, and a
- * scan is refused (not recorded) until it is chosen. The pick is remembered with
- * the toggles. A line goes back to uncounted by emptying its field (capture) or
- * "Mark uncounted" (review); the location heading clears a whole location. The
- * CSV export link carries the visible locations. One-location counts have none
- * of this and behave as before.
+ * scan is refused (not recorded) until it is chosen. Only an explicit pick is
+ * remembered with the toggles, never the automatic one. The location heading
+ * clears a whole location. The CSV export link carries the visible locations.
+ * One-location counts have none of this.
+ *
+ * Every count: a line goes back to uncounted by emptying its field (capture) or
+ * "Mark uncounted" (review). In review a line flagged for recount needs a note
+ * for that, as an override does.
  */
 (function () {
 	'use strict';
@@ -167,6 +170,10 @@
 		var prefs = loadPrefs();
 		var toggles = root.querySelectorAll('.ks-loc-toggle');
 		var select = document.getElementById('ks-count-in');
+		// True while "Teller i" holds a value this script chose (one location
+		// visible), not one the user picked: never remembered, and dropped as
+		// soon as several locations are visible again.
+		var auto = false;
 
 		function visibleIds() {
 			var ids = [];
@@ -201,10 +208,13 @@
 				if (visible.length < 2) {
 					// One visible location counts automatically.
 					select.value = visible[0] || '';
-				} else if (visible.indexOf(select.value) === -1) {
+					auto = true;
+				} else if (auto || visible.indexOf(select.value) === -1) {
 					// Several visible: this device's pick, or nothing — never a
-					// silent default that sends scans to the wrong location.
+					// silent default (nor a leftover automatic choice) that
+					// sends scans to the wrong location.
 					select.value = visible.indexOf(prefs.countIn) !== -1 ? prefs.countIn : '';
+					auto = false;
 				}
 				select.disabled = visible.length < 2;
 				syncNeeded();
@@ -235,8 +245,7 @@
 				if (!toggles[i].checked && at === -1) { hidden.push(id); }
 			}
 			prefs.hidden = hidden;
-			if (select && select.value) { prefs.countIn = select.value; }
-			savePrefs(prefs);
+			savePrefs(prefs); // countIn is only written by an explicit pick (below)
 		}
 
 		for (var k = 0; k < toggles.length; k++) {
@@ -252,6 +261,9 @@
 		if (select) {
 			if (prefs.countIn) { select.value = prefs.countIn; }
 			select.addEventListener('change', function () {
+				// The user's own pick: the only countIn this device remembers.
+				auto = false;
+				prefs.countIn = select.value;
 				persist();
 				syncNeeded();
 				var scan = document.getElementById('ks-scan-input');

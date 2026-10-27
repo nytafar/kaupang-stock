@@ -768,6 +768,33 @@ try {
     Counts::cancel($c4);
     Counts::cancel($c5);
 
+    /* --- "Teller i": only an explicit pick is remembered (counting.js) ---- */
+    WP_CLI::log('Teller i (counting.js under node)');
+    $nodeBin = trim((string) shell_exec('command -v node 2>/dev/null'));
+    if ($nodeBin === '') {
+        WP_CLI::warning('node not found; the counting.js "Teller i" checks are skipped.');
+    } else {
+        $plugin = dirname(__DIR__);
+        $json   = (string) shell_exec(escapeshellarg($nodeBin) . ' ' . escapeshellarg($plugin . '/tests/js/count-in-harness.js') . ' ' . escapeshellarg($plugin . '/assets/counting.js') . ' 2>&1');
+        $js     = json_decode($json, true);
+        $assert(is_array($js) && $js !== [], 'the counting.js harness ran (' . substr($json, 0, 200) . ')');
+        $labels = [
+            'fresh_unchosen'            => 'several locations, a device that never picked: Teller i unchosen and marked',
+            'auto_selects_single'       => 'one location visible: chosen automatically',
+            'auto_not_persisted'        => 'the automatic choice is not remembered',
+            'auto_dropped_when_several' => 'several visible again: the automatic choice is dropped, Teller i unchosen and marked',
+            'still_not_persisted'       => 'still nothing remembered',
+            'reload_unchosen'           => 'a later page load: still unchosen',
+            'pick_persisted'            => 'an explicit pick is remembered',
+            'auto_keeps_pick'           => 'an automatic choice afterwards does not overwrite the pick',
+            'pick_restored'             => 'several visible again: the pick is back',
+            'reload_keeps_pick'         => 'a later page load: the pick is restored',
+        ];
+        foreach ($labels as $key => $label) {
+            $assert(($js[$key] ?? false) === true, 'counting.js: ' . $label);
+        }
+    }
+
     /* --- One-location count: the v1 behaviour ---------------------------- */
     WP_CLI::log('One-location count');
     $c6 = Counts::create(['scope' => Counts::SCOPE_MANUAL, 'products' => [$a, $b], 'blind' => true, 'locations' => [$default]]);
