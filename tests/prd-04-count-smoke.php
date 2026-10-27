@@ -42,7 +42,8 @@
  *  - an import row whose location name two of the count's locations share is
  *    rejected;
  *  - a one-location count keeps the v1 shape: no location UI, the v1 CSV header,
- *    a location-less import, per-line uncounted issues.
+ *    a location-less import, per-line uncounted issues; only clearing a
+ *    counted line is new there (review "Mark uncounted", a trail entry).
  *
  * Writes on purpose (staging only): a durable KSTEST product pair and a KSTEST
  * location (reactivated for the run, deactivated again in finally{}). Every
@@ -778,7 +779,7 @@ try {
     ob_start();
     CountSheet::review(Counts::find($c6));
     $html .= (string) ob_get_clean();
-    $assert(strpos($html, 'ks-loc-toggle') === false && strpos($html, 'id="ks-count-in"') === false && strpos($html, 'data-loc=') === false && strpos($html, 'ks-multi') === false && strpos($html, 'ks-clear') === false, 'one-location capture/review: no toggles, no Teller i, no location columns, no clear controls');
+    $assert(strpos($html, 'ks-loc-toggle') === false && strpos($html, 'id="ks-count-in"') === false && strpos($html, 'data-loc=') === false && strpos($html, 'ks-multi') === false && strpos($html, 'ks-clear') === false, 'one-location capture/review: no toggles, no Teller i, no location columns, nothing to clear yet');
     [$header] = CountsPage::exportSheet(Counts::find($c6));
     $assert($header === ['sku', 'product', 'counted', 'product_id'], 'one-location blind export keeps the v1 header');
     $h = $csvHandle(['sku', 'counted'], [['KSTEST-PRD04C-A', '2']]);
@@ -789,6 +790,19 @@ try {
     $assert(Import::parse($h)['lines'] === [$a => 2.0], 'Import::parse keeps its v1 product → counted shape');
     fclose($h);
     Counts::toReview($c6);
+    // Clearing a counted line works on a one-location count too (the one
+    // intended difference from v1): a "Mark uncounted" per counted line in
+    // review, no per-location control, a trail entry without a location.
+    $l6a = (int) $lineOf($c6, $a, $default)['id'];
+    ob_start();
+    CountSheet::review(Counts::find($c6));
+    $html = (string) ob_get_clean();
+    $assert(substr_count($html, 'ks-clear-btn') === 1 && strpos($html, 'ks-clear-loc-btn') === false && (bool) preg_match('~data-line-id="' . $l6a . '"[^>]*>.*?ks-clear-btn~s', $html), 'one-location review: "Mark uncounted" on the one counted line, no location control');
+    $r = $rest('count-lines/' . $l6a, ['clear' => true]);
+    $trail = (string) Counts::find($c6)['note'];
+    $assert($r->get_status() === 200 && $r->get_data()['line']['counted'] === null, 'one-location: REST clear sets the line back to uncounted');
+    $assert(strpos($trail, '[uncounted] line #' . $l6a . ', ') !== false && strpos($trail, ' @ ') === false && strpos($trail, 'was 2') !== false, 'one-location: the review clear leaves a trail entry without a location');
+    $assert(CountLines::setCounted($l6a, 2) !== null, 'and the line can be counted again');
     $res = Apply::apply($c6, false);
     $assert($res['status'] === 'confirm_required' && $res['multi'] === false, 'one-location count: confirm for the uncounted line');
     $assert(count($res['issues']) === 1 && $res['issues'][0]['kind'] === 'uncounted' && (int) $res['issues'][0]['product_id'] === $b, 'uncounted listed per line, as before');

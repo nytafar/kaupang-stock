@@ -18,9 +18,12 @@ use Kaupang\Stock\Support\ProductSearch;
  * location toggles remembered per device and a "Teller i" picker for the scanner;
  * both live in counting.js. Hidden columns stay uncounted, and uncounted posts
  * nothing. With several locations visible a scan lands nowhere until "Teller i"
- * is picked on this device. A multi-location count can also set lines back to
- * uncounted, per line (capture: empty the field; review: "Mark uncounted") or
- * per location (the location heading), while it is open or in review.
+ * is picked on this device. Any count can set a counted line back to uncounted
+ * while it is open or in review (capture: empty the field; review: "Mark
+ * uncounted"), and a multi-location count a whole location too (the location
+ * heading). In review a clear is written to the count's note trail, and a line
+ * flagged for recount needs a note, as an override does. That clearing is the
+ * one place a one-location count differs from the v1 screens.
  */
 final class CountSheet {
 
@@ -173,7 +176,7 @@ final class CountSheet {
         // An `applying` count is only seen when an apply is running or died:
         // offering apply again finishes it (Apply takes over a stale claim).
         $canApply = $status === Counts::STATUS_REVIEW || $applying;
-        $canClear = $multi && self::writable($count);
+        $canClear = self::writable($count);
         ?>
         <div class="wrap ks-counts ks-review<?php echo $multi ? ' ks-multi' : ''; ?>"
              data-count-id="<?php echo (int) $countId; ?>"
@@ -230,7 +233,7 @@ final class CountSheet {
             </div>
 
             <div class="ks-tablewrap">
-            <?php $multi ? self::reviewGrid($lines, $locations, $status === Counts::STATUS_REVIEW, $canClear) : self::reviewSheet($rows, $status === Counts::STATUS_REVIEW); ?>
+            <?php $multi ? self::reviewGrid($lines, $locations, $status === Counts::STATUS_REVIEW, $canClear) : self::reviewSheet($rows, $status === Counts::STATUS_REVIEW, $canClear); ?>
             </div>
 
             <?php if ($uncounted > 0 && $status === Counts::STATUS_REVIEW): ?>
@@ -244,8 +247,8 @@ final class CountSheet {
         <?php
     }
 
-    /** One-location review grid: the v1 markup. */
-    private static function reviewSheet(array $rows, bool $canApply): void {
+    /** One-location review grid: the v1 markup, plus "Mark uncounted" per counted line. */
+    private static function reviewSheet(array $rows, bool $canApply, bool $canClear): void {
         ?>
             <table class="wp-list-table widefat striped ks-grid">
                 <thead>
@@ -276,6 +279,9 @@ final class CountSheet {
                             <button type="button" class="button-link ks-drill-btn" aria-expanded="false"><?php \esc_html_e('Movements since', 'kaupang-stock'); ?></button>
                             <?php if ($canApply && $r['recount']): ?>
                                 <button type="button" class="button-link ks-override-btn"><?php \esc_html_e('Override', 'kaupang-stock'); ?></button>
+                            <?php endif; ?>
+                            <?php if ($canClear && $r['counted'] !== null): ?>
+                                <button type="button" class="button-link ks-clear-btn"><?php \esc_html_e('Mark uncounted', 'kaupang-stock'); ?></button>
                             <?php endif; ?>
                         </td>
                     </tr>

@@ -346,7 +346,8 @@
 			api('count-lines/' + lineId, 'POST', { clear: true }).then(function (resp) {
 				if (resp.ok && resp.data && resp.data.line) {
 					applyLine(resp.data.line);
-					setStatus(resp.data.line.label + ' · ' + (resp.data.line.location || '') + ': ' + t('cleared', 'Marked uncounted.'), 'ok');
+					var where = locs.multi ? ' · ' + (resp.data.line.location || '') : '';
+					setStatus(resp.data.line.label + where + ': ' + t('cleared', 'Marked uncounted.'), 'ok');
 				} else {
 					setStatus((resp.data && resp.data.message) || t('saveFailed', 'Could not save.'), 'error');
 				}
@@ -423,12 +424,9 @@
 					if (!lineId) { return; }
 					var v = input.value.trim();
 					if (v === '') {
-						// One location: blank is ignored, as before. Several: emptying
-						// the field sets the line back to uncounted (a mis-scan into
-						// the wrong location is undone here).
-						if (locs.multi) {
-							clearLine(lineId);
-						}
+						// Emptying the field sets the line back to uncounted (a
+						// mis-scan, or a scan into the wrong location, undone here).
+						clearLine(lineId);
 						return;
 					}
 					saveAbsolute(lineId, Number(v)).then(function () {
