@@ -29,6 +29,14 @@
  *    after the claim is refused (REST 409), a fresh claim refuses a second
  *    apply and every write, a stale one is taken over, a ledger failure
  *    releases it;
+ *  - recovery: a throwable after the batch committed leaves the count
+ *    applying with its claim open, a died apply is taken over once stale, and
+ *    either retry finishes the batch (pending write-throughs completed,
+ *    `_stock` = ledger, nothing posted twice, no drift confirm); a throwable
+ *    before the ledger goes back to review; a stale claim refused for a
+ *    deactivated location goes back to review so its lines can be cleared;
+ *  - "Teller i" in counting.js (under node, against a DOM stub): an automatic
+ *    choice is never remembered, an explicit pick is;
  *  - an import row whose location name two of the count's locations share is
  *    rejected;
  *  - a one-location count keeps the v1 shape: no location UI, the v1 CSV header,
@@ -565,6 +573,110 @@ try {
     $res = Apply::apply($c11, true);
     $assert($res['status'] === 'ok' && $res['movements'] === 1, 'the retried apply posts once');
 
+    // (6) A movement listener throws after the batch committed: the second
+    // movement's write-through never runs, so `_stock` lags the ledger. The
+    // count stays recoverable: still `applying`, its claim open at once, and
+    // the retry (unconfirmed: no drift confirm for lines the batch itself
+    // moved) finishes it, completing the write-through, posting nothing new.
+    $movementTotal = static fn (): int => (int) $wpdb->get_var('SELECT COUNT(*) FROM ' . Schema::movements());
+    $gap = static fn (int $pid): float => (float) $wpdb->get_var($wpdb->prepare('SELECT COALESCE(SUM(on_hand), 0) FROM ' . Schema::balances() . ' WHERE product_id = %d', $pid)) - Ledger::readStockDirect($pid);
+    $throwsLeft = 0;
+    $thrower = static function () use (&$throwsLeft): void {
+        if ($throwsLeft > 0) {
+            $throwsLeft--;
+            throw new RuntimeException('KSTEST listener failure');
+        }
+    };
+    $twoLineCount = static function () use ($a, $default, $store, $lineOf, &$countIds): int {
+        $c = Counts::create(['scope' => Counts::SCOPE_MANUAL, 'products' => [$a], 'blind' => true]);
+        $countIds[] = $c;
+        CountLines::setCounted((int) $lineOf($c, $a, $default)['id'], (float) $lineOf($c, $a, $default)['expected'] + 2);
+        CountLines::setCounted((int) $lineOf($c, $a, $store)['id'], (float) $lineOf($c, $a, $store)['expected'] + 1);
+        Counts::toReview($c);
+        return $c;
+    };
+    $assert(abs($gap($a)) < 1e-9, '_stock matches the ledger before the write-through scenarios');
+    $c13 = $twoLineCount();
+    $throwsLeft = 1;
+    add_action('kaupang/stock/movement_recorded', $thrower, 1);
+    $res = Apply::apply($c13, true);
+    remove_action('kaupang/stock/movement_recorded', $thrower, 1);
+    $c13row = Counts::find($c13);
+    $assert($res['status'] === 'error' && $c13row['status'] === Counts::STATUS_APPLYING && count($appliedMoves($c13)) === 2, 'a throwable after the commit: an error, the batch posted (2), the count still applying');
+    $assert($c13row['applied_at'] === null && Apply::retryFrom($c13row) === '', 'its claim is open for an immediate retry');
+    $assert(abs($gap($a)) > 0.5, 'a write-through is pending: _stock lags the ledger');
+    $assert(CountLines::setCounted((int) $lineOf($c13, $a, $store)['id'], 1) === null, 'its lines stay locked (they are what was posted)');
+    ob_start();
+    CountSheet::review($c13row);
+    $html = (string) ob_get_clean();
+    $assert(strpos($html, __('An apply of this count was interrupted. Use Bruk telling to finish it now; nothing is posted twice. Counting stays locked until then.', 'kaupang-stock')) !== false, 'the review screen says it can be finished now');
+    $before = $movementTotal();
+    $res = Apply::apply($c13, false);
+    $assert($res['status'] === 'ok' && $res['movements'] === 0 && ($res['finished'] ?? 0) === 2 && Counts::find($c13)['status'] === Counts::STATUS_APPLIED, 'the retry finishes it: ok without a confirm, 0 new movements, 2 finished, applied');
+    $assert($movementTotal() === $before && abs($gap($a)) < 1e-9, 'nothing posted twice, and _stock matches the ledger again');
+    $assert(strpos($res['message'], 'movements posted') === false && strpos($res['message'], 'Nothing was posted twice') !== false, 'the message says the movements were already posted, not that they were posted now');
+
+    // (7) An apply that died after the commit (its claim fresh, write-through
+    // pending): refused with the time it can be finished; taken over once
+    // stale, which completes the write-through.
+    $c14 = $twoLineCount();
+    $throwsLeft = 1;
+    add_action('kaupang/stock/movement_recorded', $thrower, 1);
+    Apply::apply($c14, true);
+    remove_action('kaupang/stock/movement_recorded', $thrower, 1);
+    $wpdb->update(Schema::counts(), ['applied_at' => gmdate('Y-m-d H:i:s')], ['id' => $c14], ['%s'], ['%d']); // as a died request leaves it
+    $assert(abs($gap($a)) > 0.5 && count($appliedMoves($c14)) === 2, 'died after the commit: batch posted, write-through pending');
+    $res = Apply::apply($c14, false);
+    $from = Apply::retryFrom(Counts::find($c14));
+    $assert($res['status'] === 'error' && is_string($from) && $from !== '' && strpos($res['message'], $from) !== false, 'a fresh claim refuses, naming the time it can be finished (' . $from . ')');
+    ob_start();
+    CountSheet::review(Counts::find($c14));
+    $html = (string) ob_get_clean();
+    $assert(strpos($html, $from) !== false, 'the review screen names that time too');
+    $wpdb->update(Schema::counts(), ['applied_at' => gmdate('Y-m-d H:i:s', time() - Apply::CLAIM_TTL - 60)], ['id' => $c14], ['%s'], ['%d']);
+    $before = $movementTotal();
+    $res = Apply::apply($c14, false);
+    $assert($res['status'] === 'ok' && $res['movements'] === 0 && ($res['finished'] ?? 0) === 2 && Counts::find($c14)['status'] === Counts::STATUS_APPLIED, 'the takeover finishes it without a drift confirm');
+    $assert($movementTotal() === $before && abs($gap($a)) < 1e-9, 'takeover: nothing posted twice, _stock matches the ledger');
+
+    // (8) A throwable after the claim but before the ledger: back to review.
+    $c15 = Counts::create(['scope' => Counts::SCOPE_MANUAL, 'products' => [$a], 'blind' => true]);
+    $countIds[] = $c15;
+    CountLines::setCounted((int) $lineOf($c15, $a, $store)['id'], (float) $lineOf($c15, $a, $store)['expected'] + 1);
+    Counts::toReview($c15);
+    $claimed = false;
+    $addFilter(static function (string $q) use (&$claimed, $isClaim, $isLinesRead): string {
+        if ($isClaim($q)) {
+            $claimed = true;
+        } elseif ($claimed && $isLinesRead($q)) {
+            $claimed = false;
+            throw new RuntimeException('KSTEST failure under the claim');
+        }
+        return $q;
+    });
+    $res = Apply::apply($c15, true);
+    $dropFilters();
+    $c15row = Counts::find($c15);
+    $assert($res['status'] === 'error' && $c15row['status'] === Counts::STATUS_REVIEW && $c15row['applied_at'] === null && $appliedMoves($c15) === [], 'a throwable before the ledger: nothing posted, back to review');
+    $res = Apply::apply($c15, true);
+    $assert($res['status'] === 'ok' && $res['movements'] === 1, 'and the next apply posts once');
+
+    // (9) A stale claim whose lines sit on a location deactivated since: the
+    // refusal hands the count back to review, where its advice (mark them
+    // uncounted) can be followed.
+    $c16 = Counts::create(['scope' => Counts::SCOPE_MANUAL, 'products' => [$a], 'blind' => true]);
+    $countIds[] = $c16;
+    CountLines::setCounted((int) $lineOf($c16, $a, $store)['id'], 1);
+    Counts::toReview($c16);
+    $wpdb->update(Schema::counts(), ['status' => Counts::STATUS_APPLYING, 'applied_by' => get_current_user_id(), 'applied_at' => gmdate('Y-m-d H:i:s', time() - Apply::CLAIM_TTL - 60)], ['id' => $c16], ['%s', '%d', '%s'], ['%d']);
+    Locations::setActive($store, false);
+    $res = Apply::apply($c16, true);
+    $cleared = Counts::find($c16)['status'] === Counts::STATUS_REVIEW ? CountLines::clearLocation($c16, $store) : null;
+    Locations::setActive($store, true);
+    $assert($res['status'] === 'error' && strpos($res['message'], Locations::name($store)) !== false, 'stale claim + deactivated location: refused, naming it');
+    $assert($cleared === 1, 'the count is back in review, so its lines can be marked uncounted as the message says');
+    Counts::cancel($c16);
+
     /* --- CSV per location ------------------------------------------------ */
     WP_CLI::log('CSV');
     $c4 = Counts::create(['scope' => Counts::SCOPE_MANUAL, 'products' => [$a, $b], 'blind' => false]);
@@ -654,6 +766,9 @@ try {
 
     WP_CLI::success('PRD-04 §2 counting-per-location smoke test passed.');
 } finally {
+    if (isset($thrower)) {
+        remove_action('kaupang/stock/movement_recorded', $thrower, 1);
+    }
     $dropFilters();
     $wpdb->suppress_errors(false);
     $wpdb->query("DROP TABLE IF EXISTS $scratch");

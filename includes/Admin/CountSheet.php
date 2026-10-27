@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Kaupang\Stock\Admin;
 
+use Kaupang\Stock\Counting\Apply;
 use Kaupang\Stock\Counting\Counts;
 use Kaupang\Stock\Support\ProductSearch;
 
@@ -189,12 +190,21 @@ final class CountSheet {
                 <p class="ks-note-trail"><strong><?php \esc_html_e('Note:', 'kaupang-stock'); ?></strong> <?php echo \esc_html((string) $count['note']); ?></p>
             <?php endif; ?>
 
-            <?php if ($applying): ?>
-                <div class="notice notice-warning inline"><p><?php echo \esc_html(sprintf(
-                    /* translators: %d: minutes after which an unfinished apply can be taken over. */
-                    \__('This count is being applied. If that was interrupted, use Bruk telling again to finish it (possible %d minutes after it started). Counting is locked meanwhile.', 'kaupang-stock'),
-                    (int) ceil(\Kaupang\Stock\Counting\Apply::CLAIM_TTL / 60)
-                )); ?></p></div>
+            <?php if ($applying):
+                $retryFrom = Apply::retryFrom($count); ?>
+                <div class="notice notice-warning inline"><p><?php echo \esc_html($retryFrom === ''
+                    ? \__('An apply of this count was interrupted. Use Bruk telling to finish it now; nothing is posted twice. Counting stays locked until then.', 'kaupang-stock')
+                    : ($retryFrom === null
+                        ? sprintf(
+                            /* translators: %d: minutes after which an unfinished apply can be taken over. */
+                            \__('This count is being applied. If that was interrupted, Bruk telling can finish it %d minutes after it started. Counting is locked meanwhile.', 'kaupang-stock'),
+                            (int) ceil(Apply::CLAIM_TTL / 60)
+                        )
+                        : sprintf(
+                            /* translators: %s: local time from which an interrupted apply can be finished. */
+                            \__('This count is being applied. If that was interrupted, Bruk telling can finish it from %s (reload the page then). Counting is locked meanwhile.', 'kaupang-stock'),
+                            $retryFrom
+                        ))); ?></p></div>
             <?php endif; ?>
 
             <div class="ks-review__toolbar">

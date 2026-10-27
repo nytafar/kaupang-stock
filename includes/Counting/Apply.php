@@ -5,12 +5,14 @@ namespace Kaupang\Stock\Counting;
 
 use Kaupang\Stock\Ledger\Balances;
 use Kaupang\Stock\Ledger\Ledger;
-use Kaupang\Stock\Ledger\LedgerException;
+use Kaupang\Stock\Ledger\Movement;
 use Kaupang\Stock\Ledger\MovementIntent;
 use Kaupang\Stock\Ledger\Reasons;
+use Kaupang\Stock\Ledger\WriteThrough;
 use Kaupang\Stock\Locations;
 use Kaupang\Stock\Logging\Logger;
 use Kaupang\Stock\Schema;
+use Kaupang\Stock\Settings;
 use Kaupang\Stock\Support\ProductSearch;
 
 /**
@@ -43,8 +45,16 @@ use Kaupang\Stock\Support\ProductSearch;
  * claim is released back to review when the apply stops short of the ledger
  * (confirm needed, recount, deactivated location) or the ledger refuses; it
  * becomes `applied` once the batch is posted. A claim left behind by a request
- * that died is stale after CLAIM_TTL and the next apply takes it over; a batch
- * that was posted before the death is detected by its keys and only finished.
+ * that died is stale after CLAIM_TTL and the next apply takes it over. Any
+ * throwable after the claim is caught: with nothing posted the claim goes back
+ * to review; with the batch posted (a write-through or listener threw after the
+ * commit) the count stays `applying` with its claim open for an immediate retry.
+ * A batch that is already posted, after a death or a throwable, is detected by
+ * its movements and only finished: pending write-throughs to WooCommerce are
+ * completed (WriteThrough::completeIfPending) before the count is marked
+ * applied, so `_stock` never lags the ledger behind an `applied` count (the next
+ * checkout's absorber would otherwise book the gap as `external` and erase the
+ * correction).
  *
  * Per location: a line is (product, location), so each intent carries its line's
  * location_id and the drift check reads that location's on-hand. The whole count
@@ -82,53 +92,55 @@ final class Apply {
             return self::error(\__('Only a count in review can be applied.', 'kaupang-stock'));
         }
 
+        // A batch that is already in the ledger (an apply that posted and then
+        // died or threw) is only finished: no first look, whose drift check
+        // would flag every line the batch itself moved.
+        $wasPosted = self::postedMovements($countId) !== [];
+
         // A first look without the claim: the confirm dialog and every refusal
         // come from here, and counting on other devices carries on meanwhile.
-        $plan = self::plan($countId, $count, $confirmed);
-        if (isset($plan['result'])) {
-            return $plan['result'];
+        // A stale `applying` count is claimed first and then planned, so a
+        // refusal hands it back to review, where its advice can be followed.
+        if ($status === Counts::STATUS_REVIEW && !$wasPosted) {
+            $plan = self::plan($countId, $count, $confirmed);
+            if (isset($plan['result'])) {
+                return $plan['result'];
+            }
         }
 
         $stamp = self::claim($countId);
         if ($stamp === null) {
-            $now = Counts::find($countId);
-            if ($now !== null && (string) $now['status'] === Counts::STATUS_APPLIED) {
-                return self::ok(0, \__('Count already applied.', 'kaupang-stock'));
-            }
-            return self::error(\__('This count is being applied right now, or it was reopened. Reload the page to see where it stands.', 'kaupang-stock'));
+            return self::notClaimed($countId);
         }
 
-        // Under the claim no line can change. A batch an earlier, interrupted
-        // apply already posted is finished, never posted twice.
-        if (self::alreadyPosted($countId)) {
-            self::markApplied($countId, $stamp);
-            return self::ok(0, \__('Count applied.', 'kaupang-stock'));
-        }
-
-        // Re-read: what is posted is what the lines hold now, scans that landed
-        // since the first look included.
-        $plan = self::plan($countId, (array) Counts::find($countId), $confirmed);
-        if (isset($plan['result'])) {
-            self::release($countId, $stamp);
-            return $plan['result'];
-        }
-
-        // Post the batch. Zero-delta counts (all counted == expected) reach here
-        // with an empty intent set and apply cleanly with 0 movements.
-        $posted = 0;
+        // From here on every throwable is caught: the count must never be left
+        // in a state no later apply can recover from.
         try {
-            if (!empty($plan['intents'])) {
-                $movements = Ledger::recordBatch($plan['intents']);
-                $posted    = count($movements);
+            // Under the claim no line can change. A batch an earlier, interrupted
+            // apply already posted is finished, never posted twice.
+            $existing = self::postedMovements($countId);
+            if ($existing !== []) {
+                return self::finish($countId, $stamp, $existing);
             }
-        } catch (LedgerException $e) {
-            self::release($countId, $stamp);
-            Logger::error('count_apply_failed', ['count' => $countId, 'error' => $e->getMessage()]);
-            return self::error(sprintf(
-                /* translators: %s: error detail from the ledger. */
-                \__('Could not apply the count: %s', 'kaupang-stock'),
-                $e->getMessage()
-            ));
+
+            // Re-read: what is posted is what the lines hold now, scans that
+            // landed since the first look included.
+            $plan = self::plan($countId, (array) Counts::find($countId), $confirmed);
+            if (isset($plan['result'])) {
+                self::release($countId, $stamp);
+                return $plan['result'];
+            }
+
+            // Post the batch. Zero-delta counts (all counted == expected) reach
+            // here with an empty intent set and apply cleanly with 0 movements.
+            // recordBatch() commits the batch, then writes it through to Woo;
+            // a throwable from the write-through comes after the commit.
+            $posted = 0;
+            if (!empty($plan['intents'])) {
+                $posted = count(Ledger::recordBatch($plan['intents']));
+            }
+        } catch (\Throwable $e) {
+            return self::failed($countId, $stamp, $e);
         }
 
         self::markApplied($countId, $stamp);
@@ -145,6 +157,136 @@ final class Apply {
                 $posted
             ),
         ];
+    }
+
+    /**
+     * Finish a batch an interrupted apply posted: complete every write-through
+     * to WooCommerce it may have left pending (the §3 retry guarantee,
+     * WriteThrough::completeIfPending), then mark the count applied. Nothing is
+     * posted again. Called under our claim.
+     *
+     * @param Movement[] $movements
+     * @return array{status:'ok',issues:array,movements:int,finished:int,message:string}
+     */
+    private static function finish(int $countId, string $stamp, array $movements): array {
+        if (Settings::activeMode()) {
+            foreach ($movements as $movement) {
+                if (Reasons::isOwned($movement->reason)) {
+                    WriteThrough::completeIfPending($movement);
+                }
+            }
+        }
+        self::markApplied($countId, $stamp);
+        $n = count($movements);
+        Logger::notice('count_apply_finished', ['count' => $countId, 'movements' => $n]);
+        return [
+            'status'    => 'ok',
+            'issues'    => [],
+            'movements' => 0,
+            'finished'  => $n,
+            'message'   => sprintf(
+                /* translators: %d: number of stock movements an earlier, interrupted apply had posted. */
+                \_n(
+                    'Count applied. An earlier apply had already posted its %d movement and was interrupted; it is now finished and WooCommerce stock is brought up to date. Nothing was posted twice.',
+                    'Count applied. An earlier apply had already posted its %d movements and was interrupted; it is now finished and WooCommerce stock is brought up to date. Nothing was posted twice.',
+                    $n,
+                    'kaupang-stock'
+                ),
+                $n
+            ),
+        ];
+    }
+
+    /**
+     * A throwable after the claim. Nothing posted: the claim goes back to
+     * review (counting may resume, apply may be retried). The batch posted
+     * (the throwable came from the write-through or a movement listener):
+     * the count stays `applying`, since its lines are what was posted, but the
+     * claim is opened for an immediate retry, which only finishes it.
+     *
+     * @return array{status:'error',issues:array,movements:int,message:string}
+     */
+    private static function failed(int $countId, string $stamp, \Throwable $e): array {
+        global $wpdb;
+        $posted = false;
+        try {
+            $posted = self::postedMovements($countId) !== [];
+        } catch (\Throwable $ignored) {
+            // Cannot tell: keep the claim; it goes stale after CLAIM_TTL.
+            Logger::error('count_apply_failed', ['count' => $countId, 'error' => $e->getMessage(), 'posted' => 'unknown']);
+            return self::error(self::retryLaterMessage());
+        }
+        Logger::error('count_apply_failed', ['count' => $countId, 'error' => $e->getMessage(), 'posted' => $posted]);
+        if (!$posted) {
+            self::release($countId, $stamp);
+            return self::error(sprintf(
+                /* translators: %s: error detail. */
+                \__('Could not apply the count: %s', 'kaupang-stock'),
+                $e->getMessage()
+            ));
+        }
+        $wpdb->query($wpdb->prepare(
+            'UPDATE ' . Schema::counts() . ' SET applied_at = NULL WHERE id = %d AND status = %s AND applied_at = %s',
+            $countId,
+            Counts::STATUS_APPLYING,
+            $stamp
+        ));
+        return self::error(sprintf(
+            /* translators: %s: error detail. */
+            \__('The stock movements were posted, but bringing WooCommerce stock up to date failed: %s. Use Bruk telling again to finish; nothing will be posted twice.', 'kaupang-stock'),
+            $e->getMessage()
+        ));
+    }
+
+    /** Why the claim was not taken, with when a retry is possible. */
+    private static function notClaimed(int $countId): array {
+        $now    = Counts::find($countId);
+        $status = $now === null ? '' : (string) $now['status'];
+        if ($status === Counts::STATUS_APPLIED) {
+            return self::ok(0, \__('Count already applied.', 'kaupang-stock'));
+        }
+        if ($status === Counts::STATUS_APPLYING) {
+            $from = self::retryFrom($now);
+            return self::error($from === null
+                ? self::retryLaterMessage()
+                : sprintf(
+                    /* translators: %s: local date and time from which an interrupted apply can be retried. */
+                    \__('This count is being applied right now. If that apply was interrupted, Bruk telling can finish it from %s.', 'kaupang-stock'),
+                    $from
+                ));
+        }
+        return self::error(\__('This count was reopened or cancelled meanwhile. Reload the page to see where it stands.', 'kaupang-stock'));
+    }
+
+    private static function retryLaterMessage(): string {
+        return sprintf(
+            /* translators: %d: minutes. */
+            \__('This count is being applied. If that apply was interrupted, Bruk telling can finish it %d minutes after it started.', 'kaupang-stock'),
+            (int) ceil(self::CLAIM_TTL / 60)
+        );
+    }
+
+    /**
+     * For an `applying` count: the local time from which the next apply may
+     * take the claim over, or '' when that is possible now (an apply that
+     * threw after posting opens its claim at once). Null when unknown.
+     *
+     * @param array<string,mixed>|null $count
+     */
+    public static function retryFrom(?array $count): ?string {
+        if ($count === null || (string) $count['status'] !== Counts::STATUS_APPLYING) {
+            return null;
+        }
+        $at = (string) ($count['applied_at'] ?? '');
+        if ($at === '') {
+            return '';
+        }
+        $from = strtotime($at . ' UTC');
+        if ($from === false) {
+            return null;
+        }
+        $from += self::CLAIM_TTL;
+        return $from <= time() ? '' : \get_date_from_gmt(gmdate('Y-m-d H:i:s', $from), 'H:i');
     }
 
     /**
@@ -350,18 +492,29 @@ final class Apply {
     }
 
     /**
-     * True when this count's batch is already in the ledger (an apply that
-     * posted and died before markApplied). The batch is one transaction, so
-     * one movement means all of them.
+     * The movements this count's batch already put in the ledger (an apply
+     * that posted and died or threw before markApplied). The batch is one
+     * transaction, so one movement means all of them.
+     *
+     * @return Movement[]
      */
-    private static function alreadyPosted(int $countId): bool {
+    private static function postedMovements(int $countId): array {
         global $wpdb;
-        return (int) $wpdb->get_var($wpdb->prepare(
-            'SELECT COUNT(*) FROM ' . Schema::movements() . ' m
+        $ids = $wpdb->get_col($wpdb->prepare(
+            'SELECT m.id FROM ' . Schema::movements() . ' m
                JOIN ' . Schema::countLines() . " l ON l.id = m.ref_id
-              WHERE m.ref_type = 'count_line' AND l.count_id = %d",
+              WHERE m.ref_type = 'count_line' AND l.count_id = %d
+              ORDER BY m.id",
             $countId
-        )) > 0;
+        ));
+        $out = [];
+        foreach ((array) $ids as $id) {
+            $movement = Ledger::find((int) $id);
+            if ($movement !== null) {
+                $out[] = $movement;
+            }
+        }
+        return $out;
     }
 
     /**
