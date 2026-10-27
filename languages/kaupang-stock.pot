@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T14:45:39+00:00\n"
+"POT-Creation-Date: 2026-10-27T15:21:37+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: kaupang-stock\n"
@@ -43,38 +43,38 @@ msgstr ""
 msgid "Kaupang Stock requires PHP 8.1 or newer."
 msgstr ""
 
-#: includes/Admin/CountSheet.php:49
+#: includes/Admin/CountSheet.php:53
 #, php-format
 msgid "Varetelling #%d — capture"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:53
-#: includes/Admin/CountSheet.php:186
+#: includes/Admin/CountSheet.php:57
+#: includes/Admin/CountSheet.php:190
 msgid "All counts"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:58
+#: includes/Admin/CountSheet.php:62
 msgid "Vis forventet"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:61
+#: includes/Admin/CountSheet.php:65
 #: includes/Admin/CountsPage.php:431
 msgid "Til gjennomgang"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:67
+#: includes/Admin/CountSheet.php:71
 msgid "Scan or type a SKU, then Enter…"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:84
-#: includes/Admin/CountSheet.php:113
+#: includes/Admin/CountSheet.php:88
+#: includes/Admin/CountSheet.php:117
 msgid "SKU"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:85
-#: includes/Admin/CountSheet.php:114
-#: includes/Admin/CountSheet.php:243
-#: includes/Admin/CountSheet.php:290
+#: includes/Admin/CountSheet.php:89
+#: includes/Admin/CountSheet.php:118
+#: includes/Admin/CountSheet.php:256
+#: includes/Admin/CountSheet.php:306
 #: includes/Admin/MovementsPage.php:120
 #: includes/Admin/MovementsPage.php:627
 #: includes/Admin/OrderMetaBox.php:93
@@ -89,177 +89,188 @@ msgstr ""
 msgid "Product"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:86
-#: includes/Admin/CountSheet.php:121
-#: includes/Admin/CountSheet.php:244
-#: includes/Admin/CountSheet.php:298
+#: includes/Admin/CountSheet.php:90
+#: includes/Admin/CountSheet.php:125
+#: includes/Admin/CountSheet.php:257
+#: includes/Admin/CountSheet.php:314
 msgid "Forventet"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:87
-#: includes/Admin/CountSheet.php:122
-#: includes/Admin/CountSheet.php:245
-#: includes/Admin/CountSheet.php:299
+#: includes/Admin/CountSheet.php:91
+#: includes/Admin/CountSheet.php:126
+#: includes/Admin/CountSheet.php:258
+#: includes/Admin/CountSheet.php:315
 msgid "Counted"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:182
-#: includes/Counting/Apply.php:372
+#: includes/Admin/CountSheet.php:186
+#: includes/Counting/Apply.php:525
 #, php-format
 msgid "Varetelling #%d"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:189
+#: includes/Admin/CountSheet.php:193
 msgid "Note:"
 msgstr ""
 
-#. translators: %d: minutes after which an unfinished apply can be taken over.
-#: includes/Admin/CountSheet.php:195
-#, php-format
-msgid "This count is being applied. If that was interrupted, use Bruk telling again to finish it (possible %d minutes after it started). Counting is locked meanwhile."
+#: includes/Admin/CountSheet.php:199
+msgid "An apply of this count was interrupted. Use Bruk telling to finish it now; nothing is posted twice. Counting stays locked until then."
 msgstr ""
 
+#. translators: %d: minutes after which an unfinished apply can be taken over.
 #: includes/Admin/CountSheet.php:203
+#, php-format
+msgid "This count is being applied. If that was interrupted, Bruk telling can finish it %d minutes after it started. Counting is locked meanwhile."
+msgstr ""
+
+#. translators: %s: local time from which an interrupted apply can be finished.
+#: includes/Admin/CountSheet.php:208
+#, php-format
+msgid "This count is being applied. If that was interrupted, Bruk telling can finish it from %s (reload the page then). Counting is locked meanwhile."
+msgstr ""
+
+#: includes/Admin/CountSheet.php:216
 msgid "Reopen for counting"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:206
-#: includes/Admin/CountSheet.php:213
+#: includes/Admin/CountSheet.php:219
+#: includes/Admin/CountSheet.php:226
 msgid "Bruk telling"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:209
+#: includes/Admin/CountSheet.php:222
 #, php-format
 msgid "%d line(s) need a recount or override before applying."
 msgstr ""
 
-#: includes/Admin/CountSheet.php:211
+#: includes/Admin/CountSheet.php:224
 msgid "Cancel count"
-msgstr ""
-
-#: includes/Admin/CountSheet.php:215
-#, php-format
-msgid "Applied %s by %s."
 msgstr ""
 
 #: includes/Admin/CountSheet.php:228
 #, php-format
+msgid "Applied %s by %s."
+msgstr ""
+
+#: includes/Admin/CountSheet.php:241
+#, php-format
 msgid "%d line(s) have not been counted. They post nothing and will require a combined confirmation at apply."
 msgstr ""
 
-#: includes/Admin/CountSheet.php:246
-#: includes/Admin/CountSheet.php:300
+#: includes/Admin/CountSheet.php:259
+#: includes/Admin/CountSheet.php:316
 msgid "Differanse"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:259
-#: includes/Admin/CountSheet.php:324
+#: includes/Admin/CountSheet.php:272
+#: includes/Admin/CountSheet.php:340
 #: includes/Admin/CountsPage.php:160
 msgid "recount"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:266
-#: includes/Admin/CountSheet.php:335
+#: includes/Admin/CountSheet.php:279
+#: includes/Admin/CountSheet.php:351
 msgid "Movements since"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:268
-#: includes/Admin/CountSheet.php:326
+#: includes/Admin/CountSheet.php:281
+#: includes/Admin/CountSheet.php:342
 msgid "Override"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:330
-#: includes/Admin/CountSheet.php:405
+#: includes/Admin/CountSheet.php:284
+#: includes/Admin/CountSheet.php:346
+#: includes/Admin/CountSheet.php:421
 msgid "Mark uncounted"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:357
+#: includes/Admin/CountSheet.php:373
 msgid "Import counted quantities (CSV)"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:358
+#: includes/Admin/CountSheet.php:374
 msgid "Upload the exported sheet with the counted column filled. Matching is by SKU (falling back to a product id column if present). The count lands in review — never applied directly."
 msgstr ""
 
-#: includes/Admin/CountSheet.php:360
+#: includes/Admin/CountSheet.php:376
 msgid "This count covers several locations: every row needs its location (the location_id or location column from the export). Rows without one are rejected."
 msgstr ""
 
-#: includes/Admin/CountSheet.php:367
+#: includes/Admin/CountSheet.php:383
 msgid "Upload"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:384
+#: includes/Admin/CountSheet.php:400
 msgid "Show locations"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:391
+#: includes/Admin/CountSheet.php:407
 msgid "Count into"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:393
+#: includes/Admin/CountSheet.php:409
 msgid "Choose location…"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:425
+#: includes/Admin/CountSheet.php:441
 msgid "Unknown SKU: "
 msgstr ""
 
-#: includes/Admin/CountSheet.php:426
+#: includes/Admin/CountSheet.php:442
 msgid "Could not save."
 msgstr ""
 
-#: includes/Admin/CountSheet.php:427
+#: includes/Admin/CountSheet.php:443
 msgid "Loading…"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:428
+#: includes/Admin/CountSheet.php:444
 msgid "Could not load movements."
 msgstr ""
 
-#: includes/Admin/CountSheet.php:429
+#: includes/Admin/CountSheet.php:445
 msgid "Accept this counted value. Enter a note (required):"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:430
+#: includes/Admin/CountSheet.php:446
 #: includes/Admin/Menu.php:185
 #: includes/Admin/MovementsPage.php:535
 msgid "A note is required."
 msgstr ""
 
-#: includes/Admin/CountSheet.php:431
+#: includes/Admin/CountSheet.php:447
 msgid "Could not apply the count."
 msgstr ""
 
-#: includes/Admin/CountSheet.php:432
+#: includes/Admin/CountSheet.php:448
 msgid "exp"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:433
+#: includes/Admin/CountSheet.php:449
 msgid "on hand"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:434
+#: includes/Admin/CountSheet.php:450
 msgid "counted"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:435
+#: includes/Admin/CountSheet.php:451
 msgid "Bruk likevel?"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:436
+#: includes/Admin/CountSheet.php:452
 msgid "No movements since the count started."
 msgstr ""
 
-#: includes/Admin/CountSheet.php:437
+#: includes/Admin/CountSheet.php:453
 msgid "When"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:438
+#: includes/Admin/CountSheet.php:454
 msgid "Change"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:439
+#: includes/Admin/CountSheet.php:455
 #: includes/Admin/MovementsPage.php:124
 #: includes/Admin/MovementsPage.php:194
 #: includes/Admin/MovementsPage.php:270
@@ -271,7 +282,7 @@ msgstr ""
 msgid "Reason"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:440
+#: includes/Admin/CountSheet.php:456
 #: includes/Admin/CountsPage.php:231
 #: includes/Admin/MovementsPage.php:126
 #: includes/Admin/MovementsPage.php:639
@@ -282,7 +293,7 @@ msgstr ""
 msgid "Note"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:441
+#: includes/Admin/CountSheet.php:457
 #: includes/Admin/MovementsPage.php:121
 #: includes/Admin/MovementsPage.php:174
 #: includes/Admin/MovementsPage.php:429
@@ -294,39 +305,47 @@ msgstr ""
 msgid "Location"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:442
+#: includes/Admin/CountSheet.php:458
 msgid "not counted — no change"
 msgstr ""
 
 #. translators: 1: counted lines, 2: total lines, 3: movements to post (placeholders filled in JS).
-#: includes/Admin/CountSheet.php:444
+#: includes/Admin/CountSheet.php:460
 #, php-format
 msgid "%1$s of %2$s counted, %3$s change(s)"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:445
+#: includes/Admin/CountSheet.php:461
 msgid "No line for this location: "
 msgstr ""
 
-#: includes/Admin/CountSheet.php:446
+#: includes/Admin/CountSheet.php:462
 msgid "Scan not recorded: choose where you are counting (Count into) first."
 msgstr ""
 
-#: includes/Admin/CountSheet.php:447
+#: includes/Admin/CountSheet.php:463
 msgid "Several locations are shown: choose where you are counting (Count into) before scanning."
 msgstr ""
 
 #. translators: 1: location name (placeholder filled in JS).
-#: includes/Admin/CountSheet.php:449
+#: includes/Admin/CountSheet.php:465
 #, php-format
 msgid "Mark every counted line at %1$s as uncounted?"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:450
+#: includes/Admin/CountSheet.php:466
 msgid "Mark this line as uncounted?"
 msgstr ""
 
-#: includes/Admin/CountSheet.php:451
+#: includes/Admin/CountSheet.php:467
+msgid "This line is flagged for recount. Marking it uncounted is recorded on the count. Enter a note (required):"
+msgstr ""
+
+#: includes/Admin/CountSheet.php:468
+msgid "Some of these lines are flagged for recount. Marking them uncounted is recorded on the count. Enter a note (required):"
+msgstr ""
+
+#: includes/Admin/CountSheet.php:469
 msgid "Marked uncounted."
 msgstr ""
 
@@ -490,8 +509,8 @@ msgid "That status change is not allowed."
 msgstr ""
 
 #: includes/Admin/CountsPage.php:556
-#: includes/Counting/Apply.php:70
-#: includes/Rest/Controller.php:248
+#: includes/Counting/Apply.php:80
+#: includes/Rest/Controller.php:249
 msgid "Count not found."
 msgstr ""
 
@@ -1350,7 +1369,7 @@ msgid "Line removed."
 msgstr ""
 
 #: includes/Admin/PurchasingPage.php:1220
-#: includes/Rest/Controller.php:285
+#: includes/Rest/Controller.php:291
 msgid "Purchasing is not enabled."
 msgstr ""
 
@@ -2067,50 +2086,94 @@ msgstr ""
 msgid "corrects layer #%d"
 msgstr ""
 
-#: includes/Counting/Apply.php:79
-#: includes/Counting/Apply.php:96
+#: includes/Counting/Apply.php:89
+#: includes/Counting/Apply.php:246
 msgid "Count already applied."
 msgstr ""
 
-#: includes/Counting/Apply.php:82
+#: includes/Counting/Apply.php:92
 msgid "Only a count in review can be applied."
 msgstr ""
 
-#: includes/Counting/Apply.php:98
-msgid "This count is being applied right now, or it was reopened. Reload the page to see where it stands."
-msgstr ""
-
-#: includes/Counting/Apply.php:105
-msgid "Count applied."
-msgstr ""
-
-#. translators: %s: error detail from the ledger.
-#: includes/Counting/Apply.php:129
-#, php-format
-msgid "Could not apply the count: %s"
-msgstr ""
-
 #. translators: %d: number of stock movements posted.
-#: includes/Counting/Apply.php:144
+#: includes/Counting/Apply.php:156
 #, php-format
 msgid "Count applied — %d movement posted."
 msgid_plural "Count applied — %d movements posted."
 msgstr[0] ""
 msgstr[1] ""
 
+#. translators: %d: number of stock movements an earlier, interrupted apply had posted.
+#: includes/Counting/Apply.php:189
+#, php-format
+msgid "Count applied. An earlier apply had already posted its %d movement and was interrupted; it is now finished and WooCommerce stock is brought up to date. Nothing was posted twice."
+msgid_plural "Count applied. An earlier apply had already posted its %d movements and was interrupted; it is now finished and WooCommerce stock is brought up to date. Nothing was posted twice."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: error detail.
+#: includes/Counting/Apply.php:224
+#, php-format
+msgid "Could not apply the count: %s"
+msgstr ""
+
+#. translators: %s: error detail.
+#: includes/Counting/Apply.php:236
+#, php-format
+msgid "The stock movements were posted, but bringing WooCommerce stock up to date failed: %s. Use Bruk telling again to finish; nothing will be posted twice."
+msgstr ""
+
+#. translators: %s: local date and time from which an interrupted apply can be retried.
+#: includes/Counting/Apply.php:254
+#, php-format
+msgid "This count is being applied right now. If that apply was interrupted, Bruk telling can finish it from %s."
+msgstr ""
+
+#: includes/Counting/Apply.php:258
+msgid "This count was reopened or cancelled meanwhile. Reload the page to see where it stands."
+msgstr ""
+
+#. translators: %d: minutes.
+#: includes/Counting/Apply.php:264
+#, php-format
+msgid "This count is being applied. If that apply was interrupted, Bruk telling can finish it %d minutes after it started."
+msgstr ""
+
 #. translators: %s: comma-separated "location (number of counted lines)" list.
-#: includes/Counting/Apply.php:187
+#: includes/Counting/Apply.php:329
 #, php-format
 msgid "Counted lines are on a location that has been deactivated since the count was created: %s. Mark those lines uncounted, or reactivate the location, to apply."
 msgstr ""
 
-#: includes/Counting/Apply.php:204
+#: includes/Counting/Apply.php:346
 msgid "Some lines are flagged for recount. Re-count or override them before applying."
 msgstr ""
 
-#: includes/Counting/Apply.php:301
+#: includes/Counting/Apply.php:443
 msgid "Stock moved for some lines since the count started, or some lines were never counted. Review and confirm to apply anyway."
 msgstr ""
+
+#: includes/Counting/CountLines.php:118
+msgid "This line is flagged for recount. A note is required to mark it uncounted."
+msgstr ""
+
+#. translators: 1: line id, 2: product label (with location), 3: user display name, 4: the counted quantity that was cleared.
+#: includes/Counting/CountLines.php:131
+#, php-format
+msgid "[uncounted] line #%1$d, %2$s, %3$s: was %4$s"
+msgstr ""
+
+#: includes/Counting/CountLines.php:168
+msgid "Some of these lines are flagged for recount. A note is required to mark them uncounted."
+msgstr ""
+
+#. translators: 1: location name, 2: number of lines, 3: user display name.
+#: includes/Counting/CountLines.php:183
+#, php-format
+msgid "[uncounted] %1$s: %2$d line, %3$s"
+msgid_plural "[uncounted] %1$s: %2$d lines, %3$s"
+msgstr[0] ""
+msgstr[1] ""
 
 #. translators: 1: category name, 2: number of products.
 #: includes/Counting/Counts.php:414
@@ -2304,31 +2367,31 @@ msgstr ""
 msgid "Some lines exceed the remaining quantity. Confirm to receive anyway (over-receipt is allowed)."
 msgstr ""
 
-#: includes/Rest/Controller.php:147
-#: includes/Rest/Controller.php:192
-#: includes/Rest/Controller.php:243
+#: includes/Rest/Controller.php:149
+#: includes/Rest/Controller.php:199
+#: includes/Rest/Controller.php:244
 msgid "Counting is not enabled."
 msgstr ""
 
-#: includes/Rest/Controller.php:158
+#: includes/Rest/Controller.php:160
 msgid "Provide either counted or increment."
 msgstr ""
 
-#: includes/Rest/Controller.php:176
-#: includes/Rest/Controller.php:257
+#: includes/Rest/Controller.php:183
+#: includes/Rest/Controller.php:263
 msgid "That line cannot be updated (it may not exist, or its count is not open for counting)."
 msgstr ""
 
-#: includes/Rest/Controller.php:197
+#: includes/Rest/Controller.php:204
 msgid "A note is required to override a flagged line."
 msgstr ""
 
-#: includes/Rest/Controller.php:202
+#: includes/Rest/Controller.php:209
 msgid "Line not found."
 msgstr ""
 
-#: includes/Rest/Controller.php:206
-#: includes/Rest/Controller.php:212
+#: includes/Rest/Controller.php:213
+#: includes/Rest/Controller.php:219
 msgid "Overrides are only possible while the count is in review."
 msgstr ""
 
@@ -2338,10 +2401,10 @@ msgstr ""
 msgid "[override] line #%1$d, %2$s, %3$s: %4$s"
 msgstr ""
 
-#: includes/Rest/Controller.php:251
+#: includes/Rest/Controller.php:252
 msgid "That location is not part of this count."
 msgstr ""
 
-#: includes/Rest/Controller.php:292
+#: includes/Rest/Controller.php:298
 msgid "The receiving module is not available yet."
 msgstr ""
