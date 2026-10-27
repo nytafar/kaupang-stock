@@ -29,6 +29,8 @@
  *    after the claim is refused (REST 409), a fresh claim refuses a second
  *    apply and every write, a stale one is taken over, a ledger failure
  *    releases it;
+ *  - an import row whose location name two of the count's locations share is
+ *    rejected;
  *  - a one-location count keeps the v1 shape: no location UI, the v1 CSV header,
  *    a location-less import, per-line uncounted issues.
  *
@@ -595,6 +597,27 @@ try {
     fclose($h);
     $assert($res['errors'] === [] && $res['filled'] === 2, 'round trip: the export imports cleanly into a fresh count');
     $assert($near((float) $lineOf($c5, $a, $default)['counted'], 7.0) && $near((float) $lineOf($c5, $a, $store)['counted'], 2.0) && $lineOf($c5, $b, $store)['counted'] === null, 'round trip keeps counted per location (blank stays uncounted)');
+    // Names are not unique: a name two of the count's locations share is
+    // rejected, never resolved to one of them.
+    $c12 = Counts::create(['scope' => Counts::SCOPE_MANUAL, 'products' => [$a], 'blind' => false]);
+    $countIds[] = $c12;
+    $defaultName = Locations::name($default);
+    Locations::rename($store, $defaultName);
+    try {
+        $h = $csvHandle(['sku', 'location', 'location_id', 'counted'], [
+            ['KSTEST-PRD04C-A', $defaultName, '', '6'],            // ambiguous name → rejected
+            ['KSTEST-PRD04C-A', $defaultName, (string) $store, '8'], // the id decides
+        ]);
+        $res = Import::fill($c12, $h);
+        fclose($h);
+    } finally {
+        Locations::rename($store, $storeName);
+    }
+    $ambiguous = sprintf(__('Row %1$d (%2$s): several locations in this count are called “%3$s”. Give the row its location_id.', 'kaupang-stock'), 2, 'KSTEST-PRD04C-A', $defaultName);
+    $assert($res['filled'] === 1 && $res['errors'] === [$ambiguous], 'an ambiguous location name is a rejected row, never a guess');
+    $assert($lineOf($c12, $a, $default)['counted'] === null && $near((float) $lineOf($c12, $a, $store)['counted'], 8.0), 'only the row with a location_id is filled');
+    Counts::cancel($c12);
+
     Counts::cancel($c4);
     Counts::cancel($c5);
 

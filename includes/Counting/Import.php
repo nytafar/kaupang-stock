@@ -13,7 +13,9 @@ use Kaupang\Stock\Support\ProductSearch;
  * UTF-8 BOM strip and a ; / , delimiter sniff.
  *
  * Per location (PRD-04 §2): a row is (product, location). `location_id` wins,
- * else the `location` name (case-insensitive) among the count's own locations. In
+ * else the `location` name (case-insensitive) among the count's own locations.
+ * Location names are not unique: a name two of the count's locations share is
+ * rejected, never resolved to one of them (the export always carries the id). In
  * a one-location count the location columns are optional — a row without them is
  * that location, as before. In a multi-location count a row without a location is
  * an error, never guessed.
@@ -114,9 +116,9 @@ final class Import {
         $errors    = $read['errors'];
         $locations = Counts::locations($countId);
         $multi     = count($locations) > 1;
-        $byName    = [];
+        $byName    = []; // lower-cased name → every location id carrying it
         foreach ($locations as $id => $name) {
-            $byName[mb_strtolower(trim($name))] = $id;
+            $byName[mb_strtolower(trim($name))][] = $id;
         }
 
         $lineFor = [];
@@ -139,7 +141,16 @@ final class Import {
                 }
                 $loc = $r['location_id'];
             } elseif ($r['location'] !== '') {
-                $loc = $byName[mb_strtolower($r['location'])] ?? 0;
+                $ids = $byName[mb_strtolower($r['location'])] ?? [];
+                if (count($ids) > 1) {
+                    $errors[] = sprintf(
+                        /* translators: 1: CSV row number, 2: SKU or product id, 3: location name */
+                        \__('Row %1$d (%2$s): several locations in this count are called “%3$s”. Give the row its location_id.', 'kaupang-stock'),
+                        $r['row'], $who($r), $r['location']
+                    );
+                    continue;
+                }
+                $loc = (int) ($ids[0] ?? 0);
                 if ($loc <= 0) {
                     $errors[] = sprintf(
                         /* translators: 1: CSV row number, 2: SKU or product id, 3: location name */
