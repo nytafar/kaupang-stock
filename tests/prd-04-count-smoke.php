@@ -19,7 +19,10 @@
  *  - CSV export/import round trip per location; a row without a location in a
  *    multi-location count is rejected;
  *  - the v7 migration backfills v6 lines to the default location and drops the
- *    old count_product key (on a scratch copy), idempotently;
+ *    old count_product key (on a scratch copy), idempotently; a failed ALTER
+ *    reports the table not ready, and install() then leaves the version
+ *    unstamped so the next load retries;
+ *  - a count whose line insert fails throws and leaves no partial count;
  *  - a one-location count keeps the v1 shape: no location UI, the v1 CSV header,
  *    a location-less import, per-line uncounted issues.
  *
@@ -69,6 +72,44 @@ $products        = [];
 $store           = 0;
 $countIds        = [];
 $scratch         = $wpdb->prefix . 'kaupang_stock_count_lines_kstest';
+$filters         = []; // query filters this run added; removed in finally{}
+
+/** Add a `query` filter for this run (removed in finally{}). */
+$addFilter = static function (callable $cb) use (&$filters): void {
+    add_filter('query', $cb);
+    $filters[] = $cb;
+};
+$dropFilters = static function () use (&$filters): void {
+    foreach ($filters as $cb) {
+        remove_filter('query', $cb);
+    }
+    $filters = [];
+};
+
+/** The scratch count-lines table in the exact v6 shape, with three lines. */
+$createV6 = static function () use ($wpdb, $scratch): void {
+    $wpdb->query("DROP TABLE IF EXISTS $scratch");
+    $wpdb->query("CREATE TABLE $scratch (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        count_id BIGINT UNSIGNED NOT NULL,
+        product_id BIGINT UNSIGNED NOT NULL,
+        expected DECIMAL(15,3) NOT NULL,
+        counted DECIMAL(15,3) NULL,
+        counted_by BIGINT UNSIGNED NULL,
+        counted_at DATETIME NULL,
+        recount TINYINT(1) NOT NULL DEFAULT 0,
+        PRIMARY KEY  (id),
+        UNIQUE KEY count_product (count_id, product_id)
+    ) " . $wpdb->get_charset_collate());
+    $wpdb->query("INSERT INTO $scratch (count_id, product_id, expected, counted) VALUES (1, 10, 5, 4), (1, 11, 2, NULL), (2, 10, 0, 1)");
+};
+$keysOf = static function (string $table) use ($wpdb): array {
+    $keys = [];
+    foreach ((array) $wpdb->get_results("SHOW INDEX FROM $table") as $r) {
+        $keys[$r->Key_name] = ($keys[$r->Key_name] ?? 0) + 1;
+    }
+    return $keys;
+};
 
 /** Movements a count's apply posted, keyed by line id. */
 $appliedMoves = static function (int $countId) use ($wpdb): array {
@@ -142,31 +183,46 @@ try {
     $assert(!in_array('count_product', $realKeys, true) && in_array('count_product_location', $realKeys, true), 'live count_lines: count_product dropped, (count, product, location) key present');
     $assert((int) $wpdb->get_var('SELECT COUNT(*) FROM ' . Schema::countLines() . ' WHERE location_id = 0') === 0, 'live count_lines: no line left without a location');
 
+    // A failing ALTER (every ALTER on the scratch table errors): not ready, the
+    // v6 key stays, and a later run without the failure completes.
+    $createV6();
+    $addFilter(static fn (string $q): string => stripos($q, 'ALTER TABLE ' . $scratch) !== false ? 'SELECT kstest_forced_alter_failure FROM DUAL' : $q);
+    $wpdb->suppress_errors(true);
+    $migrated = Schema::migrateCountLines($scratch);
+    $wpdb->suppress_errors(false);
+    $dropFilters();
+    $assert($migrated === false && !Schema::countLinesReady($scratch), 'a failed ALTER: migrateCountLines() reports the table not ready');
+    $assert(isset($keysOf($scratch)['count_product']), 'a failed ALTER leaves the v6 count_product key in place');
+    // Column and new key added, only the drop of the old key fails: still not ready.
+    $addFilter(static fn (string $q): string => stripos($q, 'DROP INDEX count_product') !== false ? 'SELECT kstest_forced_drop_failure FROM DUAL' : $q);
+    $wpdb->suppress_errors(true);
+    $migrated = Schema::migrateCountLines($scratch);
+    $wpdb->suppress_errors(false);
+    $dropFilters();
+    $assert($migrated === false && isset($keysOf($scratch)['count_product_location']), 'new key added but the old one not dropped: still not ready');
+    $assert(Schema::migrateCountLines($scratch) === true && Schema::countLinesReady($scratch), 'the retry without the failure completes the migration');
+
+    // install(): the version is stamped only when the live table verifies. Hide
+    // the live table's key from the readiness check → stays at v6; then retry.
+    update_option(Schema::VERSION_OPTION, 6, false);
+    $addFilter(static fn (string $q): string => (stripos($q, 'SHOW INDEX FROM ' . Schema::countLines()) !== false && stripos($q, 'Key_name') !== false) ? 'SELECT 1 FROM DUAL WHERE 0' : $q);
+    $wpdb->suppress_errors(true);
+    Schema::maybeUpgrade();
+    $wpdb->suppress_errors(false);
+    $dropFilters();
+    $assert((int) get_option(Schema::VERSION_OPTION) === 6, 'install() does not stamp v7 while the table does not verify');
+    Schema::maybeUpgrade();
+    $assert((int) get_option(Schema::VERSION_OPTION) === 7, 'the next upgrade run verifies and stamps v7');
+
     // A scratch table in the exact v6 shape, with data, migrated twice.
-    $wpdb->query("DROP TABLE IF EXISTS $scratch");
-    $wpdb->query("CREATE TABLE $scratch (
-        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-        count_id BIGINT UNSIGNED NOT NULL,
-        product_id BIGINT UNSIGNED NOT NULL,
-        expected DECIMAL(15,3) NOT NULL,
-        counted DECIMAL(15,3) NULL,
-        counted_by BIGINT UNSIGNED NULL,
-        counted_at DATETIME NULL,
-        recount TINYINT(1) NOT NULL DEFAULT 0,
-        PRIMARY KEY  (id),
-        UNIQUE KEY count_product (count_id, product_id)
-    ) " . $wpdb->get_charset_collate());
-    $wpdb->query("INSERT INTO $scratch (count_id, product_id, expected, counted) VALUES (1, 10, 5, 4), (1, 11, 2, NULL), (2, 10, 0, 1)");
-    Schema::migrateCountLines($scratch);
-    Schema::migrateCountLines($scratch); // idempotent
+    $createV6();
+    $assert(Schema::migrateCountLines($scratch), 'a v6 table migrates and verifies');
+    $assert(Schema::migrateCountLines($scratch), 'a second run is a verified no-op (idempotent)');
     $default = Balances::defaultLocationId();
     $cols    = array_map(static fn ($r) => $r->Field, (array) $wpdb->get_results("SHOW COLUMNS FROM $scratch"));
     $assert(in_array('location_id', $cols, true), 'scratch v6 table gains location_id');
     $assert((int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $scratch WHERE location_id = %d", $default)) === 3, 'every v6 line backfills to the default location');
-    $keys = [];
-    foreach ((array) $wpdb->get_results("SHOW INDEX FROM $scratch") as $r) {
-        $keys[$r->Key_name] = ($keys[$r->Key_name] ?? 0) + 1;
-    }
+    $keys = $keysOf($scratch);
     $assert(!isset($keys['count_product']), 'old count_product key dropped (dbDelta alone would keep it)');
     $assert(($keys['count_product_location'] ?? 0) === 3, 'new (count, product, location) unique key present');
     $assert($wpdb->query("INSERT INTO $scratch (count_id, product_id, location_id, expected) VALUES (1, 10, 999999, 0)") === 1, 'a second location line for the same (count, product) is accepted');
@@ -229,6 +285,28 @@ try {
     CountSheet::capture(Counts::find($c1));
     $html = (string) ob_get_clean();
     $assert(strpos($html, 'ks-loc-toggle') !== false && strpos($html, 'id="ks-count-in"') !== false && strpos($html, 'data-loc="' . $store . '"') !== false, 'multi capture renders location toggles, Teller i and per-location columns');
+
+    // All or nothing: the second line insert fails → exception, nothing left.
+    $maxCount = (int) $wpdb->get_var('SELECT COALESCE(MAX(id), 0) FROM ' . Schema::counts());
+    $nth      = 0;
+    $addFilter(static function (string $q) use (&$nth): string {
+        if (stripos($q, 'INSERT INTO `' . Schema::countLines() . '`') === 0 && ++$nth === 2) {
+            return 'INSERT INTO kstest_missing_table_prd04c (id) VALUES (1)';
+        }
+        return $q;
+    });
+    $threw = false;
+    $wpdb->suppress_errors(true);
+    try {
+        Counts::create(['scope' => Counts::SCOPE_MANUAL, 'products' => [$a, $b], 'note' => 'KSTEST PRD-04 rollback ' . $run]);
+    } catch (RuntimeException $e) {
+        $threw = true;
+    }
+    $wpdb->suppress_errors(false);
+    $dropFilters();
+    $assert($threw, 'a failed line insert makes Counts::create() throw');
+    $assert((int) $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM ' . Schema::counts() . ' WHERE id > %d AND note = %s', $maxCount, 'KSTEST PRD-04 rollback ' . $run)) === 0
+        && (int) $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM ' . Schema::countLines() . ' WHERE count_id > %d', $maxCount)) === 0, 'no partial count: the document and its first line are rolled back');
 
     /* --- Apply per location, sale mid-count ------------------------------ */
     WP_CLI::log('Apply');
@@ -367,7 +445,12 @@ try {
 
     WP_CLI::success('PRD-04 §2 counting-per-location smoke test passed.');
 } finally {
+    $dropFilters();
+    $wpdb->suppress_errors(false);
     $wpdb->query("DROP TABLE IF EXISTS $scratch");
+    if ((int) get_option(Schema::VERSION_OPTION) < Schema::VERSION) {
+        Schema::maybeUpgrade(); // the stamp test left it at 6
+    }
     try {
         Settings::update(['stock_enabled' => true, 'mode' => Settings::MODE_ACTIVE, 'allow_negative_locations' => true]);
         if ($store > 0 && !Locations::isActive($store)) {

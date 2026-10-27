@@ -279,7 +279,19 @@ final class Schema {
         }
 
         // v7: after the location seed, so the backfill has a default to point at.
-        self::migrateCountLines(self::countLines());
+        // The version is stamped only once the table verifiably has the v7 shape:
+        // a failed ALTER (lock timeout, disk, permissions) leaves the marker where
+        // it was, so the next wp-admin load retries instead of running v7 code on
+        // a v6 table, where the old count_product key refuses every second
+        // location's line.
+        if (!self::migrateCountLines(self::countLines())) {
+            Logging\Logger::error('schema_upgrade_incomplete', [
+                'target' => self::VERSION,
+                'table'  => self::countLines(),
+                'error'  => (string) $wpdb->last_error,
+            ]);
+            return;
+        }
 
         \update_option(self::VERSION_OPTION, self::VERSION, false);
         // v6: settings + version marker off autoload (no storefront request reads them).
@@ -306,16 +318,19 @@ final class Schema {
 
     /**
      * Bring a count-lines table to the v7 shape. Idempotent, safe on live data:
-     *  1. dbDelta adds location_id (existing rows read 0) and the new
-     *     (count_id, product_id, location_id) unique key;
+     *  1. dbDelta adds location_id (existing rows get the column default, 0) and
+     *     the new (count_id, product_id, location_id) unique key;
      *  2. rows still at location_id 0 backfill to the default location, so an
      *     open count becomes a one-location count that works as before;
      *  3. the v1 count_product key is dropped — only once the new key exists, so
      *     the table is never without a uniqueness guard. dbDelta leaves keys it
      *     does not know about in place, and with it a second location's line
      *     for the same product would be refused.
+     * Returns whether the table now verifiably has the v7 shape
+     * (countLinesReady()); dbDelta reports no failure, so this is the only
+     * signal the caller gets.
      */
-    public static function migrateCountLines(string $table): void {
+    public static function migrateCountLines(string $table): bool {
         global $wpdb;
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         \dbDelta(self::countLinesDdl($table));
@@ -324,17 +339,61 @@ final class Schema {
         if ($default <= 0) {
             $default = (int) $wpdb->get_var('SELECT MIN(id) FROM ' . self::locations());
         }
-        if ($default > 0) {
+        if ($default > 0 && self::hasColumn($table, 'location_id')) {
             $wpdb->query($wpdb->prepare("UPDATE $table SET location_id = %d WHERE location_id = 0", $default));
         }
 
-        // Column count of a named index (0 = absent).
-        $keys = static fn (string $name): int => count((array) $wpdb->get_results(
-            $wpdb->prepare("SHOW INDEX FROM $table WHERE Key_name = %s", $name)
-        ));
-        if ($keys('count_product_location') === 3 && $keys('count_product') > 0) {
+        if (self::indexColumns($table, 'count_product_location') === ['count_id', 'product_id', 'location_id']
+            && self::indexColumns($table, 'count_product') !== []) {
             $wpdb->query("ALTER TABLE $table DROP INDEX count_product");
         }
+
+        return self::countLinesReady($table);
+    }
+
+    /**
+     * True when a count-lines table has the v7 shape: the location_id column,
+     * the unique (count_id, product_id, location_id) key, no v1 count_product
+     * key, and no line left at location 0.
+     */
+    public static function countLinesReady(string $table): bool {
+        global $wpdb;
+        if (!self::hasColumn($table, 'location_id')) {
+            return false;
+        }
+        if (self::indexColumns($table, 'count_product_location', true) !== ['count_id', 'product_id', 'location_id']) {
+            return false;
+        }
+        if (self::indexColumns($table, 'count_product') !== []) {
+            return false;
+        }
+        $unplaced = $wpdb->get_var("SELECT COUNT(*) FROM $table WHERE location_id = 0");
+        return $unplaced !== null && (int) $unplaced === 0;
+    }
+
+    private static function hasColumn(string $table, string $column): bool {
+        global $wpdb;
+        return (array) $wpdb->get_results($wpdb->prepare("SHOW COLUMNS FROM $table LIKE %s", $column)) !== [];
+    }
+
+    /**
+     * A named index's columns in key order ([] = absent). With $unique, a
+     * non-unique index of that name reads as absent.
+     *
+     * @return string[]
+     */
+    private static function indexColumns(string $table, string $name, bool $unique = false): array {
+        global $wpdb;
+        $rows = (array) $wpdb->get_results($wpdb->prepare("SHOW INDEX FROM $table WHERE Key_name = %s", $name));
+        usort($rows, static fn ($a, $b): int => (int) $a->Seq_in_index <=> (int) $b->Seq_in_index);
+        $cols = [];
+        foreach ($rows as $row) {
+            if ($unique && (int) $row->Non_unique !== 0) {
+                return [];
+            }
+            $cols[] = (string) $row->Column_name;
+        }
+        return $cols;
     }
 
     /**

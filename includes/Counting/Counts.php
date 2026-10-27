@@ -5,6 +5,7 @@ namespace Kaupang\Stock\Counting;
 
 use Kaupang\Stock\Ledger\Balances;
 use Kaupang\Stock\Locations;
+use Kaupang\Stock\Logging\Logger;
 use Kaupang\Stock\Observe\Seeder;
 use Kaupang\Stock\Schema;
 use Kaupang\Stock\Support\ProductSearch;
@@ -90,7 +91,8 @@ final class Counts {
             'SELECT DISTINCT location_id FROM ' . Schema::countLines() . ' WHERE count_id = %d',
             $countId
         )));
-        // location_id 0 only exists between a deploy and the v7 migration.
+        // Defensive: v7 backfills every line to a location, so no stored row
+        // reads 0 (before the migration the column does not exist at all).
         $ids = array_values(array_unique(array_map(static fn (int $id): int => $id > 0 ? $id : Balances::defaultLocationId(), $ids)));
         if ($ids === []) {
             $ids = [Balances::defaultLocationId()];
@@ -112,7 +114,7 @@ final class Counts {
         return count(self::locations($countId)) > 1;
     }
 
-    /** A line's location id; 0 (pre-migration row) resolves to the default. */
+    /** A line's location id; a missing or 0 location_id resolves to the default. */
     public static function lineLocation(array $line): int {
         $id = (int) ($line['location_id'] ?? 0);
         return $id > 0 ? $id : Balances::defaultLocationId();
@@ -165,7 +167,13 @@ final class Counts {
      * locations; unknown or inactive ids are ignored, and an empty result falls
      * back to every active location.
      *
+     * All or nothing: the document and its lines are written in one transaction,
+     * and any failed insert rolls the whole count back and throws. A count that
+     * silently lost its second location's lines would look complete and apply
+     * as a one-location count.
+     *
      * @param array{scope?:string,category?:int,products?:int[],blind?:bool,note?:string,locations?:int[]} $args
+     * @throws \RuntimeException when the count or one of its lines cannot be written
      */
     public static function create(array $args): int {
         global $wpdb;
@@ -179,36 +187,51 @@ final class Counts {
 
         $productIds  = self::resolveProductIds($scope, $args);
         $scopeLabel  = self::scopeLabel($scope, $args, count($productIds));
-
-        $now = gmdate('Y-m-d H:i:s');
-        $wpdb->insert(Schema::counts(), [
-            'status'     => self::STATUS_OPEN,
-            'blind'      => $blind ? 1 : 0,
-            'scope'      => $scopeLabel,
-            'note'       => $note !== '' ? $note : null,
-            'created_by' => \get_current_user_id(),
-            'created_at' => $now,
-        ], ['%s', '%d', '%s', '%s', '%d', '%s']);
-
-        $countId = (int) $wpdb->insert_id;
-        if ($countId <= 0) {
-            return 0;
-        }
-
         $locationIds = self::createLocations($args);
         // One read for every (product, location) balance instead of N×M.
         $balances = $productIds !== [] ? Balances::rows($productIds) : [];
-        foreach ($productIds as $productId) {
-            foreach ($locationIds as $locationId) {
-                $expected = (float) ($balances[$productId][$locationId]['on_hand'] ?? 0);
-                $wpdb->insert(Schema::countLines(), [
-                    'count_id'    => $countId,
-                    'product_id'  => $productId,
-                    'location_id' => $locationId,
-                    'expected'    => number_format($expected, 3, '.', ''),
-                    'recount'     => 0,
-                ], ['%d', '%d', '%d', '%s', '%d']);
+
+        $now = gmdate('Y-m-d H:i:s');
+        $wpdb->query('START TRANSACTION');
+        try {
+            $ok = $wpdb->insert(Schema::counts(), [
+                'status'     => self::STATUS_OPEN,
+                'blind'      => $blind ? 1 : 0,
+                'scope'      => $scopeLabel,
+                'note'       => $note !== '' ? $note : null,
+                'created_by' => \get_current_user_id(),
+                'created_at' => $now,
+            ], ['%s', '%d', '%s', '%s', '%d', '%s']);
+            $countId = (int) $wpdb->insert_id;
+            if ($ok === false || $countId <= 0) {
+                throw new \RuntimeException('Count insert failed: ' . $wpdb->last_error);
             }
+
+            foreach ($productIds as $productId) {
+                foreach ($locationIds as $locationId) {
+                    $expected = (float) ($balances[$productId][$locationId]['on_hand'] ?? 0);
+                    $ok = $wpdb->insert(Schema::countLines(), [
+                        'count_id'    => $countId,
+                        'product_id'  => $productId,
+                        'location_id' => $locationId,
+                        'expected'    => number_format($expected, 3, '.', ''),
+                        'recount'     => 0,
+                    ], ['%d', '%d', '%d', '%s', '%d']);
+                    if ($ok !== 1) {
+                        throw new \RuntimeException(sprintf(
+                            'Count line insert failed (product %d, location %d): %s',
+                            $productId,
+                            $locationId,
+                            $wpdb->last_error
+                        ));
+                    }
+                }
+            }
+            $wpdb->query('COMMIT');
+        } catch (\Throwable $e) {
+            $wpdb->query('ROLLBACK');
+            Logger::error('count_create_failed', ['error' => $e->getMessage()]);
+            throw $e instanceof \RuntimeException ? $e : new \RuntimeException($e->getMessage(), 0, $e);
         }
 
         return $countId;

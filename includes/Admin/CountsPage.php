@@ -280,7 +280,11 @@ final class CountsPage {
             $args['products']  = array_values(array_filter(array_map('intval', $raw)));
         }
 
-        $countId = Counts::create($args);
+        try {
+            $countId = Counts::create($args);
+        } catch (\RuntimeException $e) {
+            $countId = 0; // rolled back and logged by Counts::create()
+        }
         if ($countId <= 0) {
             Screen::redirect(Menu::SLUG_COUNTS, ['ks_err' => 'create_failed']);
         }
