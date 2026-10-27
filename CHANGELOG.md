@@ -5,6 +5,11 @@ All notable changes to Kaupang Stock. Format: [Keep a Changelog](https://keepach
 
 ## [Unreleased]
 
+### Added
+- Stock counting per location (PRD-04 §2): a count covers every active location, one line per product × location with `expected` = that location's on-hand (0 where the product has never been). Apply stays one `Ledger::recordBatch()` with the same `count_line:{id}:apply` keys, each intent on its line's location; drift is checked per location. In a multi-location count a location with no counted line is one "not counted" issue, and the apply response carries a per-location summary. Counted lines on a location deactivated since the count was created refuse the apply with a message, before the ledger. A one-location count behaves as before.
+- Schema v7: `count_lines.location_id` and a `(count_id, product_id, location_id)` unique key. Existing lines (open counts included) backfill to the default location; the old `count_product` key is dropped explicitly (dbDelta keeps keys it does not know). Runs on the next wp-admin load, idempotent.
+- REST count-line payload: `location_id`, `location`.
+
 ### Changed
 - Loading (stock#13, FE-03, FE-07): boot only adds hooks with class-string handlers; a guest page view loads the main file and `Plugin` (was 11 files). Woo stock/order handlers, the COGS bridge and the page-cache purge stay registered in every context and check their flags when they run; the shutdown absorber arms on the first dirty product; REST routes are registered from `Plugin` (the controller loads on dispatch and refuses while the ledger is off).
 - The daily reconcile is scheduled from Action Scheduler's `action_scheduler_ensure_recurring_actions`, after settings writes and on activation (unique), no longer on public `init`; a leftover action on a disabled install records nothing.

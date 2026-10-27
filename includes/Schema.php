@@ -26,7 +26,10 @@ final class Schema {
     //     by the purchase-order editor and printable ordering list.
     // v5: locations.active — soft-deactivation for multi-location routing.
     // v6: no table change; settings + this marker move off autoload (Track 4).
-    public const VERSION        = 6;
+    // v7: count_lines.location_id — a count line is (product, location). Existing
+    //     lines backfill to the default location; the old count_product unique key
+    //     is dropped explicitly (dbDelta never drops keys) — migrateCountLines().
+    public const VERSION        = 7;
     public const VERSION_OPTION = 'kaupang_stock_schema_version';
 
     public static function movements(): string {
@@ -205,19 +208,6 @@ final class Schema {
   PRIMARY KEY  (id)
 ) $collate;");
 
-        \dbDelta("CREATE TABLE " . self::countLines() . " (
-  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  count_id BIGINT UNSIGNED NOT NULL,
-  product_id BIGINT UNSIGNED NOT NULL,
-  expected DECIMAL(15,3) NOT NULL,
-  counted DECIMAL(15,3) NULL,
-  counted_by BIGINT UNSIGNED NULL,
-  counted_at DATETIME NULL,
-  recount TINYINT(1) NOT NULL DEFAULT 0,
-  PRIMARY KEY  (id),
-  UNIQUE KEY count_product (count_id, product_id)
-) $collate;");
-
         \dbDelta("CREATE TABLE " . self::costLayers() . " (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   product_id BIGINT UNSIGNED NOT NULL,
@@ -288,9 +278,63 @@ final class Schema {
             ], ['%d', '%s', '%d', '%d']);
         }
 
+        // v7: after the location seed, so the backfill has a default to point at.
+        self::migrateCountLines(self::countLines());
+
         \update_option(self::VERSION_OPTION, self::VERSION, false);
         // v6: settings + version marker off autoload (no storefront request reads them).
         \wp_set_option_autoload_values([Settings::OPTION_KEY => false, self::VERSION_OPTION => false]);
+    }
+
+    /** The count-lines DDL, parameterised on the table so the migration is testable on a scratch copy. */
+    public static function countLinesDdl(string $table): string {
+        global $wpdb;
+        return "CREATE TABLE " . $table . " (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  count_id BIGINT UNSIGNED NOT NULL,
+  product_id BIGINT UNSIGNED NOT NULL,
+  location_id BIGINT UNSIGNED NOT NULL,
+  expected DECIMAL(15,3) NOT NULL,
+  counted DECIMAL(15,3) NULL,
+  counted_by BIGINT UNSIGNED NULL,
+  counted_at DATETIME NULL,
+  recount TINYINT(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY  (id),
+  UNIQUE KEY count_product_location (count_id, product_id, location_id)
+) " . $wpdb->get_charset_collate() . ";";
+    }
+
+    /**
+     * Bring a count-lines table to the v7 shape. Idempotent, safe on live data:
+     *  1. dbDelta adds location_id (existing rows read 0) and the new
+     *     (count_id, product_id, location_id) unique key;
+     *  2. rows still at location_id 0 backfill to the default location, so an
+     *     open count becomes a one-location count that works as before;
+     *  3. the v1 count_product key is dropped — only once the new key exists, so
+     *     the table is never without a uniqueness guard. dbDelta leaves keys it
+     *     does not know about in place, and with it a second location's line
+     *     for the same product would be refused.
+     */
+    public static function migrateCountLines(string $table): void {
+        global $wpdb;
+        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+        \dbDelta(self::countLinesDdl($table));
+
+        $default = (int) $wpdb->get_var('SELECT id FROM ' . self::locations() . ' WHERE is_default = 1 ORDER BY active DESC, id ASC LIMIT 1');
+        if ($default <= 0) {
+            $default = (int) $wpdb->get_var('SELECT MIN(id) FROM ' . self::locations());
+        }
+        if ($default > 0) {
+            $wpdb->query($wpdb->prepare("UPDATE $table SET location_id = %d WHERE location_id = 0", $default));
+        }
+
+        // Column count of a named index (0 = absent).
+        $keys = static fn (string $name): int => count((array) $wpdb->get_results(
+            $wpdb->prepare("SHOW INDEX FROM $table WHERE Key_name = %s", $name)
+        ));
+        if ($keys('count_product_location') === 3 && $keys('count_product') > 0) {
+            $wpdb->query("ALTER TABLE $table DROP INDEX count_product");
+        }
     }
 
     /**

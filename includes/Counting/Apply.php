@@ -8,6 +8,7 @@ use Kaupang\Stock\Ledger\Ledger;
 use Kaupang\Stock\Ledger\LedgerException;
 use Kaupang\Stock\Ledger\MovementIntent;
 use Kaupang\Stock\Ledger\Reasons;
+use Kaupang\Stock\Locations;
 use Kaupang\Stock\Logging\Logger;
 use Kaupang\Stock\Schema;
 use Kaupang\Stock\Support\ProductSearch;
@@ -31,6 +32,14 @@ use Kaupang\Stock\Support\ProductSearch;
  * Idempotency is two-layered: a hard status gate (an applied count re-applies as ok
  * with 0 new movements) plus per-line idempotency keys `count_line:{id}:apply` that
  * dedupe at the Ledger even if the status gate is somehow bypassed.
+ *
+ * Per location: a line is (product, location), so each intent carries its line's
+ * location_id and the drift check reads that location's on-hand. The whole count
+ * is still ONE batch — apply is the count, never one location of it. A location
+ * with no counted line posts nothing; in a multi-location count it surfaces as ONE
+ * "not counted" issue instead of one row per line. Counted lines on a location
+ * deactivated since creation refuse the apply up front (the Ledger would refuse
+ * the batch anyway).
  *
  * @return array{status:string,issues:array,movements:int,message:string}
  */
@@ -57,7 +66,31 @@ final class Apply {
             return self::error(\__('Only a count in review can be applied.', 'kaupang-stock'));
         }
 
-        $lines = Counts::lines($countId);
+        $lines     = Counts::lines($countId);
+        $locations = Counts::locations($countId);
+        $multi     = count($locations) > 1;
+
+        // Counted lines on a location deactivated since the count was created
+        // cannot post (Ledger::validate refuses an inactive location) — say so
+        // plainly before the ledger is reached.
+        $inactive = [];
+        foreach ($lines as $line) {
+            $loc = Counts::lineLocation($line);
+            if ($line['counted'] !== null && !Locations::isActive($loc)) {
+                $inactive[$loc] = ($inactive[$loc] ?? 0) + 1;
+            }
+        }
+        if ($inactive !== []) {
+            $names = [];
+            foreach ($inactive as $loc => $n) {
+                $names[] = sprintf('%s (%d)', $locations[$loc] ?? Locations::name($loc), $n);
+            }
+            return self::error(sprintf(
+                /* translators: %s: comma-separated "location (number of counted lines)" list. */
+                \__('Counted lines are on a location that has been deactivated since the count was created: %s. Reactivate the location to apply, or cancel the count.', 'kaupang-stock'),
+                implode(', ', $names)
+            ));
+        }
 
         // Recount-flagged lines block apply until re-counted or overridden (§6.3).
         $blocked = [];
@@ -78,23 +111,38 @@ final class Apply {
         // Build the relative-variance intents and collect drift/uncounted issues.
         $intents = [];
         $issues  = [];
+        $summary = [];
+        foreach ($locations as $loc => $name) {
+            $summary[$loc] = ['location_id' => $loc, 'location' => $name, 'lines' => 0, 'counted' => 0, 'movements' => 0];
+        }
+        $uncountedBy = [];
         foreach ($lines as $line) {
-            $productId = (int) $line['product_id'];
-            $expected  = (float) $line['expected'];
+            $productId  = (int) $line['product_id'];
+            $locationId = Counts::lineLocation($line);
+            $expected   = (float) $line['expected'];
+            $summary[$locationId] ??= ['location_id' => $locationId, 'location' => Locations::name($locationId), 'lines' => 0, 'counted' => 0, 'movements' => 0];
+            $summary[$locationId]['lines']++;
 
             if ($line['counted'] === null) {
                 // Uncounted lines post NOTHING but are surfaced as issues that
-                // require the combined confirm (§6.3).
-                $issues[] = self::issueRow($line, 'uncounted');
+                // require the combined confirm (§6.3). One-location counts list
+                // them inline as before; multi-location ones decide per location
+                // once every line has been seen.
+                if ($multi) {
+                    $uncountedBy[$locationId][] = $line;
+                } else {
+                    $issues[] = self::issueRow($line, 'uncounted');
+                }
                 continue;
             }
+            $summary[$locationId]['counted']++;
 
             $counted = (float) $line['counted'];
 
-            // Drift: the live balance moved away from the snapshot since creation.
-            // The posted delta is unchanged (relative math is correct either way);
-            // the row is informational for the operator's acknowledgment.
-            $onHand = Balances::onHand($productId);
+            // Drift: the live balance AT THIS LOCATION moved away from the
+            // snapshot since creation. The posted delta is unchanged (relative
+            // math is correct either way); the row is informational.
+            $onHand = Balances::onHand($productId, $locationId);
             if (abs($onHand - $expected) > 1e-9) {
                 $issues[] = self::issueRow($line, 'drift', $onHand);
             }
@@ -103,6 +151,7 @@ final class Apply {
             if (abs($delta) < 1e-9) {
                 continue; // zero-delta lines apply cleanly with no movement
             }
+            $summary[$locationId]['movements']++;
 
             $intents[] = new MovementIntent(
                 $productId,
@@ -116,9 +165,35 @@ final class Apply {
                 '',
                 self::batchNote($countId, $count),
                 null,
-                'count_line:' . (int) $line['id'] . ':apply'
+                'count_line:' . (int) $line['id'] . ':apply',
+                $locationId
             );
         }
+
+        // Multi-location uncounted lines: per line, except a location where
+        // nothing at all was counted — that is one row ("not counted — no
+        // change"), not a list of every line there.
+        foreach ($uncountedBy as $locationId => $uncounted) {
+            if ($summary[$locationId]['counted'] === 0) {
+                $issues[] = [
+                    'line_id'     => 0,
+                    'product_id'  => 0,
+                    'location_id' => $locationId,
+                    'location'    => $summary[$locationId]['location'],
+                    'label'       => $summary[$locationId]['location'],
+                    'expected'    => 0.0,
+                    'on_hand'     => 0.0,
+                    'counted'     => null,
+                    'lines'       => count($uncounted),
+                    'kind'        => 'location_uncounted',
+                ];
+                continue;
+            }
+            foreach ($uncounted as $line) {
+                $issues[] = self::issueRow($line, 'uncounted');
+            }
+        }
+        $summary = array_values($summary);
 
         // Drift and/or uncounted lines need an explicit acknowledgment first.
         if (!empty($issues) && !$confirmed) {
@@ -127,6 +202,8 @@ final class Apply {
                 'issues'    => $issues,
                 'movements' => 0,
                 'message'   => \__('Stock moved for some lines since the count started, or some lines were never counted. Review and confirm to apply anyway.', 'kaupang-stock'),
+                'multi'     => $multi,
+                'locations' => $summary,
             ];
         }
 
@@ -152,6 +229,8 @@ final class Apply {
         return [
             'status'    => 'ok',
             'issues'    => $issues, // echo any acknowledged drift/uncounted rows
+            'multi'     => $multi,
+            'locations' => $summary,
             'movements' => $posted,
             'message'   => sprintf(
                 /* translators: %d: number of stock movements posted. */
@@ -194,17 +273,20 @@ final class Apply {
      * A summary row for the combined dialog / blocked list.
      *
      * @param array<string,mixed> $line
-     * @return array{line_id:int,product_id:int,label:string,expected:float,on_hand:float,counted:?float,kind:string}
+     * @return array{line_id:int,product_id:int,location_id:int,location:string,label:string,expected:float,on_hand:float,counted:?float,kind:string}
      */
     private static function issueRow(array $line, string $kind, ?float $onHand = null): array {
-        $productId = (int) $line['product_id'];
-        $expected  = (float) $line['expected'];
+        $productId  = (int) $line['product_id'];
+        $locationId = Counts::lineLocation($line);
+        $expected   = (float) $line['expected'];
         return [
-            'line_id'    => (int) $line['id'],
-            'product_id' => $productId,
-            'label'      => ProductSearch::label($productId),
-            'expected'   => $expected,
-            'on_hand'    => $onHand ?? Balances::onHand($productId),
+            'line_id'     => (int) $line['id'],
+            'product_id'  => $productId,
+            'location_id' => $locationId,
+            'location'    => Locations::name($locationId),
+            'label'       => ProductSearch::label($productId),
+            'expected'    => $expected,
+            'on_hand'     => $onHand ?? Balances::onHand($productId, $locationId),
             'counted'    => $line['counted'] === null ? null : (float) $line['counted'],
             'kind'       => $kind, // drift | uncounted | recount
         ];

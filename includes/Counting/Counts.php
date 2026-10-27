@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Kaupang\Stock\Counting;
 
 use Kaupang\Stock\Ledger\Balances;
+use Kaupang\Stock\Locations;
 use Kaupang\Stock\Observe\Seeder;
 use Kaupang\Stock\Schema;
 use Kaupang\Stock\Support\ProductSearch;
@@ -16,10 +17,14 @@ use Kaupang\Stock\Support\ProductSearch;
  * Stock MOVEMENTS are never touched here; the apply step (Apply.php) is the only
  * bridge from a count to the Ledger.
  *
- * Lines snapshot `expected = Balances::onHand($productId)` AT CREATION — the
- * count-time truth the relative-variance apply keys on (a sale after the shelf was
- * counted survives). Blind by default: the review UI hides `expected` until the
- * operator flips "Vis forventet".
+ * A line is (product, location): creation writes one line per stock-managed
+ * product × active location, each snapshotting `expected = Balances::onHand($pid,
+ * $loc)` AT CREATION — the count-time truth the relative-variance apply keys on (a
+ * sale after the shelf was counted survives). Which locations a count covers is
+ * its lines; a location created later is not in an older count. A count with one
+ * location (every single-location store, and every count migrated from schema v6)
+ * looks and behaves exactly as before. Blind by default: the review UI hides
+ * `expected` until the operator flips "Vis forventet".
  */
 final class Counts {
 
@@ -72,6 +77,47 @@ final class Counts {
         return is_array($rows) ? $rows : [];
     }
 
+    /**
+     * The locations a count covers, in Locations::all() order (default first),
+     * inactive ones included — a location deactivated since creation keeps its
+     * lines. Read from the lines; a count with no lines covers the default.
+     *
+     * @return array<int,string> location id => name
+     */
+    public static function locations(int $countId): array {
+        global $wpdb;
+        $ids = array_map('intval', (array) $wpdb->get_col($wpdb->prepare(
+            'SELECT DISTINCT location_id FROM ' . Schema::countLines() . ' WHERE count_id = %d',
+            $countId
+        )));
+        // location_id 0 only exists between a deploy and the v7 migration.
+        $ids = array_values(array_unique(array_map(static fn (int $id): int => $id > 0 ? $id : Balances::defaultLocationId(), $ids)));
+        if ($ids === []) {
+            $ids = [Balances::defaultLocationId()];
+        }
+        $out = [];
+        foreach (Locations::all() as $loc) {
+            if (in_array((int) $loc['id'], $ids, true)) {
+                $out[(int) $loc['id']] = (string) $loc['name'];
+            }
+        }
+        foreach ($ids as $id) {
+            $out[$id] ??= Locations::name($id);
+        }
+        return $out;
+    }
+
+    /** True when the count spans more than one location (the per-location UI). */
+    public static function isMulti(int $countId): bool {
+        return count(self::locations($countId)) > 1;
+    }
+
+    /** A line's location id; 0 (pre-migration row) resolves to the default. */
+    public static function lineLocation(array $line): int {
+        $id = (int) ($line['location_id'] ?? 0);
+        return $id > 0 ? $id : Balances::defaultLocationId();
+    }
+
     /** @return array<string,mixed>|null one line row */
     public static function line(int $lineId): ?array {
         global $wpdb;
@@ -111,10 +157,15 @@ final class Counts {
 
     /**
      * Create a count and snapshot its lines. Product set = stock-managed ids
-     * (Seeder::stockManagedProductIds()), narrowed by scope. `expected` per line
-     * is the live on-hand at creation. Returns the new count id.
+     * (Seeder::stockManagedProductIds()), narrowed by scope; one line per product
+     * × active location. `expected` per line is that location's live on-hand at
+     * creation (0 where the product has never been). Returns the new count id.
      *
-     * @param array{scope?:string,category?:int,products?:int[],blind?:bool,note?:string} $args
+     * `locations` (CLI/tests only, no UI) narrows to a subset of the active
+     * locations; unknown or inactive ids are ignored, and an empty result falls
+     * back to every active location.
+     *
+     * @param array{scope?:string,category?:int,products?:int[],blind?:bool,note?:string,locations?:int[]} $args
      */
     public static function create(array $args): int {
         global $wpdb;
@@ -144,17 +195,45 @@ final class Counts {
             return 0;
         }
 
+        $locationIds = self::createLocations($args);
+        // One read for every (product, location) balance instead of N×M.
+        $balances = $productIds !== [] ? Balances::rows($productIds) : [];
         foreach ($productIds as $productId) {
-            $expected = Balances::onHand($productId);
-            $wpdb->insert(Schema::countLines(), [
-                'count_id'   => $countId,
-                'product_id' => $productId,
-                'expected'   => number_format($expected, 3, '.', ''),
-                'recount'    => 0,
-            ], ['%d', '%d', '%s', '%d']);
+            foreach ($locationIds as $locationId) {
+                $expected = (float) ($balances[$productId][$locationId]['on_hand'] ?? 0);
+                $wpdb->insert(Schema::countLines(), [
+                    'count_id'    => $countId,
+                    'product_id'  => $productId,
+                    'location_id' => $locationId,
+                    'expected'    => number_format($expected, 3, '.', ''),
+                    'recount'     => 0,
+                ], ['%d', '%d', '%d', '%s', '%d']);
+            }
         }
 
         return $countId;
+    }
+
+    /**
+     * The locations a new count covers: every active location (default first),
+     * optionally narrowed by `locations`.
+     *
+     * @param array{locations?:int[]} $args
+     * @return int[]
+     */
+    private static function createLocations(array $args): array {
+        $active = array_map(static fn (array $l): int => (int) $l['id'], Locations::all(true));
+        if ($active === []) {
+            $active = [Balances::defaultLocationId()];
+        }
+        if (!empty($args['locations'])) {
+            $wanted = array_map('intval', (array) $args['locations']);
+            $picked = array_values(array_filter($active, static fn (int $id): bool => in_array($id, $wanted, true)));
+            if ($picked !== []) {
+                return $picked;
+            }
+        }
+        return $active;
     }
 
     /**

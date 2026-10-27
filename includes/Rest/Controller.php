@@ -207,11 +207,16 @@ final class Controller {
 
         $user  = \wp_get_current_user();
         $who   = $user instanceof \WP_User && $user->display_name !== '' ? $user->display_name : ('#' . \get_current_user_id());
+        // Multi-location count: the line is one location of the product — name it.
+        $label = ProductSearch::label((int) $line['product_id']);
+        if (Counts::isMulti((int) $line['count_id'])) {
+            $label .= ' @ ' . Locations::name(Counts::lineLocation($line));
+        }
         $entry = sprintf(
             /* translators: 1: line id, 2: product label, 3: user display name, 4: note. */
             \__('[override] line #%1$d, %2$s, %3$s: %4$s', 'kaupang-stock'),
             $lineId,
-            ProductSearch::label((int) $line['product_id']),
+            $label,
             $who,
             $note
         );
@@ -293,8 +298,8 @@ final class Controller {
     /* ------------------------------ Helpers ------------------------------- */
 
     /**
-     * Shape a count-line row for the client: typed numbers, product label, and the
-     * differanse (counted − expected) so the review grid needs no client math.
+     * Shape a count-line row for the client: typed numbers, product label, the
+     * line's location (a line is (product, location)), and the differanse (counted − expected) so the review grid needs no client math.
      *
      * @param array<string,mixed> $row
      * @return array<string,mixed>
@@ -306,6 +311,8 @@ final class Controller {
             'id'         => (int) $row['id'],
             'count_id'   => (int) $row['count_id'],
             'product_id' => (int) $row['product_id'],
+            'location_id'=> Counts::lineLocation($row),
+            'location'   => Locations::name(Counts::lineLocation($row)),
             'label'      => ProductSearch::label((int) $row['product_id']),
             'expected'   => $expected,
             'counted'    => $counted,
