@@ -2151,3 +2151,85 @@ msgstr ""
 #: includes/Ledger/Reasons.php:112
 msgid "Flytting ut"
 msgstr ""
+
+#. PRD-04 §2 counting per location (added by hand; tools/release regenerates the catalogue).
+
+#, php-format
+msgid "Counted lines are on a location that has been deactivated since the count was created: %s. Reactivate the location to apply, or cancel the count."
+msgstr "Talte linjer ligger på en lokasjon som er deaktivert etter at tellingen ble opprettet: %s. Aktiver lokasjonen igjen for å bruke tellingen, eller avbryt tellingen."
+
+#, php-format
+msgid "Row %1$d (%2$s): location id %3$d is not part of this count."
+msgstr "Rad %1$d (%2$s): lokasjons-ID %3$d er ikke med i denne tellingen."
+
+#, php-format
+msgid "Row %1$d (%2$s): location “%3$s” is not part of this count."
+msgstr "Rad %1$d (%2$s): lokasjonen «%3$s» er ikke med i denne tellingen."
+
+#, php-format
+msgid "Row %1$d (%2$s) has no location. This count covers several locations, so every row needs location_id or location."
+msgstr "Rad %1$d (%2$s) mangler lokasjon. Denne tellingen dekker flere lokasjoner, så hver rad må ha location_id eller location."
+
+msgid "This count covers several locations: every row needs its location (the location_id or location column from the export). Rows without one are rejected."
+msgstr "Denne tellingen dekker flere lokasjoner: hver rad må ha sin lokasjon (kolonnen location_id eller location fra eksporten). Rader uten lokasjon avvises."
+
+msgid "Show locations"
+msgstr "Vis lokasjoner"
+
+msgid "Count into"
+msgstr "Teller i"
+
+msgid "Unknown SKU: "
+msgstr "Ukjent SKU: "
+
+msgid "Could not save."
+msgstr "Kunne ikke lagre."
+
+msgid "Loading…"
+msgstr "Laster …"
+
+msgid "Could not load movements."
+msgstr "Kunne ikke hente bevegelser."
+
+msgid "Accept this counted value. Enter a note (required):"
+msgstr "Godta talt verdi. Skriv et notat (påkrevd):"
+
+msgid "Could not apply the count."
+msgstr "Kunne ikke bruke tellingen."
+
+msgid "exp"
+msgstr "forv."
+
+msgid "on hand"
+msgstr "på lager"
+
+msgid "counted"
+msgstr "talt"
+
+msgid "Bruk likevel?"
+msgstr "Bruk likevel?"
+
+msgid "No movements since the count started."
+msgstr "Ingen bevegelser siden tellingen startet."
+
+msgid "When"
+msgstr "Når"
+
+msgid "Change"
+msgstr "Endring"
+
+msgid "not counted — no change"
+msgstr "ikke talt — ingen endring"
+
+#, php-format
+msgid "%1$s of %2$s counted, %3$s change(s)"
+msgstr "%1$s av %2$s talt, %3$s endring(er)"
+
+msgid "No line for this location: "
+msgstr "Ingen linje på denne lokasjonen: "
+
+#, php-format
+msgid "%d CSV row was not imported:"
+msgid_plural "%d CSV rows were not imported:"
+msgstr[0] "%d CSV-rad ble ikke importert:"
+msgstr[1] "%d CSV-rader ble ikke importert:"

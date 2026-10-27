@@ -15,13 +15,22 @@
  * Review: apply (with ONE combined drift/uncounted confirm dialog and a single
  * "Bruk likevel"), override a recount-flagged line (note required), re-count it, and
  * an expandable "movements since count started" drill-down per line.
+ *
+ * Multi-location counts (root has .ks-multi, PRD-04 §2): one column group per
+ * location. The location toggles are display-only and remembered per device and
+ * site (localStorage); a hidden location's lines simply stay uncounted. "Teller i"
+ * picks which visible location a scan increments (automatic when one is visible).
+ * The CSV export link carries the visible locations. One-location counts have none
+ * of this and behave as before.
  */
 (function () {
 	'use strict';
 
 	var KS = window.KaupangStock || {};
-	var I18N = KS.i18n || {};
+	var KSC = window.KaupangStockCounting || {};
+	var I18N = Object.assign({}, KS.i18n || {}, KSC.i18n || {});
 	var DEBOUNCE_MS = 300;
+	var STORE_KEY = 'kaupangStock.countLocations.' + (KSC.siteKey || window.location.host);
 
 	function t(key, fallback) {
 		return (I18N && I18N[key]) || fallback;
@@ -100,6 +109,142 @@
 		}
 	}
 
+	/* ------------------------------ Locations ----------------------------- */
+
+	function readLocations(root) {
+		try {
+			return JSON.parse(root.getAttribute('data-locations') || '[]') || [];
+		} catch (e) {
+			return [];
+		}
+	}
+
+	function loadPrefs() {
+		try {
+			var raw = window.localStorage.getItem(STORE_KEY);
+			var prefs = raw ? JSON.parse(raw) : {};
+			return {
+				hidden: Array.isArray(prefs.hidden) ? prefs.hidden.map(String) : [],
+				countIn: prefs.countIn ? String(prefs.countIn) : ''
+			};
+		} catch (e) {
+			return { hidden: [], countIn: '' };
+		}
+	}
+
+	function savePrefs(prefs) {
+		try {
+			window.localStorage.setItem(STORE_KEY, JSON.stringify(prefs));
+		} catch (e) { /* private mode: the toggles still work for this page */ }
+	}
+
+	/**
+	 * Location visibility + "Teller i" for a multi-location sheet. Returns
+	 * {multi, locations, countIn(), name(id)}; for a one-location count it only
+	 * reports that single location.
+	 */
+	function initLocations(root, onChange) {
+		var locations = readLocations(root);
+		var names = {};
+		for (var i = 0; i < locations.length; i++) {
+			names[String(locations[i].id)] = locations[i].name;
+		}
+		var multi = root.classList.contains('ks-multi') && locations.length > 1;
+		var api = {
+			multi: multi,
+			locations: locations,
+			name: function (id) { return names[String(id)] || ''; },
+			countIn: function () { return locations.length ? String(locations[0].id) : ''; }
+		};
+		if (!multi) {
+			return api;
+		}
+
+		var prefs = loadPrefs();
+		var toggles = root.querySelectorAll('.ks-loc-toggle');
+		var select = document.getElementById('ks-count-in');
+
+		function visibleIds() {
+			var ids = [];
+			for (var i = 0; i < toggles.length; i++) {
+				if (toggles[i].checked) { ids.push(toggles[i].value); }
+			}
+			return ids;
+		}
+
+		// Restore the device's choice; never leave this count with nothing shown.
+		for (var t = 0; t < toggles.length; t++) {
+			toggles[t].checked = prefs.hidden.indexOf(toggles[t].value) === -1;
+		}
+		if (!visibleIds().length) {
+			for (var u = 0; u < toggles.length; u++) { toggles[u].checked = true; }
+		}
+
+		function apply() {
+			var visible = visibleIds();
+			var cells = root.querySelectorAll('[data-loc]');
+			for (var i = 0; i < cells.length; i++) {
+				cells[i].hidden = visible.indexOf(cells[i].getAttribute('data-loc')) === -1;
+			}
+			if (select) {
+				for (var o = 0; o < select.options.length; o++) {
+					var opt = select.options[o];
+					opt.hidden = opt.disabled = visible.indexOf(opt.value) === -1;
+				}
+				if (visible.indexOf(select.value) === -1 || select.value === '') {
+					select.value = visible.indexOf(prefs.countIn) !== -1 ? prefs.countIn : visible[0];
+				}
+				// One visible location counts automatically.
+				select.disabled = visible.length < 2;
+			}
+			var exportBtn = root.querySelector('.ks-export-btn');
+			if (exportBtn) {
+				var url = new URL(exportBtn.href, window.location.href);
+				url.searchParams.set('locations', visible.join(','));
+				exportBtn.href = url.toString();
+			}
+			if (onChange) { onChange(visible); }
+		}
+
+		function persist() {
+			var hidden = prefs.hidden.slice();
+			for (var i = 0; i < toggles.length; i++) {
+				var id = toggles[i].value;
+				var at = hidden.indexOf(id);
+				if (toggles[i].checked && at !== -1) { hidden.splice(at, 1); }
+				if (!toggles[i].checked && at === -1) { hidden.push(id); }
+			}
+			prefs.hidden = hidden;
+			if (select && select.value) { prefs.countIn = select.value; }
+			savePrefs(prefs);
+		}
+
+		for (var k = 0; k < toggles.length; k++) {
+			toggles[k].addEventListener('change', function (ev) {
+				if (!visibleIds().length) {
+					ev.target.checked = true; // at least one location stays visible
+					return;
+				}
+				apply();
+				persist();
+			});
+		}
+		if (select) {
+			if (prefs.countIn) { select.value = prefs.countIn; }
+			select.addEventListener('change', function () {
+				persist();
+				var scan = document.getElementById('ks-scan-input');
+				if (scan) { scan.focus(); }
+			});
+		}
+		apply();
+
+		api.countIn = function () {
+			return select ? select.value : (visibleIds()[0] || '');
+		};
+		return api;
+	}
+
 	/* ------------------------------ Capture ------------------------------- */
 
 	function initCapture() {
@@ -120,14 +265,25 @@
 
 		var lastScan = { value: '', at: 0 };
 
+		// Blind mode hides every Forventet column, so each location header spans
+		// one column instead of two.
+		function syncSpans() {
+			var blind = root.classList.contains('ks-capture--blind');
+			var heads = root.querySelectorAll('th.ks-loc-head[data-span]');
+			for (var i = 0; i < heads.length; i++) {
+				heads[i].colSpan = blind ? 1 : Number(heads[i].getAttribute('data-span'));
+			}
+		}
+		var locs = initLocations(root);
+
 		function setStatus(msg, kind) {
 			if (!statusEl) { return; }
 			statusEl.textContent = msg || '';
 			statusEl.className = 'ks-scanbar__status' + (kind ? ' ks-scanbar__status--' + kind : '');
 		}
 
-		function rowFor(lineId) {
-			return root.querySelector('tr[data-line-id="' + lineId + '"]');
+		function inputFor(lineId) {
+			return root.querySelector('.ks-count-input[data-line-id="' + lineId + '"]');
 		}
 
 		function flashRow(row) {
@@ -139,13 +295,15 @@
 		}
 
 		function applyLine(line) {
-			var row = rowFor(line.id);
+			var input = inputFor(line.id);
+			var row = input && input.closest('tr');
 			if (!row) { return; }
-			var input = row.querySelector('.ks-count-input');
-			if (input) {
-				input.value = (line.counted === null || line.counted === undefined) ? '' : fmt(line.counted);
+			input.value = (line.counted === null || line.counted === undefined) ? '' : fmt(line.counted);
+			if (locs.multi) {
+				input.closest('td').classList.toggle('ks-cell--recount', !!line.recount);
+			} else {
+				row.classList.toggle('ks-row--recount', !!line.recount);
 			}
-			row.classList.toggle('ks-row--recount', !!line.recount);
 			flashRow(row);
 		}
 
@@ -161,15 +319,22 @@
 		}
 
 		function incrementBySku(sku) {
-			var lineId = skuMap[sku];
-			if (!lineId) {
+			// skuMap: SKU → {location id → line id}; a scan lands on "Teller i".
+			var byLoc = skuMap[sku];
+			if (!byLoc) {
 				setStatus(t('unknownSku', 'Unknown SKU: ') + sku, 'warn');
+				return;
+			}
+			var lineId = byLoc[locs.countIn()];
+			if (!lineId) {
+				setStatus(t('noLine', 'No line for this location: ') + sku, 'warn');
 				return;
 			}
 			api('count-lines/' + lineId, 'POST', { increment: 1 }).then(function (resp) {
 				if (resp.ok && resp.data && resp.data.line) {
 					applyLine(resp.data.line);
-					setStatus(resp.data.line.label + ' → ' + fmt(resp.data.line.counted), 'ok');
+					var where = locs.multi ? ' · ' + (resp.data.line.location || locs.name(resp.data.line.location_id)) : '';
+					setStatus(resp.data.line.label + where + ' → ' + fmt(resp.data.line.counted), 'ok');
 				} else {
 					setStatus((resp.data && resp.data.message) || t('saveFailed', 'Could not save.'), 'error');
 				}
@@ -212,7 +377,7 @@
 			(function (input) {
 				input.addEventListener('change', function () {
 					var row = input.closest('tr');
-					var lineId = row && row.getAttribute('data-line-id');
+					var lineId = input.getAttribute('data-line-id') || (row && row.getAttribute('data-line-id'));
 					if (!lineId) { return; }
 					var v = input.value.trim();
 					if (v === '') {
@@ -229,8 +394,10 @@
 		if (showExpected) {
 			showExpected.addEventListener('change', function () {
 				root.classList.toggle('ks-capture--blind', !showExpected.checked);
+				syncSpans();
 			});
 		}
+		syncSpans();
 
 		if (scanInput) {
 			scanInput.focus();
@@ -246,6 +413,7 @@
 		}
 		var countId = root.getAttribute('data-count-id');
 		var since = root.getAttribute('data-since') || '';
+		var locs = initLocations(root);
 
 		// Drill-down: "movements since count started" per line.
 		root.addEventListener('click', function (ev) {
@@ -274,7 +442,7 @@
 					cell.textContent = t('loadFailed', 'Could not load movements.');
 					return;
 				}
-				cell.innerHTML = renderMovements(resp.data.rows || []);
+				cell.innerHTML = renderMovements(resp.data.rows || [], locs.multi ? locs : null);
 			});
 		});
 
@@ -282,7 +450,8 @@
 		root.addEventListener('click', function (ev) {
 			var btn = ev.target.closest ? ev.target.closest('.ks-override-btn') : null;
 			if (!btn) { return; }
-			var row = btn.closest('tr');
+			// The line is the row (one location) or the location's cell (several).
+			var row = btn.closest('[data-line-id]');
 			var lineId = row && row.getAttribute('data-line-id');
 			if (!lineId) { return; }
 			var note = window.prompt(t('overridePrompt', 'Accept this counted value. Enter a note (required):'));
@@ -359,28 +528,47 @@
 	 * likevel" confirm (§6.3) — the acknowledgment is informational; confirming
 	 * re-applies with the same relative deltas.
 	 */
+	function issueLine(it) {
+		var counted = (it.counted === null || it.counted === undefined) ? '—' : fmt(it.counted);
+		return '• ' + it.label +
+			' (' + t('expectedShort', 'exp') + ' ' + fmt(it.expected) +
+			', ' + t('onHandShort', 'on hand') + ' ' + fmt(it.on_hand) +
+			', ' + t('countedShort', 'counted') + ' ' + counted +
+			') [' + it.kind + ']';
+	}
+
 	function showConfirmDialog(data) {
 		var lines = [];
 		var issues = data.issues || [];
 		lines.push(data.message || '');
 		lines.push('');
-		for (var i = 0; i < issues.length; i++) {
-			var it = issues[i];
-			var counted = (it.counted === null || it.counted === undefined) ? '—' : fmt(it.counted);
-			lines.push(
-				'• ' + it.label +
-				' (' + t('expectedShort', 'exp') + ' ' + fmt(it.expected) +
-				', ' + t('onHandShort', 'on hand') + ' ' + fmt(it.on_hand) +
-				', ' + t('countedShort', 'counted') + ' ' + counted +
-				') [' + it.kind + ']'
-			);
+		if (data.multi && data.locations) {
+			// Per location: a location with nothing counted is ONE row; one with
+			// counted lines lists its drift/uncounted lines as before.
+			for (var l = 0; l < data.locations.length; l++) {
+				var loc = data.locations[l];
+				var own = issues.filter(function (it) { return String(it.location_id) === String(loc.location_id); });
+				if (loc.counted === 0) {
+					lines.push(loc.location + ': ' + t('notCounted', 'not counted — no change'));
+					continue;
+				}
+				lines.push(loc.location + ': ' + t('locationSummary', '%1$s of %2$s counted, %3$s change(s)')
+					.replace('%1$s', loc.counted).replace('%2$s', loc.lines).replace('%3$s', loc.movements));
+				for (var j = 0; j < own.length; j++) {
+					lines.push('  ' + issueLine(own[j]));
+				}
+			}
+		} else {
+			for (var i = 0; i < issues.length; i++) {
+				lines.push(issueLine(issues[i]));
+			}
 		}
 		lines.push('');
 		lines.push(t('applyAnyway', 'Bruk likevel?'));
 		return window.confirm(lines.join('\n'));
 	}
 
-	function renderMovements(rows) {
+	function renderMovements(rows, locs) {
 		if (!rows.length) {
 			return '<p class="ks-drill-empty">' + t('noMovements', 'No movements since the count started.') + '</p>';
 		}
@@ -388,6 +576,7 @@
 		// colspan cell instead of pushing the page.
 		var html = '<div class="ks-tablewrap"><table class="ks-drill-table"><thead><tr>' +
 			'<th>' + t('when', 'When') + '</th>' +
+			(locs ? '<th>' + t('location', 'Location') + '</th>' : '') +
 			'<th>' + t('change', 'Change') + '</th>' +
 			'<th>' + t('reason', 'Reason') + '</th>' +
 			'<th>' + t('note', 'Note') + '</th>' +
@@ -398,6 +587,7 @@
 			var cls = delta > 0 ? 'ks-pos' : (delta < 0 ? 'ks-neg' : '');
 			html += '<tr>' +
 				'<td>' + escapeHtml(r.created_at || r.occurred_at || '') + '</td>' +
+				(locs ? '<td>' + escapeHtml(locs.name(r.location_id) || ('#' + r.location_id)) + '</td>' : '') +
 				'<td class="' + cls + '">' + escapeHtml(fmtSigned(delta)) + '</td>' +
 				'<td>' + escapeHtml(r.reason || '') + '</td>' +
 				'<td>' + escapeHtml(r.note || '') + '</td>' +

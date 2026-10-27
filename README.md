@@ -60,7 +60,12 @@ Purge caches after flag changes: `wp --path=… nginx-helper purge-all --allow-r
 - **Bevegelser** — the ledger. Filterable movement log (product, reason, ref, actor, via,
   date), signed colored delta, ref deep-links to the source document, CSV export.
 - **Varetelling** — two-phase counting (capture → review → apply). Blind by default;
-  applies **relative variance** so a sale mid-count survives the apply.
+  applies **relative variance** so a sale mid-count survives the apply. A count covers
+  every active location (one line per product × location); with more than one, the
+  sheets show a column group per location, display-only location toggles remembered
+  per device, and a "Count into" picker for the scanner. CSV rows are per (product,
+  location). A one-location count looks exactly as before. Check:
+  `tests/prd-04-count-smoke.php` (staging only).
 - **Innkjøp** — suppliers (brreg org-nr lookup when kaupang-brreg is active), purchase
   orders, and receiving (2-click happy path, partial/over-receipt, derived status).
 
@@ -82,8 +87,8 @@ option). Check: `tools/check.php` (below), storefront: `wp kaupang-assets audit 
 | wp-admin screens (not admin-ajax) | `Admin\Menu` + its pages; product/order panels when enabled; `Schema` upgrade on `admin_init` | `kaupang-stock-admin` (+ `-counting`, `-purchasing`) on its own screens only | none |
 | WP-CLI | `Cli\Command` | none | none |
 
-`kaupang_stock_settings` and `kaupang_stock_schema_version` are not autoloaded (schema v6 moves existing rows; it runs
-on the next wp-admin page load after a deploy). The daily reconcile is scheduled (unique) from Action Scheduler's
+`kaupang_stock_settings` and `kaupang_stock_schema_version` are not autoloaded (schema v6 moves existing rows, v7 adds
+`count_lines.location_id` and backfills it; both run on the next wp-admin page load after a deploy). The daily reconcile is scheduled (unique) from Action Scheduler's
 ensure hook, after every settings write and on activation — never on a request path.
 
 Check: `sudo -u <sysuser> wp --path=/var/www/<site>/htdocs eval-file /var/www/<site>/htdocs/wp-content/plugins/kaupang-stock/tools/check.php`

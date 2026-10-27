@@ -190,3 +190,44 @@
 }
 
 .ks-import input[type="file"] { margin-right: 8px; }
+
+/* ------------------------------- Locations (multi) -------------------- */
+/* Only a count spanning several locations renders these (.ks-multi). */
+
+.ks-counts [data-loc][hidden] { display: none !important; }
+
+.ks-loc-toggles {
+	display: inline-flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 4px 12px;
+	margin: 0;
+	padding: 4px 10px;
+	border: 1px solid var(--ks-border);
+	border-radius: var(--ks-radius);
+	background: var(--ks-surface);
+}
+
+.ks-loc-toggles__label {
+	float: left; /* keeps the legend inline in the fieldset */
+	padding: 0;
+	margin-right: 4px;
+	font-weight: 600;
+}
+
+.ks-loc-toggles label { white-space: nowrap; }
+
+.ks-count-in {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-weight: 600;
+}
+
+.ks-multi .ks-loc-head { text-align: center; }
+.ks-multi .ks-loc-head,
+.ks-multi .ks-loc-first { border-left: 1px solid var(--ks-border); }
+
+.ks-sheet--multi td.ks-cell--recount { background: var(--ks-danger-bg); }
+.ks-grid--multi .ks-cell-diff .ks-chip--recount { margin-left: 4px; }
+.ks-grid--multi .ks-cell-diff .ks-override-btn { margin-left: 6px; }

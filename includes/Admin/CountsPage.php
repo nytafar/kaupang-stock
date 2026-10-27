@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 namespace Kaupang\Stock\Admin;
 
-use Kaupang\Stock\Counting\CountLines;
 use Kaupang\Stock\Counting\Import;
 use Kaupang\Stock\Counting\Counts;
+use Kaupang\Stock\Locations;
 use Kaupang\Stock\Settings;
 use Kaupang\Stock\Support\ProductSearch;
 use Kaupang\Stock\Support\Assets;
@@ -18,6 +18,10 @@ use Kaupang\Stock\Support\Assets;
  *    drives per-row increments over REST (keyboard-wedge scanner, Enter-terminated).
  *  - review: the three-column expected / counted / differanse grid, recount chips,
  *    override, per-line "movements since count started" drill-down, and apply.
+ *
+ * Capture and review render in CountSheet (one column group per location when a
+ * count spans several, PRD-04 §2); this class keeps the router, the list, the
+ * create form, the admin-post handlers and the small UI helpers both share.
  *
  * The shell's Menu routes the submenu slug to render() and registers the shared
  * `kaupang-stock-admin` asset handles; this page enqueues its own counting.{css,js}
@@ -33,7 +37,10 @@ final class CountsPage {
     private const A_CREATE    = 'kaupang_stock_count_create';
     private const A_TRANSITION = 'kaupang_stock_count_transition';
     private const A_EXPORT    = 'kaupang_stock_count_export';
-    private const A_IMPORT    = 'kaupang_stock_count_import';
+    public const A_IMPORT     = 'kaupang_stock_count_import';
+
+    /** Per-user transient carrying rejected CSV rows across the import redirect. */
+    private const IMPORT_ERRORS = 'kaupang_stock_count_import_errors_';
 
     public static function register(): void {
         \add_action('admin_post_' . self::A_CREATE, [self::class, 'handleCreate']);
@@ -66,6 +73,34 @@ final class CountsPage {
             Assets::ver('assets/counting.js'),
             true
         );
+        \wp_localize_script('kaupang-stock-counting', 'KaupangStockCounting', [
+            // localStorage is per origin; the home path keeps two installs on one
+            // origin apart ("remembered per device, per site").
+            'siteKey' => (string) \wp_parse_url(\home_url('/'), PHP_URL_HOST) . (string) \wp_parse_url(\home_url('/'), PHP_URL_PATH),
+            'i18n'    => [
+                'unknownSku'      => \__('Unknown SKU: ', 'kaupang-stock'),
+                'saveFailed'      => \__('Could not save.', 'kaupang-stock'),
+                'loading'         => \__('Loading…', 'kaupang-stock'),
+                'loadFailed'      => \__('Could not load movements.', 'kaupang-stock'),
+                'overridePrompt'  => \__('Accept this counted value. Enter a note (required):', 'kaupang-stock'),
+                'noteRequired'    => \__('A note is required.', 'kaupang-stock'),
+                'applyFailed'     => \__('Could not apply the count.', 'kaupang-stock'),
+                'expectedShort'   => \__('exp', 'kaupang-stock'),
+                'onHandShort'     => \__('on hand', 'kaupang-stock'),
+                'countedShort'    => \__('counted', 'kaupang-stock'),
+                'applyAnyway'     => \__('Bruk likevel?', 'kaupang-stock'),
+                'noMovements'     => \__('No movements since the count started.', 'kaupang-stock'),
+                'when'            => \__('When', 'kaupang-stock'),
+                'change'          => \__('Change', 'kaupang-stock'),
+                'reason'          => \__('Reason', 'kaupang-stock'),
+                'note'            => \__('Note', 'kaupang-stock'),
+                'location'        => \__('Location', 'kaupang-stock'),
+                'notCounted'      => \__('not counted — no change', 'kaupang-stock'),
+                /* translators: 1: counted lines, 2: total lines, 3: movements to post (placeholders filled in JS). */
+                'locationSummary' => \__('%1$s of %2$s counted, %3$s change(s)', 'kaupang-stock'),
+                'noLine'          => \__('No line for this location: ', 'kaupang-stock'),
+            ],
+        ]);
     }
 
     /* ------------------------------ Router -------------------------------- */
@@ -90,9 +125,9 @@ final class CountsPage {
                 $view = $status === Counts::STATUS_OPEN ? 'capture' : 'review';
             }
             if ($view === 'capture') {
-                self::renderCapture($count);
+                CountSheet::capture($count);
             } else {
-                self::renderReview($count);
+                CountSheet::review($count);
             }
             return;
         }
@@ -226,205 +261,6 @@ final class CountsPage {
         <?php
     }
 
-    /* ------------------------------ Capture view -------------------------- */
-
-    private static function renderCapture(array $count): void {
-        $countId = (int) $count['id'];
-        $blind   = !empty($count['blind']);
-        $lines   = Counts::lines($countId);
-        $rows    = self::decorateLines($lines);
-
-        // Per-row SKU map (server-rendered) so the scanner resolves a line
-        // client-side; repeated scans increment via REST.
-        $skuMap = [];
-        foreach ($rows as $r) {
-            if ($r['sku'] !== '') {
-                $skuMap[$r['sku']] = $r['id'];
-            }
-        }
-        ?>
-        <div class="wrap ks-counts ks-capture <?php echo $blind ? 'ks-capture--blind' : ''; ?>"
-             data-count-id="<?php echo (int) $countId; ?>"
-             data-sku-map="<?php echo \esc_attr((string) \wp_json_encode($skuMap)); ?>">
-            <h1>
-                <?php echo \esc_html(sprintf(\__('Varetelling #%d — capture', 'kaupang-stock'), $countId)); ?>
-                <?php echo self::statusChip((string) $count['status']); // phpcs:ignore WordPress.Security.EscapeOutput ?>
-            </h1>
-            <?php self::notices(); ?>
-            <p class="ks-back"><a href="<?php echo \esc_url(self::listUrl()); ?>">&larr; <?php \esc_html_e('All counts', 'kaupang-stock'); ?></a></p>
-
-            <div class="ks-capture__toolbar">
-                <label class="ks-blind-toggle">
-                    <input type="checkbox" id="ks-show-expected" <?php echo $blind ? '' : 'checked'; ?> />
-                    <?php \esc_html_e('Vis forventet', 'kaupang-stock'); ?>
-                </label>
-                <?php echo self::transitionButton($countId, 'to_review', \__('Til gjennomgang', 'kaupang-stock'), 'button-primary'); // phpcs:ignore WordPress.Security.EscapeOutput ?>
-                <?php echo self::exportButton($countId); // phpcs:ignore WordPress.Security.EscapeOutput ?>
-            </div>
-
-            <div class="ks-scanbar">
-                <input type="text" id="ks-scan-input" class="ks-scanbar__input" autocomplete="off" autofocus
-                       placeholder="<?php \esc_attr_e('Scan or type a SKU, then Enter…', 'kaupang-stock'); ?>" />
-                <span class="ks-scanbar__status" id="ks-scan-status" role="status" aria-live="polite"></span>
-            </div>
-
-            <div class="ks-tablewrap">
-            <table class="wp-list-table widefat striped ks-sheet">
-                <thead>
-                    <tr>
-                        <th><?php \esc_html_e('SKU', 'kaupang-stock'); ?></th>
-                        <th><?php \esc_html_e('Product', 'kaupang-stock'); ?></th>
-                        <th class="ks-col-expected"><?php \esc_html_e('Forventet', 'kaupang-stock'); ?></th>
-                        <th><?php \esc_html_e('Counted', 'kaupang-stock'); ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php foreach ($rows as $r): ?>
-                    <tr data-line-id="<?php echo (int) $r['id']; ?>" data-sku="<?php echo \esc_attr($r['sku']); ?>">
-                        <td><code><?php echo \esc_html($r['sku'] !== '' ? $r['sku'] : '—'); ?></code></td>
-                        <td><?php echo \esc_html($r['title']); ?></td>
-                        <td class="ks-col-expected"><?php echo \esc_html(self::fmt($r['expected'])); ?></td>
-                        <td>
-                            <input type="number" step="1" min="0" class="ks-count-input small-text"
-                                   value="<?php echo $r['counted'] === null ? '' : \esc_attr(self::fmt($r['counted'])); ?>" />
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-            </div>
-        </div>
-        <?php
-    }
-
-    /* ------------------------------ Review view --------------------------- */
-
-    private static function renderReview(array $count): void {
-        $countId = (int) $count['id'];
-        $status  = (string) $count['status'];
-        $lines   = Counts::lines($countId);
-        $rows    = self::decorateLines($lines);
-        $since   = (string) $count['created_at']; // UTC; drill-down cutoff
-
-        $recountCount = 0;
-        $uncounted    = 0;
-        foreach ($rows as $r) {
-            if ($r['recount']) {
-                $recountCount++;
-            }
-            if ($r['counted'] === null) {
-                $uncounted++;
-            }
-        }
-        $applied  = $status === Counts::STATUS_APPLIED;
-        $canApply = $status === Counts::STATUS_REVIEW;
-        ?>
-        <div class="wrap ks-counts ks-review"
-             data-count-id="<?php echo (int) $countId; ?>"
-             data-since="<?php echo \esc_attr($since); ?>">
-            <h1>
-                <?php echo \esc_html(sprintf(\__('Varetelling #%d', 'kaupang-stock'), $countId)); ?>
-                <?php echo self::statusChip($status); // phpcs:ignore WordPress.Security.EscapeOutput ?>
-            </h1>
-            <?php self::notices(); ?>
-            <p class="ks-back"><a href="<?php echo \esc_url(self::listUrl()); ?>">&larr; <?php \esc_html_e('All counts', 'kaupang-stock'); ?></a></p>
-
-            <?php if ((string) ($count['note'] ?? '') !== ''): ?>
-                <p class="ks-note-trail"><strong><?php \esc_html_e('Note:', 'kaupang-stock'); ?></strong> <?php echo \esc_html((string) $count['note']); ?></p>
-            <?php endif; ?>
-
-            <div class="ks-review__toolbar">
-                <?php if ($canApply): ?>
-                    <?php echo self::transitionButton($countId, 'reopen', \__('Reopen for counting', 'kaupang-stock'), 'button'); // phpcs:ignore WordPress.Security.EscapeOutput ?>
-                    <button type="button" class="button button-primary ks-apply-btn"
-                            <?php echo $recountCount > 0 ? 'disabled' : ''; ?>>
-                        <?php \esc_html_e('Bruk telling', 'kaupang-stock'); ?>
-                    </button>
-                    <?php if ($recountCount > 0): ?>
-                        <span class="description"><?php echo \esc_html(sprintf(\__('%d line(s) need a recount or override before applying.', 'kaupang-stock'), $recountCount)); ?></span>
-                    <?php endif; ?>
-                    <?php echo self::transitionButton($countId, 'cancel', \__('Cancel count', 'kaupang-stock'), 'button ks-danger', true); // phpcs:ignore WordPress.Security.EscapeOutput ?>
-                <?php elseif ($applied): ?>
-                    <p class="description"><?php echo \esc_html(sprintf(\__('Applied %s by %s.', 'kaupang-stock'),
-                        \get_date_from_gmt((string) ($count['applied_at'] ?? gmdate('Y-m-d H:i:s')), 'Y-m-d H:i'),
-                        self::userName((int) ($count['applied_by'] ?? 0)))); ?></p>
-                <?php endif; ?>
-                <?php echo self::exportButton($countId); // phpcs:ignore WordPress.Security.EscapeOutput ?>
-            </div>
-
-            <div class="ks-tablewrap">
-            <table class="wp-list-table widefat striped ks-grid">
-                <thead>
-                    <tr>
-                        <th><?php \esc_html_e('Product', 'kaupang-stock'); ?></th>
-                        <th class="ks-num"><?php \esc_html_e('Forventet', 'kaupang-stock'); ?></th>
-                        <th class="ks-num"><?php \esc_html_e('Counted', 'kaupang-stock'); ?></th>
-                        <th class="ks-num"><?php \esc_html_e('Differanse', 'kaupang-stock'); ?></th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php foreach ($rows as $r):
-                    $diff  = $r['counted'] === null ? null : $r['counted'] - $r['expected'];
-                    $klass = $diff === null ? '' : ($diff > 0 ? 'ks-pos' : ($diff < 0 ? 'ks-neg' : 'ks-zero'));
-                    ?>
-                    <tr data-line-id="<?php echo (int) $r['id']; ?>" data-product-id="<?php echo (int) $r['product_id']; ?>">
-                        <td>
-                            <?php echo \esc_html($r['title']); ?>
-                            <?php if ($r['sku'] !== ''): ?><code class="ks-sku"><?php echo \esc_html($r['sku']); ?></code><?php endif; ?>
-                            <?php if ($r['recount']): ?>
-                                <span class="ks-chip ks-chip--recount"><?php \esc_html_e('recount', 'kaupang-stock'); ?></span>
-                            <?php endif; ?>
-                        </td>
-                        <td class="ks-num ks-cell-expected"><?php echo \esc_html(self::fmt($r['expected'])); ?></td>
-                        <td class="ks-num ks-cell-counted"><?php echo $r['counted'] === null ? '<em>—</em>' : \esc_html(self::fmt($r['counted'])); ?></td>
-                        <td class="ks-num ks-cell-diff <?php echo \esc_attr($klass); ?>"><?php echo $diff === null ? '' : \esc_html(self::fmtSigned($diff)); ?></td>
-                        <td class="ks-row-actions">
-                            <button type="button" class="button-link ks-drill-btn" aria-expanded="false"><?php \esc_html_e('Movements since', 'kaupang-stock'); ?></button>
-                            <?php if ($canApply && $r['recount']): ?>
-                                <button type="button" class="button-link ks-override-btn"><?php \esc_html_e('Override', 'kaupang-stock'); ?></button>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                    <tr class="ks-drill-row" hidden><td colspan="5" class="ks-drill-cell"></td></tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-            </div>
-
-            <?php if ($uncounted > 0 && $canApply): ?>
-                <p class="description ks-uncounted-note">
-                    <?php echo \esc_html(sprintf(\__('%d line(s) have not been counted. They post nothing and will require a combined confirmation at apply.', 'kaupang-stock'), $uncounted)); ?>
-                </p>
-            <?php endif; ?>
-        </div>
-
-        <?php self::renderImportForm($count); ?>
-        <?php
-    }
-
-    private static function renderImportForm(array $count): void {
-        $status = (string) $count['status'];
-        // Import re-fills counted and lands in review — offered while still open or
-        // in review, never once applied/cancelled.
-        if (!in_array($status, [Counts::STATUS_OPEN, Counts::STATUS_REVIEW], true)) {
-            return;
-        }
-        ?>
-        <div class="ks-import">
-            <h2><?php \esc_html_e('Import counted quantities (CSV)', 'kaupang-stock'); ?></h2>
-            <p class="description"><?php \esc_html_e('Upload the exported sheet with the counted column filled. Matching is by SKU (falling back to a product id column if present). The count lands in review — never applied directly.', 'kaupang-stock'); ?></p>
-            <form method="post" action="<?php echo \esc_url(\admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
-                <?php \wp_nonce_field(self::A_IMPORT); ?>
-                <input type="hidden" name="action" value="<?php echo \esc_attr(self::A_IMPORT); ?>" />
-                <input type="hidden" name="count" value="<?php echo (int) $count['id']; ?>" />
-                <input type="file" name="sheet" accept=".csv,text/csv" required />
-                <button type="submit" class="button"><?php \esc_html_e('Upload', 'kaupang-stock'); ?></button>
-            </form>
-        </div>
-        <?php
-    }
-
     /* ------------------------------ Handlers ------------------------------ */
 
     public static function handleCreate(): void {
@@ -482,6 +318,9 @@ final class CountsPage {
     /**
      * CSV export of the sheet (§6.7): columns sku, product, counted — plus an
      * `expected` column ONLY when the count is not blind. Streamed as a download.
+     * A multi-location count exports one row per (product, location) with
+     * `location, location_id` after `product`, limited to the locations the
+     * device shows (`locations`, sent by counting.js; absent = all).
      */
     public static function handleExport(): void {
         Screen::guard(self::A_EXPORT, 'GET');
@@ -490,10 +329,32 @@ final class CountsPage {
         if ($count === null) {
             Screen::redirect(Menu::SLUG_COUNTS, ['ks_err' => 'not_found']);
         }
-        $blind = !empty($count['blind']);
-        $rows  = self::decorateLines(Counts::lines($countId));
+        $only = [];
+        if (isset($_GET['locations'])) {
+            $only = array_map('intval', explode(',', \sanitize_text_field(\wp_unslash((string) $_GET['locations']))));
+        }
+        [$header, $csv] = self::exportSheet($count, $only);
+        Screen::streamCsv('varetelling-' . $countId . '.csv', $header, $csv, ',');
+    }
 
-        $header = ['sku', 'product', 'counted'];
+    /**
+     * The export sheet as [header, rows] (no I/O, so the check can round-trip
+     * it). One-location count: the v1 shape. Multi-location: location columns,
+     * rows limited to `$only` when it names any of the count's locations.
+     *
+     * @param array<string,mixed> $count
+     * @param int[]               $only
+     * @return array{0:array<int,string>,1:array<int,array<int,scalar>>}
+     */
+    public static function exportSheet(array $count, array $only = []): array {
+        $countId   = (int) $count['id'];
+        $blind     = !empty($count['blind']);
+        $locations = Counts::locations($countId);
+        $multi     = count($locations) > 1;
+        $rows      = CountSheet::decorate(Counts::lines($countId));
+        $only      = $multi ? array_values(array_intersect(array_map('intval', $only), array_keys($locations))) : [];
+
+        $header = $multi ? ['sku', 'product', 'location', 'location_id', 'counted'] : ['sku', 'product', 'counted'];
         if (!$blind) {
             $header[] = 'expected';
         }
@@ -502,24 +363,29 @@ final class CountsPage {
 
         $csv = [];
         foreach ($rows as $r) {
-            $line = [
-                $r['sku'],
-                $r['title'],
-                $r['counted'] === null ? '' : self::fmt($r['counted']),
-            ];
+            if ($only !== [] && !in_array($r['location_id'], $only, true)) {
+                continue;
+            }
+            $line = [$r['sku'], $r['title']];
+            if ($multi) {
+                $line[] = $locations[$r['location_id']] ?? Locations::name($r['location_id']);
+                $line[] = $r['location_id'];
+            }
+            $line[] = $r['counted'] === null ? '' : self::fmt($r['counted']);
             if (!$blind) {
                 $line[] = self::fmt($r['expected']);
             }
             $line[] = $r['product_id'];
             $csv[]  = $line;
         }
-        Screen::streamCsv('varetelling-' . $countId . '.csv', $header, $csv, ',');
+        return [$header, $csv];
     }
 
     /**
      * CSV import (§6.7): fill `counted` for matching lines (by sku, falling back to
-     * a product_id column), move the count to review, never apply. The parse and
-     * the SKU match live in Counting\Import.
+     * a product_id column; per location in a multi-location count), move the
+     * count to review, never apply. The parse and the match live in
+     * Counting\Import; rejected rows are shown after the redirect.
      */
     public static function handleImport(): void {
         Screen::guard(self::A_IMPORT);
@@ -544,59 +410,27 @@ final class CountsPage {
             Screen::redirect(Menu::SLUG_COUNTS, ['count' => $countId, 'view' => 'review', 'ks_err' => 'parse_failed']);
         }
         rewind($handle);
-        $parsed = Import::parse($handle);
+        $result = Import::fill($countId, $handle);
         fclose($handle);
+        $applied = $result['filled'];
 
-        // Fill the count's own lines from the parsed product → counted map.
-        $applied = 0;
-        foreach (Counts::lines($countId) as $line) {
-            $productId = (int) $line['product_id'];
-            if (isset($parsed['lines'][$productId])
-                && CountLines::setCounted((int) $line['id'], $parsed['lines'][$productId]) !== null
-            ) {
-                $applied++;
-            }
+        $extra = [];
+        if ($result['errors'] !== []) {
+            \set_transient(self::IMPORT_ERRORS . \get_current_user_id(), array_slice($result['errors'], 0, 50), 10 * MINUTE_IN_SECONDS);
+            $extra = ['ks_rejected' => count($result['errors'])];
         }
 
         // Land in review (never applied). Only transitions from open.
         if ((string) $count['status'] === Counts::STATUS_OPEN) {
             Counts::toReview($countId);
         }
-        Screen::redirect(Menu::SLUG_COUNTS, ['count' => $countId, 'view' => 'review', 'ks_msg' => 'imported', 'n' => $applied]);
-    }
-
-    /* ------------------------------ Decorate ------------------------------ */
-
-    /**
-     * Attach title + SKU to raw line rows in a single query batch (no WC_Product
-     * loop). Returns typed, render-ready rows.
-     *
-     * @param array<int,array<string,mixed>> $lines
-     * @return array<int,array{id:int,product_id:int,title:string,sku:string,expected:float,counted:?float,recount:bool}>
-     */
-    private static function decorateLines(array $lines): array {
-        $meta = ProductSearch::rows(array_map(static fn ($l): int => (int) $l['product_id'], $lines));
-
-        $out = [];
-        foreach ($lines as $l) {
-            $pid   = (int) $l['product_id'];
-            $title = $meta[$pid]['title'] ?? ('#' . $pid);
-            $out[] = [
-                'id'         => (int) $l['id'],
-                'product_id' => $pid,
-                'title'      => $title,
-                'sku'        => $meta[$pid]['sku'] ?? '',
-                'expected'   => (float) $l['expected'],
-                'counted'    => $l['counted'] === null ? null : (float) $l['counted'],
-                'recount'    => (int) $l['recount'] === 1,
-            ];
-        }
-        return $out;
+        Screen::redirect(Menu::SLUG_COUNTS, ['count' => $countId, 'view' => 'review', 'ks_msg' => 'imported', 'n' => $applied] + $extra);
     }
 
     /* ------------------------------ URLs & UI ----------------------------- */
 
-    private static function listUrl(): string {
+    /** @internal shared with CountSheet. */
+    public static function listUrl(): string {
         return \admin_url('admin.php?page=' . self::SLUG);
     }
 
@@ -608,7 +442,8 @@ final class CountsPage {
         return \add_query_arg(['page' => self::SLUG, 'count' => $countId, 'view' => 'review'], \admin_url('admin.php'));
     }
 
-    private static function statusChip(string $status): string {
+    /** @internal shared with CountSheet. */
+    public static function statusChip(string $status): string {
         $labels = [
             Counts::STATUS_OPEN      => \__('Open', 'kaupang-stock'),
             Counts::STATUS_REVIEW    => \__('Til gjennomgang', 'kaupang-stock'),
@@ -631,7 +466,8 @@ final class CountsPage {
     }
 
     /** A small POST form button for a lifecycle transition (nonce-protected). */
-    private static function transitionButton(int $countId, string $to, string $label, string $class, bool $confirm = false): string {
+    /** @internal shared with CountSheet. */
+    public static function transitionButton(int $countId, string $to, string $label, string $class, bool $confirm = false): string {
         $onclick = $confirm
             ? ' onclick="return confirm(\'' . \esc_js(__('Cancel this count? This cannot be undone.', 'kaupang-stock')) . '\');"'
             : '';
@@ -648,12 +484,13 @@ final class CountsPage {
         return (string) ob_get_clean();
     }
 
-    private static function exportButton(int $countId): string {
+    /** @internal shared with CountSheet. */
+    public static function exportButton(int $countId): string {
         $url = \wp_nonce_url(
             \add_query_arg(['action' => self::A_EXPORT, 'count' => $countId], \admin_url('admin-post.php')),
             self::A_EXPORT
         );
-        return '<a class="button" href="' . \esc_url($url) . '">' . \esc_html__('Export CSV', 'kaupang-stock') . '</a>';
+        return '<a class="button ks-export-btn" href="' . \esc_url($url) . '">' . \esc_html__('Export CSV', 'kaupang-stock') . '</a>';
     }
 
     /* ------------------------------ Helpers ------------------------------- */
@@ -688,7 +525,8 @@ final class CountsPage {
         return array_values(ProductSearch::rows(\Kaupang\Stock\Observe\Seeder::stockManagedProductIds()));
     }
 
-    private static function userName(int $userId): string {
+    /** @internal shared with CountSheet. */
+    public static function userName(int $userId): string {
         if ($userId <= 0) {
             return \__('system', 'kaupang-stock');
         }
@@ -696,12 +534,14 @@ final class CountsPage {
         return $user instanceof \WP_User && $user->display_name !== '' ? $user->display_name : ('#' . $userId);
     }
 
-    private static function fmt(float $n): string {
+    /** @internal shared with CountSheet. */
+    public static function fmt(float $n): string {
         // Integer v1: show without decimals when whole (the common case).
         return abs($n - round($n)) < 1e-9 ? (string) (int) round($n) : rtrim(rtrim(number_format($n, 3, '.', ''), '0'), '.');
     }
 
-    private static function fmtSigned(float $n): string {
+    /** @internal shared with CountSheet. */
+    public static function fmtSigned(float $n): string {
         $s = self::fmt(abs($n));
         if ($n > 0) {
             return '+' . $s;
@@ -712,8 +552,10 @@ final class CountsPage {
         return '0';
     }
 
-    private static function notices(): void {
+    /** @internal shared with CountSheet. */
+    public static function notices(): void {
         $n = isset($_GET['n']) ? (int) $_GET['n'] : 0; // phpcs:ignore WordPress.Security.NonceVerification
+        self::rejectedRowsNotice();
         Screen::notices(
             [
                 'created'     => \__('Count created. Start scanning below.', 'kaupang-stock'),
@@ -734,5 +576,29 @@ final class CountsPage {
                 'parse_failed'        => \__('The CSV could not be read.', 'kaupang-stock'),
             ]
         );
+    }
+
+    /** The rows a CSV import rejected (one notice, the first 50 reasons). */
+    private static function rejectedRowsNotice(): void {
+        if (empty($_GET['ks_rejected'])) { // phpcs:ignore WordPress.Security.NonceVerification
+            return;
+        }
+        $key    = self::IMPORT_ERRORS . \get_current_user_id();
+        $errors = \get_transient($key);
+        \delete_transient($key);
+        $total = (int) $_GET['ks_rejected']; // phpcs:ignore WordPress.Security.NonceVerification
+        echo '<div class="notice notice-warning is-dismissible ks-import-rejected"><p>' . \esc_html(sprintf(
+            /* translators: %d: number of CSV rows that were not imported. */
+            \_n('%d CSV row was not imported:', '%d CSV rows were not imported:', $total, 'kaupang-stock'),
+            $total
+        )) . '</p>';
+        if (is_array($errors) && $errors !== []) {
+            echo '<ul>';
+            foreach ($errors as $e) {
+                echo '<li>' . \esc_html((string) $e) . '</li>';
+            }
+            echo '</ul>';
+        }
+        echo '</div>';
     }
 }
