@@ -63,8 +63,12 @@ Purge caches after flag changes: `wp --path=… nginx-helper purge-all --allow-r
   applies **relative variance** so a sale mid-count survives the apply. A count covers
   every active location (one line per product × location); with more than one, the
   sheets show a column group per location, display-only location toggles remembered
-  per device, and a "Count into" picker for the scanner. CSV rows are per (product,
-  location). A one-location count looks exactly as before. Check:
+  per device, and a "Count into" picker for the scanner (with several locations shown, a
+  scan is refused until this device has picked one). A counted line, or every counted
+  line of one location, can be marked uncounted again while the count is open or in
+  review. Apply claims the count (`applying`) before it reads the lines, so no scan is
+  accepted that it does not post. CSV rows are per (product, location). A one-location
+  count looks exactly as before. Check:
   `tests/prd-04-count-smoke.php` (staging only).
 - **Innkjøp** — suppliers (brreg org-nr lookup when kaupang-brreg is active), purchase
   orders, and receiving (2-click happy path, partial/over-receipt, derived status).

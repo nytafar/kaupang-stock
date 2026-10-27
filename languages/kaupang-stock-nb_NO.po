@@ -42,88 +42,90 @@ msgstr "Kaupang Stock krever PHP 8.1 eller nyere."
 msgid "Varetelling"
 msgstr "Varetelling"
 
-#: includes/Admin/CountsPage.php:123
+#: includes/Admin/CountsPage.php:136
 #: includes/Admin/PurchasingPage.php:161
-#: includes/Admin/SettingsPage.php:349
+#: includes/Admin/SettingsPage.php:345
 msgid "Status"
 msgstr "Status"
 
-#: includes/Admin/CountsPage.php:124
-#: includes/Admin/CountsPage.php:169
+#: includes/Admin/CountsPage.php:137
+#: includes/Admin/CountsPage.php:182
 msgid "Scope"
 msgstr "Omfang"
 
-#: includes/Admin/CountsPage.php:125
+#: includes/Admin/CountsPage.php:138
 msgid "Blind"
 msgstr "Blind"
 
-#: includes/Admin/CountsPage.php:126
+#: includes/Admin/CountsPage.php:139
 msgid "Progress"
 msgstr "Fremdrift"
 
-#: includes/Admin/CountsPage.php:127
+#: includes/Admin/CountsPage.php:140
 msgid "Created"
 msgstr "Opprettet"
 
-#: includes/Admin/CountsPage.php:133
+#: includes/Admin/CountsPage.php:146
 msgid "No counts yet."
 msgstr "Ingen varetellinger ennå."
 
-#: includes/Admin/CountsPage.php:143
-#: includes/Admin/SettingsPage.php:361
+#: includes/Admin/CountsPage.php:156
+#: includes/Admin/SettingsPage.php:357
 msgid "Yes"
 msgstr "Ja"
 
-#: includes/Admin/CountsPage.php:143
+#: includes/Admin/CountsPage.php:156
 msgid "No"
 msgstr "Nei"
 
-#: includes/Admin/CountsPage.php:147
-#: includes/Admin/CountsPage.php:376
+#: includes/Admin/CountSheet.php:259
+#: includes/Admin/CountSheet.php:324
+#: includes/Admin/CountsPage.php:160
 msgid "recount"
 msgstr "opptelling"
 
-#: includes/Admin/CountsPage.php:172
+#: includes/Admin/CountsPage.php:185
 msgid "All stock-managed products"
 msgstr "Alle lagerstyrte produkter"
 
-#: includes/Admin/CountsPage.php:173
+#: includes/Admin/CountsPage.php:186
 msgid "One product category"
 msgstr "Én produktkategori"
 
-#: includes/Admin/CountsPage.php:174
+#: includes/Admin/CountsPage.php:187
 msgid "Manual selection"
 msgstr "Manuelt utvalg"
 
-#: includes/Admin/CountsPage.php:179
+#: includes/Admin/CountsPage.php:192
 msgid "Category"
 msgstr "Kategori"
 
-#: includes/Admin/CountsPage.php:190
+#: includes/Admin/CountsPage.php:203
 msgid "Products"
 msgstr "Produkter"
 
-#: includes/Admin/CountsPage.php:194
+#: includes/Admin/CountsPage.php:207
 msgid "Filter by name or SKU…"
 msgstr "Filtrer på navn eller SKU…"
 
-#: includes/Admin/CountsPage.php:195
+#: includes/Admin/CountsPage.php:208
 msgid "Stock-managed products"
 msgstr "Lagerstyrte produkter"
 
-#: includes/Admin/CountsPage.php:204
+#: includes/Admin/CountsPage.php:217
 msgid "Only stock-managed products are listed."
 msgstr "Bare lagerstyrte produkter vises."
 
-#: includes/Admin/CountsPage.php:209
+#: includes/Admin/CountsPage.php:222
 msgid "Blind count"
 msgstr "Blindtelling"
 
-#: includes/Admin/CountsPage.php:213
+#: includes/Admin/CountsPage.php:226
 msgid "Hide the expected quantity while counting (recommended)."
 msgstr "Skjul forventet mengde under tellingen (anbefalt)."
 
-#: includes/Admin/CountsPage.php:218
+#: includes/Admin/CountSheet.php:440
+#: includes/Admin/CountsPage.php:231
 #: includes/Admin/MovementsPage.php:126
 #: includes/Admin/MovementsPage.php:639
 #: includes/Admin/PurchasingPage.php:251
@@ -133,39 +135,42 @@ msgstr "Skjul forventet mengde under tellingen (anbefalt)."
 msgid "Note"
 msgstr "Notat"
 
-#: includes/Admin/CountsPage.php:223
+#: includes/Admin/CountsPage.php:236
 msgid "Create count"
 msgstr "Opprett varetelling"
 
-#: includes/Admin/CountsPage.php:250
+#: includes/Admin/CountSheet.php:49
 #, php-format
 msgid "Varetelling #%d — capture"
 msgstr "Varetelling #%d — registrering"
 
-#: includes/Admin/CountsPage.php:254
-#: includes/Admin/CountsPage.php:330
+#: includes/Admin/CountSheet.php:53
+#: includes/Admin/CountSheet.php:186
 msgid "All counts"
 msgstr "Alle varetellinger"
 
-#: includes/Admin/CountsPage.php:259
+#: includes/Admin/CountSheet.php:58
 msgid "Vis forventet"
 msgstr "Vis forventet"
 
-#: includes/Admin/CountsPage.php:261
-#: includes/Admin/CountsPage.php:614
+#: includes/Admin/CountSheet.php:61
+#: includes/Admin/CountsPage.php:431
 msgid "Til gjennomgang"
 msgstr "Til gjennomgang"
 
-#: includes/Admin/CountsPage.php:267
+#: includes/Admin/CountSheet.php:67
 msgid "Scan or type a SKU, then Enter…"
 msgstr "Skann eller skriv en SKU, trykk deretter Enter…"
 
-#: includes/Admin/CountsPage.php:275
+#: includes/Admin/CountSheet.php:84
+#: includes/Admin/CountSheet.php:113
 msgid "SKU"
 msgstr "SKU"
 
-#: includes/Admin/CountsPage.php:276
-#: includes/Admin/CountsPage.php:359
+#: includes/Admin/CountSheet.php:85
+#: includes/Admin/CountSheet.php:114
+#: includes/Admin/CountSheet.php:243
+#: includes/Admin/CountSheet.php:290
 #: includes/Admin/MovementsPage.php:120
 #: includes/Admin/MovementsPage.php:627
 #: includes/Admin/OrderMetaBox.php:93
@@ -180,109 +185,117 @@ msgstr "SKU"
 msgid "Product"
 msgstr "Produkt"
 
-#: includes/Admin/CountsPage.php:277
-#: includes/Admin/CountsPage.php:360
+#: includes/Admin/CountSheet.php:86
+#: includes/Admin/CountSheet.php:121
+#: includes/Admin/CountSheet.php:244
+#: includes/Admin/CountSheet.php:298
 msgid "Forventet"
 msgstr "Forventet"
 
-#: includes/Admin/CountsPage.php:278
-#: includes/Admin/CountsPage.php:361
+#: includes/Admin/CountSheet.php:87
+#: includes/Admin/CountSheet.php:122
+#: includes/Admin/CountSheet.php:245
+#: includes/Admin/CountSheet.php:299
 msgid "Counted"
 msgstr "Talt"
 
-#: includes/Admin/CountsPage.php:326
-#: includes/Counting/Apply.php:169
+#: includes/Admin/CountSheet.php:182
+#: includes/Counting/Apply.php:372
 #, php-format
 msgid "Varetelling #%d"
 msgstr "Varetelling #%d"
 
-#: includes/Admin/CountsPage.php:333
+#: includes/Admin/CountSheet.php:189
 msgid "Note:"
 msgstr "Notat:"
 
-#: includes/Admin/CountsPage.php:338
+#: includes/Admin/CountSheet.php:203
 msgid "Reopen for counting"
 msgstr "Gjenåpne for telling"
 
-#: includes/Admin/CountsPage.php:341
+#: includes/Admin/CountSheet.php:206
+#: includes/Admin/CountSheet.php:213
 msgid "Bruk telling"
 msgstr "Bruk telling"
 
-#: includes/Admin/CountsPage.php:344
+#: includes/Admin/CountSheet.php:209
 #, php-format
 msgid "%d line(s) need a recount or override before applying."
 msgstr "%d linje(r) trenger opptelling eller overstyring før bokføring."
 
-#: includes/Admin/CountsPage.php:346
+#: includes/Admin/CountSheet.php:211
 msgid "Cancel count"
 msgstr "Avbryt varetelling"
 
-#: includes/Admin/CountsPage.php:348
+#: includes/Admin/CountSheet.php:215
 #, php-format
 msgid "Applied %s by %s."
 msgstr "Bokført %s av %s."
 
-#: includes/Admin/CountsPage.php:362
+#: includes/Admin/CountSheet.php:246
+#: includes/Admin/CountSheet.php:300
 msgid "Differanse"
 msgstr "Differanse"
 
-#: includes/Admin/CountsPage.php:383
+#: includes/Admin/CountSheet.php:266
+#: includes/Admin/CountSheet.php:335
 msgid "Movements since"
 msgstr "Bevegelser siden"
 
-#: includes/Admin/CountsPage.php:385
+#: includes/Admin/CountSheet.php:268
+#: includes/Admin/CountSheet.php:326
 msgid "Override"
 msgstr "Overstyr"
 
-#: includes/Admin/CountsPage.php:397
+#: includes/Admin/CountSheet.php:228
 #, php-format
 msgid "%d line(s) have not been counted. They post nothing and will require a combined confirmation at apply."
 msgstr "%d linje(r) er ikke talt. De bokfører ingenting og krever en samlet bekreftelse ved bokføring."
 
-#: includes/Admin/CountsPage.php:415
+#: includes/Admin/CountSheet.php:357
 msgid "Import counted quantities (CSV)"
 msgstr "Importer talte mengder (CSV)"
 
-#: includes/Admin/CountsPage.php:416
+#: includes/Admin/CountSheet.php:358
 msgid "Upload the exported sheet with the counted column filled. Matching is by SKU (falling back to a product id column if present). The count lands in review — never applied directly."
 msgstr "Last opp det eksporterte arket med den talte kolonnen utfylt. Samsvar skjer på SKU (faller tilbake til en produkt-ID-kolonne hvis den finnes). Varetellingen havner til gjennomgang — bokføres aldri direkte."
 
-#: includes/Admin/CountsPage.php:422
+#: includes/Admin/CountSheet.php:367
 msgid "Upload"
 msgstr "Last opp"
 
-#: includes/Admin/CountsPage.php:613
-#: includes/Admin/CountsPage.php:628
+#: includes/Admin/CountsPage.php:430
+#: includes/Admin/CountsPage.php:446
 #: includes/Admin/PurchasingPage.php:185
 msgid "Open"
 msgstr "Åpen"
 
-#: includes/Admin/CountsPage.php:615
+#: includes/Admin/CountsPage.php:433
 msgid "Applied"
 msgstr "Bokført"
 
-#: includes/Admin/CountsPage.php:616
+#: includes/Admin/CountsPage.php:434
 msgid "Cancelled"
 msgstr "Avbrutt"
 
-#: includes/Admin/CountsPage.php:625
+#: includes/Admin/CountsPage.php:443
 msgid "Capture"
 msgstr "Registrer"
 
-#: includes/Admin/CountsPage.php:626
+#: includes/Admin/CountsPage.php:444
 msgid "Review"
 msgstr "Gjennomgang"
 
-#: includes/Admin/CountsPage.php:636
+#: includes/Admin/CountsPage.php:455
 msgid "Cancel this count? This cannot be undone."
 msgstr "Avbryte denne varetellingen? Dette kan ikke angres."
 
-#: includes/Admin/CountsPage.php:656
+#: includes/Admin/CountsPage.php:476
 #: includes/Admin/ValuationPage.php:234
 msgid "Export CSV"
 msgstr "Eksporter CSV"
 
-#: includes/Admin/CountsPage.php:693
+#: includes/Admin/CountsPage.php:514
 #: includes/Admin/MovementsPage.php:731
 msgid "system"
 msgstr "system"
@@ -291,45 +304,46 @@ msgstr "system"
 msgid "Invalid request method."
 msgstr "Ugyldig forespørselsmetode."
 
-#: includes/Admin/CountsPage.php:719
+#: includes/Admin/CountsPage.php:544
 msgid "Count created. Start scanning below."
 msgstr "Varetelling opprettet. Begynn å skanne nedenfor."
 
-#: includes/Admin/CountsPage.php:720
+#: includes/Admin/CountsPage.php:545
 msgid "The count was created but no stock-managed products matched the scope."
 msgstr "Varetellingen ble opprettet, men ingen lagerstyrte produkter samsvarte med omfanget."
 
-#: includes/Admin/CountsPage.php:729
+#: includes/Admin/CountsPage.php:554
 msgid "Could not create the count."
 msgstr "Kunne ikke opprette varetellingen."
 
-#: includes/Admin/CountsPage.php:721
+#: includes/Admin/CountsPage.php:546
 msgid "Count updated."
 msgstr "Varetelling oppdatert."
 
-#: includes/Admin/CountsPage.php:730
+#: includes/Admin/CountsPage.php:555
 msgid "That status change is not allowed."
 msgstr "Den statusendringen er ikke tillatt."
 
-#: includes/Admin/CountsPage.php:731
-#: includes/Counting/Apply.php:45
+#: includes/Admin/CountsPage.php:556
+#: includes/Counting/Apply.php:70
+#: includes/Rest/Controller.php:248
 msgid "Count not found."
 msgstr "Fant ikke varetellingen."
 
-#: includes/Admin/CountsPage.php:732
+#: includes/Admin/CountsPage.php:557
 msgid "This count can no longer be imported into."
 msgstr "Denne varetellingen kan ikke lenger importeres til."
 
-#: includes/Admin/CountsPage.php:733
+#: includes/Admin/CountsPage.php:558
 msgid "No CSV file was uploaded."
 msgstr "Ingen CSV-fil ble lastet opp."
 
-#: includes/Admin/CountsPage.php:734
+#: includes/Admin/CountsPage.php:559
 msgid "The CSV could not be read."
 msgstr "CSV-filen kunne ikke leses."
 
 #. translators: %d: number of matched lines filled from the CSV.
-#: includes/Admin/CountsPage.php:724
+#: includes/Admin/CountsPage.php:549
 #, php-format
 msgid "%d line filled from the CSV. The count is now in review."
 msgid_plural "%d lines filled from the CSV. The count is now in review."
@@ -338,7 +352,7 @@ msgstr[1] "%d linjer fylt ut fra CSV-en. Varetellingen er nå til gjennomgang."
 
 #: includes/Admin/Menu.php:81
 #: includes/Admin/Menu.php:101
-#: includes/Admin/SettingsPage.php:319
+#: includes/Admin/SettingsPage.php:315
 #: includes/Admin/StatusPage.php:88
 msgid "Stock status"
 msgstr "Lagerstatus"
@@ -357,17 +371,17 @@ msgstr "Bevegelser"
 msgid "Stock value"
 msgstr "Lagerverdi"
 
-#: includes/Admin/CountsPage.php:109
+#: includes/Admin/CountsPage.php:122
 #: includes/Admin/Menu.php:131
-#: includes/Admin/SettingsPage.php:237
-#: includes/Admin/SettingsPage.php:240
+#: includes/Admin/SettingsPage.php:233
+#: includes/Admin/SettingsPage.php:236
 msgid "Stock counts"
 msgstr "Varetellinger"
 
 #: includes/Admin/Menu.php:142
 #: includes/Admin/PurchasingPage.php:138
 #: includes/Admin/PurchasingPage.php:149
-#: includes/Admin/SettingsPage.php:230
+#: includes/Admin/SettingsPage.php:226
 msgid "Purchasing"
 msgstr "Innkjøp"
 
@@ -382,6 +396,7 @@ msgstr "Juster"
 msgid "Cancel"
 msgstr "Avbryt"
 
+#: includes/Admin/CountSheet.php:430
 #: includes/Admin/Menu.php:185
 #: includes/Admin/MovementsPage.php:535
 msgid "A note is required."
@@ -431,6 +446,7 @@ msgstr "Tidspunkt"
 msgid "Balance after"
 msgstr "Saldo etter"
 
+#: includes/Admin/CountSheet.php:439
 #: includes/Admin/MovementsPage.php:124
 #: includes/Admin/MovementsPage.php:194
 #: includes/Admin/MovementsPage.php:270
@@ -937,7 +953,7 @@ msgstr "Ingenting innkommende."
 
 #: includes/Admin/PurchasingPage.php:869
 #: includes/Admin/PurchasingPage.php:951
-#: includes/Admin/SettingsPage.php:347
+#: includes/Admin/SettingsPage.php:343
 msgid "Name"
 msgstr "Navn"
 
@@ -963,8 +979,8 @@ msgstr "Telefon"
 
 #: includes/Admin/PurchasingPage.php:874
 #: includes/Admin/PurchasingPage.php:993
-#: includes/Admin/SettingsPage.php:201
-#: includes/Admin/SettingsPage.php:362
+#: includes/Admin/SettingsPage.php:197
+#: includes/Admin/SettingsPage.php:358
 msgid "Active"
 msgstr "Aktiv"
 
@@ -973,12 +989,12 @@ msgid "No suppliers yet."
 msgstr "Ingen leverandører ennå."
 
 #: includes/Admin/PurchasingPage.php:895
-#: includes/Admin/SettingsPage.php:367
+#: includes/Admin/SettingsPage.php:363
 msgid "Deactivate"
 msgstr "Deaktiver"
 
 #: includes/Admin/PurchasingPage.php:895
-#: includes/Admin/SettingsPage.php:367
+#: includes/Admin/SettingsPage.php:363
 msgid "Activate"
 msgstr "Aktiver"
 
@@ -1122,40 +1138,40 @@ msgid "No company found for that organisation number (or the registry was unavai
 msgstr "Fant ikke noe selskap for det organisasjonsnummeret (eller registeret var utilgjengelig)."
 
 #. translators: 1: number of products seeded, 2: total stock-managed products
-#: includes/Admin/SettingsPage.php:98
+#: includes/Admin/SettingsPage.php:94
 #, php-format
 msgid "Stock ledger enabled. Seeded %1$d of %2$d stock-managed products."
 msgstr "Lagerlogg aktivert. Klargjorde %1$d av %2$d lagerstyrte produkter."
 
-#: includes/Admin/SettingsPage.php:165
+#: includes/Admin/SettingsPage.php:161
 msgid "Stock — settings"
 msgstr "Lager — innstillinger"
 
-#: includes/Admin/SettingsPage.php:184
+#: includes/Admin/SettingsPage.php:180
 msgid "Stock ledger"
 msgstr "Lagerlogg"
 
-#: includes/Admin/SettingsPage.php:192
+#: includes/Admin/SettingsPage.php:188
 msgid "Mode"
 msgstr "Modus"
 
-#: includes/Admin/SettingsPage.php:197
+#: includes/Admin/SettingsPage.php:193
 msgid "Shadow"
 msgstr "Skygge"
 
-#: includes/Admin/SettingsPage.php:244
+#: includes/Admin/SettingsPage.php:240
 msgid "Recount threshold (%)"
 msgstr "Terskel for opptelling (%)"
 
-#: includes/Admin/SettingsPage.php:210
+#: includes/Admin/SettingsPage.php:206
 msgid "Negative stock"
 msgstr "Negativt lager"
 
-#: includes/Admin/SettingsPage.php:290
+#: includes/Admin/SettingsPage.php:286
 msgid "Cost tracking (FIFO)"
 msgstr "Kostprissporing (FIFO)"
 
-#: includes/Admin/SettingsPage.php:298
+#: includes/Admin/SettingsPage.php:294
 msgid "Order COGS"
 msgstr "Varekost på ordre"
 
@@ -1515,30 +1531,31 @@ msgstr "Korreksjon"
 msgid "corrects layer #%d"
 msgstr "korrigerer kostlag #%d"
 
-#: includes/Counting/Apply.php:54
+#: includes/Counting/Apply.php:79
+#: includes/Counting/Apply.php:96
 msgid "Count already applied."
 msgstr "Varetellingen er allerede bokført."
 
-#: includes/Counting/Apply.php:57
+#: includes/Counting/Apply.php:82
 msgid "Only a count in review can be applied."
 msgstr "Bare en varetelling til gjennomgang kan bokføres."
 
-#: includes/Counting/Apply.php:74
+#: includes/Counting/Apply.php:204
 msgid "Some lines are flagged for recount. Re-count or override them before applying."
 msgstr "Noen linjer er flagget for opptelling. Tell dem på nytt eller overstyr dem før bokføring."
 
-#: includes/Counting/Apply.php:129
+#: includes/Counting/Apply.php:301
 msgid "Stock moved for some lines since the count started, or some lines were never counted. Review and confirm to apply anyway."
 msgstr "Lageret har endret seg for noen linjer siden varetellingen startet, eller noen linjer ble aldri talt. Gå gjennom og bekreft for å bokføre likevel."
 
 #. translators: %s: error detail from the ledger.
-#: includes/Counting/Apply.php:145
+#: includes/Counting/Apply.php:129
 #, php-format
 msgid "Could not apply the count: %s"
 msgstr "Kunne ikke bokføre varetellingen: %s"
 
 #. translators: %d: number of stock movements posted.
-#: includes/Counting/Apply.php:158
+#: includes/Counting/Apply.php:144
 #, php-format
 msgid "Count applied — %d movement posted."
 msgid_plural "Count applied — %d movements posted."
@@ -1546,19 +1563,19 @@ msgstr[0] "Varetelling bokført — %d bevegelse bokført."
 msgstr[1] "Varetelling bokført — %d bevegelser bokført."
 
 #. translators: 1: category name, 2: number of products.
-#: includes/Counting/Counts.php:307
+#: includes/Counting/Counts.php:414
 #, php-format
 msgid "Category: %1$s (%2$d products)"
 msgstr "Kategori: %1$s (%2$d produkter)"
 
 #. translators: %d: number of products.
-#: includes/Counting/Counts.php:311
+#: includes/Counting/Counts.php:418
 #, php-format
 msgid "Manual selection (%d products)"
 msgstr "Manuelt utvalg (%d produkter)"
 
 #. translators: %d: number of products.
-#: includes/Counting/Counts.php:314
+#: includes/Counting/Counts.php:421
 #, php-format
 msgid "All stock-managed products (%d)"
 msgstr "Alle lagerstyrte produkter (%d)"
@@ -1611,7 +1628,7 @@ msgstr "Inngående saldo"
 msgid "Ekstern endring"
 msgstr "Ekstern endring"
 
-#: includes/Plugin.php:34
+#: includes/Plugin.php:47
 msgid "Kaupang Stock requires WooCommerce to be active."
 msgstr "Kaupang Stock krever at WooCommerce er aktivert."
 
@@ -1659,47 +1676,46 @@ msgstr "Ingenting å motta — angi en mengde på minst én linje."
 msgid "Some lines exceed the remaining quantity. Confirm to receive anyway (over-receipt is allowed)."
 msgstr "Noen linjer overstiger gjenstående mengde. Bekreft for å motta likevel (overmottak er tillatt)."
 
-#: includes/Rest/Controller.php:249
-#: includes/Rest/Controller.php:291
+#: includes/Rest/Controller.php:147
+#: includes/Rest/Controller.php:192
+#: includes/Rest/Controller.php:243
 msgid "Counting is not enabled."
 msgstr "Varetelling er ikke aktivert."
 
-#: includes/Rest/Controller.php:259
+#: includes/Rest/Controller.php:158
 msgid "Provide either counted or increment."
 msgstr "Oppgi enten talt eller økning."
 
-#: includes/Rest/Controller.php:275
+#: includes/Rest/Controller.php:176
+#: includes/Rest/Controller.php:257
 msgid "That line cannot be updated (it may not exist, or its count is not open for counting)."
 msgstr "Den linjen kan ikke oppdateres (den finnes kanskje ikke, eller varetellingen er ikke åpen for telling)."
 
-#: includes/Rest/Controller.php:296
+#: includes/Rest/Controller.php:197
 msgid "A note is required to override a flagged line."
 msgstr "Et notat er påkrevd for å overstyre en flagget linje."
 
-#: includes/Rest/Controller.php:301
+#: includes/Rest/Controller.php:202
 msgid "Line not found."
 msgstr "Fant ikke linjen."
 
-#: includes/Rest/Controller.php:305
+#: includes/Rest/Controller.php:206
+#: includes/Rest/Controller.php:212
 msgid "Overrides are only possible while the count is in review."
 msgstr "Overstyringer er bare mulig mens varetellingen er til gjennomgang."
 
-#: includes/Rest/Controller.php:310
-msgid "Could not override the line."
-msgstr "Kunne ikke overstyre linjen."
-
 #. translators: 1: line id, 2: product label, 3: user display name, 4: note.
-#: includes/Rest/Controller.php:317
+#: includes/Rest/Controller.php:224
 #, php-format
 msgid "[override] line #%1$d, %2$s, %3$s: %4$s"
 msgstr "[overstyring] linje #%1$d, %2$s, %3$s: %4$s"
 
 #: includes/Admin/PurchasingPage.php:1220
-#: includes/Rest/Controller.php:349
+#: includes/Rest/Controller.php:285
 msgid "Purchasing is not enabled."
 msgstr "Innkjøp er ikke aktivert."
 
-#: includes/Rest/Controller.php:356
+#: includes/Rest/Controller.php:292
 msgid "The receiving module is not available yet."
 msgstr "Varemottaksmodulen er ikke tilgjengelig ennå."
 
@@ -1748,23 +1764,23 @@ msgstr "Leverandører"
 msgid "Supplier"
 msgstr "Leverandør"
 
-#: includes/Admin/CountsPage.php:110
+#: includes/Admin/CountsPage.php:123
 msgid "New count"
 msgstr "Ny telling"
 
-#: includes/Admin/SettingsPage.php:181
+#: includes/Admin/SettingsPage.php:177
 msgid "Ledger"
 msgstr "Hovedbok"
 
-#: includes/Admin/SettingsPage.php:227
+#: includes/Admin/SettingsPage.php:223
 msgid "Modules"
 msgstr "Moduler"
 
-#: includes/Admin/SettingsPage.php:259
+#: includes/Admin/SettingsPage.php:255
 msgid "Map created_via"
 msgstr "Koble created_via"
 
-#: includes/Admin/SettingsPage.php:287
+#: includes/Admin/SettingsPage.php:283
 msgid "Costing"
 msgstr "Kostpris"
 
@@ -1814,91 +1830,91 @@ msgstr "Hele perioden"
 msgid "Period"
 msgstr "Periode"
 
-#: includes/Admin/SettingsPage.php:187
+#: includes/Admin/SettingsPage.php:183
 msgid "Record every stock change in the ledger"
 msgstr "Registrer alle lagerendringer i hovedboken"
 
-#: includes/Admin/SettingsPage.php:188
+#: includes/Admin/SettingsPage.php:184
 msgid "Seeds opening balances on first enable. History is kept when turned off."
 msgstr "Legger inn åpningsbalanser første gang. Historikken beholdes når den slås av."
 
-#: includes/Admin/SettingsPage.php:197
+#: includes/Admin/SettingsPage.php:193
 msgid "record only, nothing written to WooCommerce"
 msgstr "kun registrering, ingenting skrives til WooCommerce"
 
-#: includes/Admin/SettingsPage.php:201
+#: includes/Admin/SettingsPage.php:197
 msgid "adjustments, receipts and counts write to WooCommerce stock"
 msgstr "justeringer, varemottak og tellinger skriver til WooCommerce-lager"
 
-#: includes/Admin/SettingsPage.php:205
+#: includes/Admin/SettingsPage.php:201
 msgid "Active: stock operations now change WooCommerce stock."
 msgstr "Aktiv: lageroperasjoner endrer nå WooCommerce-lageret."
 
-#: includes/Admin/SettingsPage.php:213
+#: includes/Admin/SettingsPage.php:209
 msgid "Flag negative on-hand on Stock status"
 msgstr "Merk negativ beholdning på Lagerstatus"
 
-#: includes/Admin/SettingsPage.php:217
+#: includes/Admin/SettingsPage.php:213
 msgid "Allow adjustments and transfers to take a location below zero"
 msgstr "Tillat at justeringer og flyttinger tar en lokasjon under null"
 
-#: includes/Admin/SettingsPage.php:233
+#: includes/Admin/SettingsPage.php:229
 msgid "Suppliers, purchase orders and receiving"
 msgstr "Leverandører, innkjøpsordrer og varemottak"
 
-#: includes/Admin/SettingsPage.php:248
+#: includes/Admin/SettingsPage.php:244
 msgid "Lines off by more than this are flagged for recount."
 msgstr "Linjer med større avvik enn dette merkes for omtelling."
 
-#: includes/Admin/SettingsPage.php:261
+#: includes/Admin/SettingsPage.php:257
 msgid "Orders from these channels draw stock from the chosen location."
 msgstr "Ordrer fra disse kanalene trekker lager fra valgt lokasjon."
 
-#: includes/Admin/SettingsPage.php:293
+#: includes/Admin/SettingsPage.php:289
 msgid "Track cost of goods (FIFO)"
 msgstr "Spor varekostnad (FIFO)"
 
-#: includes/Admin/SettingsPage.php:294
+#: includes/Admin/SettingsPage.php:290
 msgid "Enter opening unit costs on Stock value after enabling."
 msgstr "Legg inn åpningskostpriser under Lagerverdi etter aktivering."
 
-#: includes/Admin/SettingsPage.php:301
+#: includes/Admin/SettingsPage.php:297
 msgid "Write FIFO cost onto order lines"
 msgstr "Skriv FIFO-kostpris på ordrelinjer"
 
-#: includes/Admin/SettingsPage.php:302
+#: includes/Admin/SettingsPage.php:298
 msgid "Feeds WooCommerce’s Cost of goods sold when that feature is on."
 msgstr "Mater WooCommerce sin varekostnad når den funksjonen er på."
 
-#: includes/Admin/SettingsPage.php:308
+#: includes/Admin/SettingsPage.php:304
 msgid "Page cache"
 msgstr "Sidebuffer"
 
-#: includes/Admin/SettingsPage.php:311
+#: includes/Admin/SettingsPage.php:307
 msgid "Purge on stock change"
 msgstr "Tøm ved lagerendring"
 
-#: includes/Admin/SettingsPage.php:318
+#: includes/Admin/SettingsPage.php:314
 msgid "Off"
 msgstr "Av"
 
-#: includes/Admin/SettingsPage.php:319
+#: includes/Admin/SettingsPage.php:315
 msgid "sold out, back in stock, backorder"
 msgstr "utsolgt, på lager igjen, restordre"
 
-#: includes/Admin/SettingsPage.php:320
+#: includes/Admin/SettingsPage.php:316
 msgid "Stock status and low stock"
 msgstr "Lagerstatus og lavt lager"
 
-#: includes/Admin/SettingsPage.php:320
+#: includes/Admin/SettingsPage.php:316
 msgid "also every quantity change at or below the low-stock threshold"
 msgstr "også hver antallsendring på eller under grensen for lavt lager"
 
-#: includes/Admin/SettingsPage.php:333
+#: includes/Admin/SettingsPage.php:329
 msgid "Nginx Helper is not active, so there is no page cache to purge."
 msgstr "Nginx Helper er ikke aktiv, så det finnes ingen sidebuffer å tømme."
 
-#: includes/Admin/SettingsPage.php:335
+#: includes/Admin/SettingsPage.php:331
 msgid "Stock changes from orders, refunds and Stock operations do not save the product, so Nginx Helper does not purge its page by itself. Uses WooCommerce’s low-stock threshold. Works with the stock ledger off."
 msgstr "Lagerendringer fra ordre, refusjoner og Lager lagrer ikke produktet, så Nginx Helper tømmer ikke siden av seg selv. Bruker WooCommerce sin grense for lavt lager. Virker også med lagerboken av."
 
@@ -1907,12 +1923,13 @@ msgstr "Lagerendringer fra ordre, refusjoner og Lager lagrer ikke produktet, så
 msgid "https://github.com/nytafar/kaupang-stock"
 msgstr ""
 
+#: includes/Admin/CountSheet.php:441
 #: includes/Admin/MovementsPage.php:121
 #: includes/Admin/MovementsPage.php:174
 #: includes/Admin/MovementsPage.php:429
 #: includes/Admin/MovementsPage.php:630
 #: includes/Admin/PurchasingPage.php:699
-#: includes/Admin/SettingsPage.php:264
+#: includes/Admin/SettingsPage.php:260
 #: includes/Admin/StatusPage.php:597
 #: includes/Admin/ValuationPage.php:174
 msgid "Location"
@@ -2025,68 +2042,68 @@ msgstr ""
 msgid "This order is placed — its lines are locked."
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:170
+#: includes/Admin/SettingsPage.php:166
 msgid "Location added."
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:171
+#: includes/Admin/SettingsPage.php:167
 msgid "Location renamed."
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:172
+#: includes/Admin/SettingsPage.php:168
 msgid "Default location changed."
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:173
+#: includes/Admin/SettingsPage.php:169
 msgid "Location status changed."
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:175
+#: includes/Admin/SettingsPage.php:171
 msgid "Could not change the location."
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:256
+#: includes/Admin/SettingsPage.php:252
 msgid "Order routing"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:263
+#: includes/Admin/SettingsPage.php:259
 msgid "created_via"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:344
+#: includes/Admin/SettingsPage.php:340
 msgid "Stock locations"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:348
+#: includes/Admin/SettingsPage.php:344
 msgid "Default"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:350
+#: includes/Admin/SettingsPage.php:346
 msgid "Actions"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:359
+#: includes/Admin/SettingsPage.php:355
 msgid "Rename"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:362
+#: includes/Admin/SettingsPage.php:358
 msgid "Inactive"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:365
+#: includes/Admin/SettingsPage.php:361
 msgid "Set default"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:372
-#: includes/Admin/SettingsPage.php:378
+#: includes/Admin/SettingsPage.php:368
+#: includes/Admin/SettingsPage.php:374
 msgid "Add location"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:376
+#: includes/Admin/SettingsPage.php:372
 msgid "Location name"
 msgstr ""
 
-#: includes/Admin/SettingsPage.php:377
+#: includes/Admin/SettingsPage.php:373
 msgid "Make default"
 msgstr ""
 
@@ -2134,15 +2151,15 @@ msgstr ""
 msgid "Transfer out"
 msgstr ""
 
-#: includes/Counting/Import.php:25
+#: includes/Counting/Import.php:51
 msgid "The CSV is empty."
-msgstr ""
+msgstr "CSV-filen er tom."
 
 #. translators: %s: the SKU column value that matched no product
-#: includes/Counting/Import.php:60
+#: includes/Counting/Import.php:88
 #, php-format
 msgid "No product matched SKU “%s”."
-msgstr ""
+msgstr "Ingen produkter har SKU «%s»."
 
 #: includes/Ledger/Reasons.php:111
 msgid "Flytting inn"
@@ -2152,84 +2169,179 @@ msgstr ""
 msgid "Flytting ut"
 msgstr ""
 
-#. PRD-04 §2 counting per location (added by hand; tools/release regenerates the catalogue).
-
-#, php-format
-msgid "Counted lines are on a location that has been deactivated since the count was created: %s. Reactivate the location to apply, or cancel the count."
-msgstr "Talte linjer ligger på en lokasjon som er deaktivert etter at tellingen ble opprettet: %s. Aktiver lokasjonen igjen for å bruke tellingen, eller avbryt tellingen."
-
+#. translators: 1: CSV row number, 2: SKU or product id, 3: location id
+#: includes/Counting/Import.php:137
 #, php-format
 msgid "Row %1$d (%2$s): location id %3$d is not part of this count."
 msgstr "Rad %1$d (%2$s): lokasjons-ID %3$d er ikke med i denne tellingen."
 
+#. translators: 1: CSV row number, 2: SKU or product id, 3: location name
+#: includes/Counting/Import.php:157
 #, php-format
 msgid "Row %1$d (%2$s): location “%3$s” is not part of this count."
 msgstr "Rad %1$d (%2$s): lokasjonen «%3$s» er ikke med i denne tellingen."
 
+#. translators: 1: CSV row number, 2: SKU or product id
+#: includes/Counting/Import.php:165
 #, php-format
 msgid "Row %1$d (%2$s) has no location. This count covers several locations, so every row needs location_id or location."
 msgstr "Rad %1$d (%2$s) mangler lokasjon. Denne tellingen dekker flere lokasjoner, så hver rad må ha location_id eller location."
 
+#: includes/Admin/CountSheet.php:360
 msgid "This count covers several locations: every row needs its location (the location_id or location column from the export). Rows without one are rejected."
 msgstr "Denne tellingen dekker flere lokasjoner: hver rad må ha sin lokasjon (kolonnen location_id eller location fra eksporten). Rader uten lokasjon avvises."
 
+#: includes/Admin/CountSheet.php:384
 msgid "Show locations"
 msgstr "Vis lokasjoner"
 
+#: includes/Admin/CountSheet.php:391
 msgid "Count into"
 msgstr "Teller i"
 
+#: includes/Admin/CountSheet.php:425
 msgid "Unknown SKU: "
 msgstr "Ukjent SKU: "
 
+#: includes/Admin/CountSheet.php:426
 msgid "Could not save."
 msgstr "Kunne ikke lagre."
 
+#: includes/Admin/CountSheet.php:427
 msgid "Loading…"
 msgstr "Laster …"
 
+#: includes/Admin/CountSheet.php:428
 msgid "Could not load movements."
 msgstr "Kunne ikke hente bevegelser."
 
+#: includes/Admin/CountSheet.php:429
 msgid "Accept this counted value. Enter a note (required):"
 msgstr "Godta talt verdi. Skriv et notat (påkrevd):"
 
+#: includes/Admin/CountSheet.php:431
 msgid "Could not apply the count."
 msgstr "Kunne ikke bruke tellingen."
 
+#: includes/Admin/CountSheet.php:432
 msgid "exp"
 msgstr "forv."
 
+#: includes/Admin/CountSheet.php:433
 msgid "on hand"
 msgstr "på lager"
 
+#: includes/Admin/CountSheet.php:434
 msgid "counted"
 msgstr "talt"
 
+#: includes/Admin/CountSheet.php:435
 msgid "Bruk likevel?"
 msgstr "Bruk likevel?"
 
+#: includes/Admin/CountSheet.php:436
 msgid "No movements since the count started."
 msgstr "Ingen bevegelser siden tellingen startet."
 
+#: includes/Admin/CountSheet.php:437
 msgid "When"
 msgstr "Når"
 
+#: includes/Admin/CountSheet.php:438
 msgid "Change"
 msgstr "Endring"
 
+#: includes/Admin/CountSheet.php:442
 msgid "not counted — no change"
 msgstr "ikke talt — ingen endring"
 
+#. translators: 1: counted lines, 2: total lines, 3: movements to post (placeholders filled in JS).
+#: includes/Admin/CountSheet.php:444
 #, php-format
 msgid "%1$s of %2$s counted, %3$s change(s)"
 msgstr "%1$s av %2$s talt, %3$s endring(er)"
 
+#: includes/Admin/CountSheet.php:445
 msgid "No line for this location: "
 msgstr "Ingen linje på denne lokasjonen: "
 
+#. translators: %d: number of CSV rows that were not imported.
+#: includes/Admin/CountsPage.php:575
 #, php-format
 msgid "%d CSV row was not imported:"
 msgid_plural "%d CSV rows were not imported:"
 msgstr[0] "%d CSV-rad ble ikke importert:"
 msgstr[1] "%d CSV-rader ble ikke importert:"
+
+#. translators: %d: minutes after which an unfinished apply can be taken over.
+#: includes/Admin/CountSheet.php:195
+#, php-format
+msgid "This count is being applied. If that was interrupted, use Bruk telling again to finish it (possible %d minutes after it started). Counting is locked meanwhile."
+msgstr "Tellingen bokføres nå. Ble det avbrutt, trykk Bruk telling igjen for å fullføre (mulig %d minutter etter at den startet). Telling er låst så lenge."
+
+#: includes/Admin/CountSheet.php:330
+#: includes/Admin/CountSheet.php:405
+msgid "Mark uncounted"
+msgstr "Merk som ikke talt"
+
+#: includes/Admin/CountSheet.php:393
+msgid "Choose location…"
+msgstr "Velg lokasjon …"
+
+#: includes/Admin/CountSheet.php:446
+msgid "Scan not recorded: choose where you are counting (Count into) first."
+msgstr "Skanningen ble ikke registrert: velg hvor du teller (Teller i) først."
+
+#: includes/Admin/CountSheet.php:447
+msgid "Several locations are shown: choose where you are counting (Count into) before scanning."
+msgstr "Flere lokasjoner vises: velg hvor du teller (Teller i) før du skanner."
+
+#. translators: 1: location name (placeholder filled in JS).
+#: includes/Admin/CountSheet.php:449
+#, php-format
+msgid "Mark every counted line at %1$s as uncounted?"
+msgstr "Merke alle talte linjer på %1$s som ikke talt?"
+
+#: includes/Admin/CountSheet.php:450
+msgid "Mark this line as uncounted?"
+msgstr "Merke denne linjen som ikke talt?"
+
+#: includes/Admin/CountSheet.php:451
+msgid "Marked uncounted."
+msgstr "Merket som ikke talt."
+
+#: includes/Admin/CountsPage.php:432
+msgid "Applying"
+msgstr "Bokføres"
+
+#: includes/Counting/Apply.php:98
+msgid "This count is being applied right now, or it was reopened. Reload the page to see where it stands."
+msgstr "Tellingen bokføres akkurat nå, eller den er gjenåpnet. Last inn siden på nytt for å se status."
+
+#: includes/Counting/Apply.php:105
+msgid "Count applied."
+msgstr "Tellingen er bokført."
+
+#. translators: %s: comma-separated "location (number of counted lines)" list.
+#: includes/Counting/Apply.php:187
+#, php-format
+msgid "Counted lines are on a location that has been deactivated since the count was created: %s. Mark those lines uncounted, or reactivate the location, to apply."
+msgstr "Talte linjer ligger på en lokasjon som er deaktivert etter at tellingen ble opprettet: %s. Merk de linjene som ikke talt, eller aktiver lokasjonen igjen, for å bokføre."
+
+#. translators: 1: CSV row number, 2: SKU or product id, 3: location name
+#: includes/Counting/Import.php:148
+#, php-format
+msgid "Row %1$d (%2$s): several locations in this count are called “%3$s”. Give the row its location_id."
+msgstr "Rad %1$d (%2$s): flere lokasjoner i denne tellingen heter «%3$s». Gi raden location_id."
+
+#. translators: %d: number of rows not written
+#: includes/Counting/Import.php:191
+#, php-format
+msgid "%d row was not written: the count is no longer open for counting."
+msgid_plural "%d rows were not written: the count is no longer open for counting."
+msgstr[0] "%d rad ble ikke skrevet: tellingen er ikke lenger åpen for telling."
+msgstr[1] "%d rader ble ikke skrevet: tellingen er ikke lenger åpen for telling."
+
+#: includes/Rest/Controller.php:251
+msgid "That location is not part of this count."
+msgstr "Den lokasjonen er ikke med i denne tellingen."
