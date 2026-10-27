@@ -176,6 +176,7 @@ final class Plugin {
                 'id'        => ['type' => 'integer', 'required' => true],
                 'counted'   => ['type' => 'number', 'required' => false],
                 'increment' => ['type' => 'number', 'required' => false],
+                'clear'     => ['type' => 'boolean', 'required' => false],
             ],
         ]);
 
@@ -186,6 +187,16 @@ final class Plugin {
             'args'                => [
                 'id'   => ['type' => 'integer', 'required' => true],
                 'note' => ['type' => 'string', 'required' => true],
+            ],
+        ]);
+
+        \register_rest_route(self::REST_NS, '/counts/(?P<id>\d+)/clear', [
+            'methods'             => 'POST',
+            'callback'            => [$c, 'countClearLocation'],
+            'permission_callback' => [$c, 'can'],
+            'args'                => [
+                'id'          => ['type' => 'integer', 'required' => true],
+                'location_id' => ['type' => 'integer', 'required' => true, 'minimum' => 1],
             ],
         ]);
 

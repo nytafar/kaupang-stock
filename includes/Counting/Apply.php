@@ -14,7 +14,8 @@ use Kaupang\Stock\Schema;
 use Kaupang\Stock\Support\ProductSearch;
 
 /**
- * The drift-guarded relative-variance apply (§6.3 "Apply"). ONLY for status=review.
+ * The drift-guarded relative-variance apply (§6.3 "Apply"). ONLY for status=review
+ * (or a stale `applying` claim, see below).
  *
  * Per counted line the posted movement is `delta = counted − expected` — the
  * count-time variance, NOT an absolute "set". Relative deltas mean a sale that
@@ -33,6 +34,18 @@ use Kaupang\Stock\Support\ProductSearch;
  * with 0 new movements) plus per-line idempotency keys `count_line:{id}:apply` that
  * dedupe at the Ledger even if the status gate is somehow bypassed.
  *
+ * Claim: line writes stay allowed in review (a second device may still be
+ * scanning), so before the lines that are posted are read, the count is flipped
+ * review → `applying` in one conditional UPDATE. Every line write
+ * (CountLines) holds a shared lock on the count row and re-checks its status, so
+ * a write either committed before the claim (and is in the lines read after it)
+ * or sees `applying` and is refused (REST 409). Nothing lands in between. The
+ * claim is released back to review when the apply stops short of the ledger
+ * (confirm needed, recount, deactivated location) or the ledger refuses; it
+ * becomes `applied` once the batch is posted. A claim left behind by a request
+ * that died is stale after CLAIM_TTL and the next apply takes it over; a batch
+ * that was posted before the death is detected by its keys and only finished.
+ *
  * Per location: a line is (product, location), so each intent carries its line's
  * location_id and the drift check reads that location's on-hand. The whole count
  * is still ONE batch — apply is the count, never one location of it. A location
@@ -44,6 +57,9 @@ use Kaupang\Stock\Support\ProductSearch;
  * @return array{status:string,issues:array,movements:int,message:string}
  */
 final class Apply {
+
+    /** Seconds after which an `applying` claim is treated as abandoned. */
+    public const CLAIM_TTL = 600;
 
     /**
      * @return array{status:'ok'|'confirm_required'|'error',issues:array,movements:int,message:string}
@@ -62,13 +78,94 @@ final class Apply {
         if ($status === Counts::STATUS_APPLIED) {
             return self::ok(0, \__('Count already applied.', 'kaupang-stock'));
         }
-        if ($status !== Counts::STATUS_REVIEW) {
+        if ($status !== Counts::STATUS_REVIEW && $status !== Counts::STATUS_APPLYING) {
             return self::error(\__('Only a count in review can be applied.', 'kaupang-stock'));
         }
 
+        // A first look without the claim: the confirm dialog and every refusal
+        // come from here, and counting on other devices carries on meanwhile.
+        $plan = self::plan($countId, $count, $confirmed);
+        if (isset($plan['result'])) {
+            return $plan['result'];
+        }
+
+        $stamp = self::claim($countId);
+        if ($stamp === null) {
+            $now = Counts::find($countId);
+            if ($now !== null && (string) $now['status'] === Counts::STATUS_APPLIED) {
+                return self::ok(0, \__('Count already applied.', 'kaupang-stock'));
+            }
+            return self::error(\__('This count is being applied right now, or it was reopened. Reload the page to see where it stands.', 'kaupang-stock'));
+        }
+
+        // Under the claim no line can change. A batch an earlier, interrupted
+        // apply already posted is finished, never posted twice.
+        if (self::alreadyPosted($countId)) {
+            self::markApplied($countId, $stamp);
+            return self::ok(0, \__('Count applied.', 'kaupang-stock'));
+        }
+
+        // Re-read: what is posted is what the lines hold now, scans that landed
+        // since the first look included.
+        $plan = self::plan($countId, (array) Counts::find($countId), $confirmed);
+        if (isset($plan['result'])) {
+            self::release($countId, $stamp);
+            return $plan['result'];
+        }
+
+        // Post the batch. Zero-delta counts (all counted == expected) reach here
+        // with an empty intent set and apply cleanly with 0 movements.
+        $posted = 0;
+        try {
+            if (!empty($plan['intents'])) {
+                $movements = Ledger::recordBatch($plan['intents']);
+                $posted    = count($movements);
+            }
+        } catch (LedgerException $e) {
+            self::release($countId, $stamp);
+            Logger::error('count_apply_failed', ['count' => $countId, 'error' => $e->getMessage()]);
+            return self::error(sprintf(
+                /* translators: %s: error detail from the ledger. */
+                \__('Could not apply the count: %s', 'kaupang-stock'),
+                $e->getMessage()
+            ));
+        }
+
+        self::markApplied($countId, $stamp);
+
+        return [
+            'status'    => 'ok',
+            'issues'    => $plan['issues'], // echo any acknowledged drift/uncounted rows
+            'multi'     => $plan['multi'],
+            'locations' => $plan['summary'],
+            'movements' => $posted,
+            'message'   => sprintf(
+                /* translators: %d: number of stock movements posted. */
+                \_n('Count applied — %d movement posted.', 'Count applied — %d movements posted.', $posted, 'kaupang-stock'),
+                $posted
+            ),
+        ];
+    }
+
+    /**
+     * Read the lines and decide: either a `result` to return as is (a refusal or
+     * confirm_required), or the intents to post with the issues and the
+     * per-location summary. Reads only; the caller holds or takes the claim.
+     *
+     * @param array<string,mixed> $count
+     * @return array{result?:array,intents?:MovementIntent[],issues?:array,summary?:array,multi?:bool}
+     */
+    private static function plan(int $countId, array $count, bool $confirmed): array {
         $lines     = Counts::lines($countId);
         $locations = Counts::locations($countId);
         $multi     = count($locations) > 1;
+
+        // Every location row once per apply, not one query per line or issue.
+        $known = [];
+        foreach (Locations::all() as $loc) {
+            $known[(int) $loc['id']] = $loc;
+        }
+        $nameOf = static fn (int $id): string => $locations[$id] ?? (isset($known[$id]) ? (string) $known[$id]['name'] : '#' . $id);
 
         // Counted lines on a location deactivated since the count was created
         // cannot post (Ledger::validate refuses an inactive location) — say so
@@ -76,36 +173,36 @@ final class Apply {
         $inactive = [];
         foreach ($lines as $line) {
             $loc = Counts::lineLocation($line);
-            if ($line['counted'] !== null && !Locations::isActive($loc)) {
+            if ($line['counted'] !== null && (int) ($known[$loc]['active'] ?? 0) !== 1) {
                 $inactive[$loc] = ($inactive[$loc] ?? 0) + 1;
             }
         }
         if ($inactive !== []) {
             $names = [];
             foreach ($inactive as $loc => $n) {
-                $names[] = sprintf('%s (%d)', $locations[$loc] ?? Locations::name($loc), $n);
+                $names[] = sprintf('%s (%d)', $nameOf($loc), $n);
             }
-            return self::error(sprintf(
+            return ['result' => self::error(sprintf(
                 /* translators: %s: comma-separated "location (number of counted lines)" list. */
-                \__('Counted lines are on a location that has been deactivated since the count was created: %s. Reactivate the location to apply, or cancel the count.', 'kaupang-stock'),
+                \__('Counted lines are on a location that has been deactivated since the count was created: %s. Mark those lines uncounted, or reactivate the location, to apply.', 'kaupang-stock'),
                 implode(', ', $names)
-            ));
+            ))];
         }
 
         // Recount-flagged lines block apply until re-counted or overridden (§6.3).
         $blocked = [];
         foreach ($lines as $line) {
             if ((int) $line['recount'] === 1) {
-                $blocked[] = self::issueRow($line, 'recount');
+                $blocked[] = self::issueRow($line, 'recount', $nameOf);
             }
         }
         if (!empty($blocked)) {
-            return [
+            return ['result' => [
                 'status'    => 'error',
                 'issues'    => $blocked,
                 'movements' => 0,
                 'message'   => \__('Some lines are flagged for recount. Re-count or override them before applying.', 'kaupang-stock'),
-            ];
+            ]];
         }
 
         // Build the relative-variance intents and collect drift/uncounted issues.
@@ -120,7 +217,7 @@ final class Apply {
             $productId  = (int) $line['product_id'];
             $locationId = Counts::lineLocation($line);
             $expected   = (float) $line['expected'];
-            $summary[$locationId] ??= ['location_id' => $locationId, 'location' => Locations::name($locationId), 'lines' => 0, 'counted' => 0, 'movements' => 0];
+            $summary[$locationId] ??= ['location_id' => $locationId, 'location' => $nameOf($locationId), 'lines' => 0, 'counted' => 0, 'movements' => 0];
             $summary[$locationId]['lines']++;
 
             if ($line['counted'] === null) {
@@ -131,7 +228,7 @@ final class Apply {
                 if ($multi) {
                     $uncountedBy[$locationId][] = $line;
                 } else {
-                    $issues[] = self::issueRow($line, 'uncounted');
+                    $issues[] = self::issueRow($line, 'uncounted', $nameOf);
                 }
                 continue;
             }
@@ -144,7 +241,7 @@ final class Apply {
             // math is correct either way); the row is informational.
             $onHand = Balances::onHand($productId, $locationId);
             if (abs($onHand - $expected) > 1e-9) {
-                $issues[] = self::issueRow($line, 'drift', $onHand);
+                $issues[] = self::issueRow($line, 'drift', $nameOf, $onHand);
             }
 
             $delta = $counted - $expected;
@@ -190,54 +287,81 @@ final class Apply {
                 continue;
             }
             foreach ($uncounted as $line) {
-                $issues[] = self::issueRow($line, 'uncounted');
+                $issues[] = self::issueRow($line, 'uncounted', $nameOf);
             }
         }
         $summary = array_values($summary);
 
         // Drift and/or uncounted lines need an explicit acknowledgment first.
         if (!empty($issues) && !$confirmed) {
-            return [
+            return ['result' => [
                 'status'    => 'confirm_required',
                 'issues'    => $issues,
                 'movements' => 0,
                 'message'   => \__('Stock moved for some lines since the count started, or some lines were never counted. Review and confirm to apply anyway.', 'kaupang-stock'),
                 'multi'     => $multi,
                 'locations' => $summary,
-            ];
+            ]];
         }
 
-        // Post the batch. Zero-delta counts (all counted == expected) reach here
-        // with an empty intent set and apply cleanly with 0 movements.
-        $posted = 0;
-        try {
-            if (!empty($intents)) {
-                $movements = Ledger::recordBatch($intents);
-                $posted    = count($movements);
-            }
-        } catch (LedgerException $e) {
-            Logger::error('count_apply_failed', ['count' => $countId, 'error' => $e->getMessage()]);
-            return self::error(sprintf(
-                /* translators: %s: error detail from the ledger. */
-                \__('Could not apply the count: %s', 'kaupang-stock'),
-                $e->getMessage()
-            ));
-        }
+        return ['intents' => $intents, 'issues' => $issues, 'summary' => $summary, 'multi' => $multi];
+    }
 
-        self::markApplied($countId);
+    /**
+     * Take the count for this apply: review → applying, or a stale applying
+     * claim taken over. One conditional UPDATE, so of two racing applies only
+     * one wins. The claim is the (applied_by, applied_at) stamp — those columns
+     * are only meaningful once the count is applied, and markApplied() rewrites
+     * them. Returns the stamp, or null when the count could not be claimed.
+     */
+    private static function claim(int $countId): ?string {
+        global $wpdb;
+        $stamp = gmdate('Y-m-d H:i:s');
+        $stale = gmdate('Y-m-d H:i:s', time() - self::CLAIM_TTL);
+        $n = $wpdb->query($wpdb->prepare(
+            'UPDATE ' . Schema::counts() . '
+                SET status = %s, applied_by = %d, applied_at = %s
+              WHERE id = %d
+                AND (status = %s OR (status = %s AND (applied_at IS NULL OR applied_at < %s)))',
+            Counts::STATUS_APPLYING,
+            \get_current_user_id(),
+            $stamp,
+            $countId,
+            Counts::STATUS_REVIEW,
+            Counts::STATUS_APPLYING,
+            $stale
+        ));
+        return $n === 1 ? $stamp : null;
+    }
 
-        return [
-            'status'    => 'ok',
-            'issues'    => $issues, // echo any acknowledged drift/uncounted rows
-            'multi'     => $multi,
-            'locations' => $summary,
-            'movements' => $posted,
-            'message'   => sprintf(
-                /* translators: %d: number of stock movements posted. */
-                \_n('Count applied — %d movement posted.', 'Count applied — %d movements posted.', $posted, 'kaupang-stock'),
-                $posted
-            ),
-        ];
+    /** Give the claim back (review again, counting may resume). Only our own claim. */
+    private static function release(int $countId, string $stamp): void {
+        global $wpdb;
+        $wpdb->query($wpdb->prepare(
+            'UPDATE ' . Schema::counts() . '
+                SET status = %s, applied_by = NULL, applied_at = NULL
+              WHERE id = %d AND status = %s AND applied_by = %d AND applied_at = %s',
+            Counts::STATUS_REVIEW,
+            $countId,
+            Counts::STATUS_APPLYING,
+            \get_current_user_id(),
+            $stamp
+        ));
+    }
+
+    /**
+     * True when this count's batch is already in the ledger (an apply that
+     * posted and died before markApplied). The batch is one transaction, so
+     * one movement means all of them.
+     */
+    private static function alreadyPosted(int $countId): bool {
+        global $wpdb;
+        return (int) $wpdb->get_var($wpdb->prepare(
+            'SELECT COUNT(*) FROM ' . Schema::movements() . ' m
+               JOIN ' . Schema::countLines() . " l ON l.id = m.ref_id
+              WHERE m.ref_type = 'count_line' AND l.count_id = %d",
+            $countId
+        )) > 0;
     }
 
     /**
@@ -253,29 +377,30 @@ final class Apply {
         return mb_substr($note, 0, 255);
     }
 
-    /** Stamp the count applied (terminal) with attribution. */
-    private static function markApplied(int $countId): void {
+    /** Stamp the count applied (terminal) with attribution — from our own claim only. */
+    private static function markApplied(int $countId, string $stamp): void {
         global $wpdb;
-        $wpdb->update(
-            Schema::counts(),
-            [
-                'status'     => Counts::STATUS_APPLIED,
-                'applied_by' => \get_current_user_id(),
-                'applied_at' => gmdate('Y-m-d H:i:s'),
-            ],
-            ['id' => $countId],
-            ['%s', '%d', '%s'],
-            ['%d']
-        );
+        $wpdb->query($wpdb->prepare(
+            'UPDATE ' . Schema::counts() . '
+                SET status = %s, applied_by = %d, applied_at = %s
+              WHERE id = %d AND status = %s AND applied_at = %s',
+            Counts::STATUS_APPLIED,
+            \get_current_user_id(),
+            gmdate('Y-m-d H:i:s'),
+            $countId,
+            Counts::STATUS_APPLYING,
+            $stamp
+        ));
     }
 
     /**
      * A summary row for the combined dialog / blocked list.
      *
-     * @param array<string,mixed> $line
+     * @param array<string,mixed>   $line
+     * @param callable(int):string  $nameOf location id → name, resolved once per apply
      * @return array{line_id:int,product_id:int,location_id:int,location:string,label:string,expected:float,on_hand:float,counted:?float,kind:string}
      */
-    private static function issueRow(array $line, string $kind, ?float $onHand = null): array {
+    private static function issueRow(array $line, string $kind, callable $nameOf, ?float $onHand = null): array {
         $productId  = (int) $line['product_id'];
         $locationId = Counts::lineLocation($line);
         $expected   = (float) $line['expected'];
@@ -283,7 +408,7 @@ final class Apply {
             'line_id'     => (int) $line['id'],
             'product_id'  => $productId,
             'location_id' => $locationId,
-            'location'    => Locations::name($locationId),
+            'location'    => $nameOf($locationId),
             'label'       => ProductSearch::label($productId),
             'expected'    => $expected,
             'on_hand'     => $onHand ?? Balances::onHand($productId, $locationId),

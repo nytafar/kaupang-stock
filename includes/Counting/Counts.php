@@ -31,6 +31,8 @@ final class Counts {
 
     public const STATUS_OPEN      = 'open';
     public const STATUS_REVIEW    = 'review';
+    /** Transient: an apply has claimed the count and is posting it (Apply::claim()). No line write succeeds. */
+    public const STATUS_APPLYING  = 'applying';
     public const STATUS_APPLIED   = 'applied';
     public const STATUS_CANCELLED = 'cancelled';
 
@@ -361,20 +363,23 @@ final class Counts {
     }
 
     /**
+     * One conditional UPDATE, so a transition can never overwrite a status that
+     * changed since it was read (an apply claiming the count, a second tab).
+     *
      * @param string[] $from allowed current statuses
      */
     private static function transition(int $countId, array $from, string $to, bool $stampClosed = false): bool {
         global $wpdb;
-        $count = self::find($countId);
-        if ($count === null || !in_array((string) $count['status'], $from, true)) {
-            return false;
-        }
-        $data    = ['status' => $to];
-        $formats = ['%s'];
         // The schema has no closed_at on counts; applied_by/applied_at are only
         // stamped by Apply. Cancellation is a pure status flip.
-        $updated = $wpdb->update(Schema::counts(), $data, ['id' => $countId], $formats, ['%d']);
-        return $updated !== false;
+        $in = implode(',', array_fill(0, count($from), '%s'));
+        $n  = $wpdb->query($wpdb->prepare(
+            'UPDATE ' . Schema::counts() . " SET status = %s WHERE id = %d AND status IN ($in)",
+            $to,
+            $countId,
+            ...$from
+        ));
+        return $n === 1;
     }
 
     /**

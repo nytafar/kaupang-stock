@@ -231,3 +231,19 @@
 .ks-sheet--multi td.ks-cell--recount { background: var(--ks-danger-bg); }
 .ks-grid--multi .ks-cell-diff .ks-chip--recount { margin-left: 4px; }
 .ks-grid--multi .ks-cell-diff .ks-override-btn { margin-left: 6px; }
+
+/* Several locations visible and no "Teller i" picked on this device yet. */
+.ks-count-in--needed select {
+	outline: 2px solid var(--ks-warning-fg);
+	outline-offset: 1px;
+	background: var(--ks-warning-bg);
+}
+
+/* "Mark uncounted": per location in the heading, per line in the review cell. */
+.ks-multi .ks-loc-head .ks-clear-loc-btn {
+	display: block;
+	margin: 2px auto 0;
+	font-weight: 400;
+	font-size: 12px;
+}
+.ks-grid--multi .ks-cell-diff .ks-clear-btn { margin-left: 6px; font-size: 12px; }

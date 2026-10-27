@@ -7,23 +7,36 @@ use Kaupang\Stock\Schema;
 use Kaupang\Stock\Settings;
 
 /**
- * Count LINE write logic (§6.3 capture/review). Two ways a line's `counted`
+ * Count LINE write logic (§6.3 capture/review). Three ways a line's `counted`
  * changes:
  *
  *  - set (absolute): manual per-row qty entry — `counted` becomes exactly N.
  *  - increment (atomic): the scanner path — a repeated scan does an in-SQL
  *    `counted = COALESCE(counted,0) + N`. Lost updates are the inFlow anti-pattern,
  *    so the addition happens in the database, never read-modify-write in PHP.
+ *  - clear: back to uncounted (a mis-scan into the wrong location, or counted
+ *    lines on a location deactivated since creation). Per line, or every
+ *    counted line of one location of a count.
  *
- * Both stamp counted_by/counted_at and recompute the recount flag against the
- * variance threshold. The override path (accepting a flagged value as-is) lives in
- * the REST controller because it writes a trail note, not `counted` — a fresh count
- * pass is the only thing that changes what was counted (who-counted-what integrity).
+ * Set and increment stamp counted_by/counted_at and recompute the recount flag
+ * against the variance threshold; clear empties all three and the flag. The
+ * override path (accepting a flagged value as-is) writes a trail note, not
+ * `counted` — a fresh count pass is the only thing that changes what was counted
+ * (who-counted-what integrity).
+ *
+ * Every write runs in a short transaction that first takes a shared lock on the
+ * parent count row and re-checks its status there. Apply claims the count with an
+ * UPDATE of that row (exclusive lock) before it reads the lines, so a write either
+ * commits before the claim and is posted, or sees `applying` and is refused —
+ * never a 200 whose value the apply does not see.
  *
  * These are the plugin's own document rows, so direct $wpdb is correct; no stock
  * movement is written here — Apply.php is the only bridge to the Ledger.
  */
 final class CountLines {
+
+    /** Statuses in which a count's lines may be counted or cleared. */
+    private const WRITABLE = [Counts::STATUS_OPEN, Counts::STATUS_REVIEW];
 
     /**
      * Absolute set of `counted`. Returns the fresh line row, or null when the line
@@ -32,23 +45,21 @@ final class CountLines {
      * @return array<string,mixed>|null
      */
     public static function setCounted(int $lineId, float $counted): ?array {
-        if (!self::writable($lineId)) {
-            return null;
-        }
-        global $wpdb;
-        $now = gmdate('Y-m-d H:i:s');
-        $wpdb->update(
-            Schema::countLines(),
-            [
-                'counted'    => number_format(max(0, $counted), 3, '.', ''),
-                'counted_by' => \get_current_user_id(),
-                'counted_at' => $now,
-            ],
-            ['id' => $lineId],
-            ['%s', '%d', '%s'],
-            ['%d']
-        );
-        return self::recomputeRecount($lineId);
+        return self::guarded($lineId, self::WRITABLE, static function () use ($lineId, $counted): bool {
+            global $wpdb;
+            $ok = $wpdb->update(
+                Schema::countLines(),
+                [
+                    'counted'    => number_format(max(0, $counted), 3, '.', ''),
+                    'counted_by' => \get_current_user_id(),
+                    'counted_at' => gmdate('Y-m-d H:i:s'),
+                ],
+                ['id' => $lineId],
+                ['%s', '%d', '%s'],
+                ['%d']
+            );
+            return $ok !== false && self::recomputeRecount($lineId) !== null;
+        });
     }
 
     /**
@@ -59,24 +70,66 @@ final class CountLines {
      * @return array<string,mixed>|null
      */
     public static function increment(int $lineId, float $by): ?array {
-        if (!self::writable($lineId)) {
+        return self::guarded($lineId, self::WRITABLE, static function () use ($lineId, $by): bool {
+            global $wpdb;
+            $table = Schema::countLines();
+            $ok    = $wpdb->query($wpdb->prepare(
+                "UPDATE $table
+                    SET counted = COALESCE(counted, 0) + %f,
+                        counted_by = %d,
+                        counted_at = %s
+                  WHERE id = %d",
+                $by,
+                \get_current_user_id(),
+                gmdate('Y-m-d H:i:s'),
+                $lineId
+            ));
+            return $ok !== false && self::recomputeRecount($lineId) !== null;
+        });
+    }
+
+    /**
+     * Set a line back to uncounted: counted, counted_by, counted_at and the
+     * recount flag cleared. Open or review only. Returns the fresh row, or null
+     * when not writable.
+     *
+     * @return array<string,mixed>|null
+     */
+    public static function clear(int $lineId): ?array {
+        return self::guarded($lineId, self::WRITABLE, static function () use ($lineId): bool {
+            global $wpdb;
+            $table = Schema::countLines();
+            return $wpdb->query($wpdb->prepare(
+                "UPDATE $table SET counted = NULL, counted_by = NULL, counted_at = NULL, recount = 0 WHERE id = %d",
+                $lineId
+            )) !== false;
+        });
+    }
+
+    /**
+     * Clear every counted line of one location of a count (a whole location
+     * scanned into the wrong column, or a location deactivated since creation).
+     * Returns how many lines were cleared, or null when the count is not open|
+     * review.
+     */
+    public static function clearLocation(int $countId, int $locationId): ?int {
+        if (!Settings::get('counting_enabled')) {
             return null;
         }
-        global $wpdb;
-        $now   = gmdate('Y-m-d H:i:s');
-        $table = Schema::countLines();
-        $wpdb->query($wpdb->prepare(
-            "UPDATE $table
-                SET counted = COALESCE(counted, 0) + %f,
-                    counted_by = %d,
-                    counted_at = %s
-              WHERE id = %d",
-            $by,
-            \get_current_user_id(),
-            $now,
-            $lineId
-        ));
-        return self::recomputeRecount($lineId);
+        $cleared = null;
+        $ok = self::withCountLock($countId, self::WRITABLE, static function () use ($countId, $locationId, &$cleared): bool {
+            global $wpdb;
+            $table = Schema::countLines();
+            $n     = $wpdb->query($wpdb->prepare(
+                "UPDATE $table SET counted = NULL, counted_by = NULL, counted_at = NULL, recount = 0
+                  WHERE count_id = %d AND location_id = %d AND counted IS NOT NULL",
+                $countId,
+                $locationId
+            ));
+            $cleared = $n === false ? null : (int) $n;
+            return $n !== false;
+        });
+        return $ok ? $cleared : null;
     }
 
     /**
@@ -86,19 +139,16 @@ final class CountLines {
      * @return array<string,mixed>|null
      */
     public static function clearRecountFlag(int $lineId): ?array {
-        $line = Counts::line($lineId);
-        if ($line === null) {
-            return null;
-        }
-        global $wpdb;
-        $wpdb->update(
-            Schema::countLines(),
-            ['recount' => 0],
-            ['id' => $lineId],
-            ['%d'],
-            ['%d']
-        );
-        return Counts::line($lineId);
+        return self::guarded($lineId, [Counts::STATUS_REVIEW], static function () use ($lineId): bool {
+            global $wpdb;
+            return $wpdb->update(
+                Schema::countLines(),
+                ['recount' => 0],
+                ['id' => $lineId],
+                ['%d'],
+                ['%d']
+            ) !== false;
+        });
     }
 
     /**
@@ -147,22 +197,55 @@ final class CountLines {
     }
 
     /**
-     * A line is writable (capture/manual save) only while its parent count is open
-     * or in review — spec gates the increment/set ops to {open, review}.
+     * Run one line write under the count lock. Counting must be enabled at all
+     * (master flag), the line must exist, and its count must be in $statuses at
+     * the moment the write commits. Returns the fresh row, or null.
+     *
+     * @param string[]        $statuses
+     * @param callable():bool $write
+     * @return array<string,mixed>|null
      */
-    private static function writable(int $lineId): bool {
-        // Master flag: counting must be enabled at all.
+    private static function guarded(int $lineId, array $statuses, callable $write): ?array {
         if (!Settings::get('counting_enabled')) {
-            return false;
+            return null;
         }
         $line = Counts::line($lineId);
         if ($line === null) {
-            return false;
+            return null;
         }
-        $count = Counts::find((int) $line['count_id']);
-        if ($count === null) {
-            return false;
+        if (!self::withCountLock((int) $line['count_id'], $statuses, $write)) {
+            return null;
         }
-        return in_array((string) $count['status'], [Counts::STATUS_OPEN, Counts::STATUS_REVIEW], true);
+        return Counts::line($lineId);
+    }
+
+    /**
+     * START TRANSACTION, read the count's status with a shared lock (LOCK IN
+     * SHARE MODE: MariaDB and MySQL both accept it), run $write only when the
+     * status is allowed, COMMIT; anything else rolls back. The shared lock makes
+     * Apply's claim (an UPDATE of the same row) wait for writes in flight, and a
+     * write that starts after the claim reads `applying`.
+     *
+     * @param string[]        $statuses
+     * @param callable():bool $write
+     */
+    private static function withCountLock(int $countId, array $statuses, callable $write): bool {
+        global $wpdb;
+        $wpdb->query('START TRANSACTION');
+        try {
+            $status = $wpdb->get_var($wpdb->prepare(
+                'SELECT status FROM ' . Schema::counts() . ' WHERE id = %d LOCK IN SHARE MODE',
+                $countId
+            ));
+            if ($status === null || !in_array((string) $status, $statuses, true) || !$write()) {
+                $wpdb->query('ROLLBACK');
+                return false;
+            }
+            $wpdb->query('COMMIT');
+            return true;
+        } catch (\Throwable $e) {
+            $wpdb->query('ROLLBACK');
+            throw $e;
+        }
     }
 }

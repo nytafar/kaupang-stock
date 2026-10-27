@@ -164,11 +164,22 @@ final class Import {
             }
         }
 
-        $filled = 0;
+        $filled  = 0;
+        $refused = 0;
         foreach ($targets as $lineId => $counted) {
             if (CountLines::setCounted($lineId, $counted) !== null) {
                 $filled++;
+            } else {
+                $refused++;
             }
+        }
+        if ($refused > 0) {
+            // The count left open/review mid-import (an apply claimed it).
+            $errors[] = sprintf(
+                /* translators: %d: number of rows not written */
+                \_n('%d row was not written: the count is no longer open for counting.', '%d rows were not written: the count is no longer open for counting.', $refused, 'kaupang-stock'),
+                $refused
+            );
         }
         return ['filled' => $filled, 'errors' => $errors];
     }

@@ -19,8 +19,12 @@
  * Multi-location counts (root has .ks-multi, PRD-04 §2): one column group per
  * location. The location toggles are display-only and remembered per device and
  * site (localStorage); a hidden location's lines simply stay uncounted. "Teller i"
- * picks which visible location a scan increments (automatic when one is visible).
- * The CSV export link carries the visible locations. One-location counts have none
+ * picks which visible location a scan increments: automatic when one is visible;
+ * with several visible it starts unchosen on a device that never picked, and a
+ * scan is refused (not recorded) until it is chosen. The pick is remembered with
+ * the toggles. A line goes back to uncounted by emptying its field (capture) or
+ * "Mark uncounted" (review); the location heading clears a whole location. The
+ * CSV export link carries the visible locations. One-location counts have none
  * of this and behave as before.
  */
 (function () {
@@ -189,13 +193,21 @@
 			if (select) {
 				for (var o = 0; o < select.options.length; o++) {
 					var opt = select.options[o];
+					if (opt.value === '') {
+						continue; // the "Choose location…" placeholder
+					}
 					opt.hidden = opt.disabled = visible.indexOf(opt.value) === -1;
 				}
-				if (visible.indexOf(select.value) === -1 || select.value === '') {
-					select.value = visible.indexOf(prefs.countIn) !== -1 ? prefs.countIn : visible[0];
+				if (visible.length < 2) {
+					// One visible location counts automatically.
+					select.value = visible[0] || '';
+				} else if (visible.indexOf(select.value) === -1) {
+					// Several visible: this device's pick, or nothing — never a
+					// silent default that sends scans to the wrong location.
+					select.value = visible.indexOf(prefs.countIn) !== -1 ? prefs.countIn : '';
 				}
-				// One visible location counts automatically.
 				select.disabled = visible.length < 2;
+				syncNeeded();
 			}
 			var exportBtn = root.querySelector('.ks-export-btn');
 			if (exportBtn) {
@@ -204,6 +216,14 @@
 				exportBtn.href = url.toString();
 			}
 			if (onChange) { onChange(visible); }
+		}
+
+		// Several locations visible and no "Teller i" yet: mark the picker.
+		function syncNeeded() {
+			if (!select) { return; }
+			var needed = !select.disabled && select.value === '';
+			var wrap = select.closest('.ks-count-in');
+			if (wrap) { wrap.classList.toggle('ks-count-in--needed', needed); }
 		}
 
 		function persist() {
@@ -233,6 +253,7 @@
 			if (prefs.countIn) { select.value = prefs.countIn; }
 			select.addEventListener('change', function () {
 				persist();
+				syncNeeded();
 				var scan = document.getElementById('ks-scan-input');
 				if (scan) { scan.focus(); }
 			});
@@ -241,6 +262,9 @@
 
 		api.countIn = function () {
 			return select ? select.value : (visibleIds()[0] || '');
+		};
+		api.focusCountIn = function () {
+			if (select && !select.disabled) { select.focus(); }
 		};
 		return api;
 	}
@@ -318,6 +342,18 @@
 			});
 		}
 
+		function clearLine(lineId) {
+			api('count-lines/' + lineId, 'POST', { clear: true }).then(function (resp) {
+				if (resp.ok && resp.data && resp.data.line) {
+					applyLine(resp.data.line);
+					setStatus(resp.data.line.label + ' · ' + (resp.data.line.location || '') + ': ' + t('cleared', 'Marked uncounted.'), 'ok');
+				} else {
+					setStatus((resp.data && resp.data.message) || t('saveFailed', 'Could not save.'), 'error');
+				}
+				if (scanInput) { scanInput.focus(); }
+			});
+		}
+
 		function incrementBySku(sku) {
 			// skuMap: SKU → {location id → line id}; a scan lands on "Teller i".
 			var byLoc = skuMap[sku];
@@ -325,7 +361,13 @@
 				setStatus(t('unknownSku', 'Unknown SKU: ') + sku, 'warn');
 				return;
 			}
-			var lineId = byLoc[locs.countIn()];
+			var target = locs.countIn();
+			if (locs.multi && !target) {
+				setStatus(t('pickCountIn', 'Scan not recorded: choose where you are counting (Count into) first.'), 'error');
+				locs.focusCountIn();
+				return;
+			}
+			var lineId = byLoc[target];
 			if (!lineId) {
 				setStatus(t('noLine', 'No line for this location: ') + sku, 'warn');
 				return;
@@ -381,7 +423,13 @@
 					if (!lineId) { return; }
 					var v = input.value.trim();
 					if (v === '') {
-						return; // blank leaves the line uncounted; no destructive clear op
+						// One location: blank is ignored, as before. Several: emptying
+						// the field sets the line back to uncounted (a mis-scan into
+						// the wrong location is undone here).
+						if (locs.multi) {
+							clearLine(lineId);
+						}
+						return;
 					}
 					saveAbsolute(lineId, Number(v)).then(function () {
 						if (scanInput) { scanInput.focus(); }
@@ -398,10 +446,41 @@
 			});
 		}
 		syncSpans();
+		bindClearLocation(root, function (msg, kind) { setStatus(msg, kind); });
 
 		if (scanInput) {
 			scanInput.focus();
 		}
+		if (locs.multi && !locs.countIn()) {
+			setStatus(t('chooseCountIn', 'Several locations are shown: choose where you are counting (Count into) before scanning.'), 'warn');
+		}
+	}
+
+	/**
+	 * The location heading's "Mark uncounted": every counted line of that
+	 * location back to uncounted (confirm first), then reload the sheet.
+	 */
+	function bindClearLocation(root, report) {
+		var countId = root.getAttribute('data-count-id');
+		root.addEventListener('click', function (ev) {
+			var btn = ev.target.closest ? ev.target.closest('.ks-clear-loc-btn') : null;
+			if (!btn) { return; }
+			ev.preventDefault();
+			var name = btn.getAttribute('data-loc-name') || '';
+			if (!window.confirm(t('clearLocation', 'Mark every counted line at %1$s as uncounted?').replace('%1$s', name))) {
+				return;
+			}
+			btn.disabled = true;
+			api('counts/' + countId + '/clear', 'POST', { location_id: Number(btn.getAttribute('data-loc-id')) }).then(function (resp) {
+				if (resp.ok && resp.data) {
+					window.location.reload();
+					return;
+				}
+				btn.disabled = false;
+				var msg = (resp.data && resp.data.message) || t('saveFailed', 'Could not save.');
+				if (report) { report(msg, 'error'); } else { window.alert(msg); }
+			});
+		});
 	}
 
 	/* ------------------------------ Review -------------------------------- */
@@ -470,6 +549,26 @@
 				}
 			});
 		});
+
+		// Mark one counted line (a location's cell) uncounted, then reload so the
+		// counters, chips and apply gate are recomputed server-side.
+		root.addEventListener('click', function (ev) {
+			var btn = ev.target.closest ? ev.target.closest('.ks-clear-btn') : null;
+			if (!btn) { return; }
+			var cell = btn.closest('[data-line-id]');
+			var lineId = cell && cell.getAttribute('data-line-id');
+			if (!lineId || !window.confirm(t('clearLine', 'Mark this line as uncounted?'))) { return; }
+			btn.disabled = true;
+			api('count-lines/' + lineId, 'POST', { clear: true }).then(function (resp) {
+				if (resp.ok && resp.data && resp.data.line) {
+					window.location.reload();
+					return;
+				}
+				btn.disabled = false;
+				window.alert((resp.data && resp.data.message) || t('saveFailed', 'Could not save.'));
+			});
+		});
+		bindClearLocation(root, null);
 
 		// Re-counting a flagged line is done by reopening the count for counting
 		// (the toolbar button) and re-scanning — the review UI only offers the

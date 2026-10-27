@@ -23,8 +23,9 @@ use Kaupang\Stock\Support\ProductSearch;
  *
  * Routes:
  *  - GET  /movements                      the review/audit drill-down feed
- *  - POST /count-lines/{id}               capture: absolute set or atomic increment
+ *  - POST /count-lines/{id}               capture: absolute set, atomic increment, or clear
  *  - POST /count-lines/{id}/override      review: accept a flagged value (trail note)
+ *  - POST /counts/{id}/clear              every counted line of one location → uncounted
  *  - POST /counts/{id}/apply              the drift-guarded relative-variance apply
  *  - POST /receive                        delegated VERBATIM to the purchasing module
  *
@@ -134,10 +135,12 @@ final class Controller {
     /* ------------------------------ Count lines --------------------------- */
 
     /**
-     * POST /count-lines/{id} {counted?, increment?}. Gated on counting_enabled and
-     * a parent count in {open, review}. `increment` is the atomic scanner op;
-     * `counted` is an absolute set. Returns the updated line row (with recount flag
-     * recomputed inside CountLines).
+     * POST /count-lines/{id} {counted?, increment?, clear?}. Gated on
+     * counting_enabled and a parent count in {open, review}. `increment` is the
+     * atomic scanner op; `counted` is an absolute set; `clear: true` sets the line
+     * back to uncounted. Returns the updated line row (with recount flag
+     * recomputed inside CountLines). 409 when the count is not open for counting
+     * any more — including an apply that has already read the lines.
      */
     public static function countLine(\WP_REST_Request $req): \WP_REST_Response|\WP_Error {
         if (!Settings::get('counting_enabled')) {
@@ -149,14 +152,17 @@ final class Controller {
         $params      = is_array($params) ? $params : [];
         $hasCounted  = array_key_exists('counted', $params) || $req->get_param('counted') !== null;
         $hasIncr     = array_key_exists('increment', $params) || $req->get_param('increment') !== null;
+        $clear       = (bool) ($params['clear'] ?? $req->get_param('clear'));
 
-        if (!$hasCounted && !$hasIncr) {
+        if (!$hasCounted && !$hasIncr && !$clear) {
             return new \WP_Error('missing_value', \__('Provide either counted or increment.', 'kaupang-stock'), ['status' => 400]);
         }
 
         // The write ops themselves re-check writability (line exists, count open|
-        // review) and return null when the line is not writable.
-        if ($hasIncr) {
+        // review) under the count lock and return null when the line is not writable.
+        if ($clear) {
+            $row = CountLines::clear($lineId);
+        } elseif ($hasIncr) {
             $by  = (float) ($params['increment'] ?? $req->get_param('increment'));
             $row = CountLines::increment($lineId, $by);
         } else {
@@ -200,9 +206,10 @@ final class Controller {
             return new \WP_Error('not_review', \__('Overrides are only possible while the count is in review.', 'kaupang-stock'), ['status' => 409]);
         }
 
+        // Re-checked under the count lock: an apply may have claimed it since.
         $row = CountLines::clearRecountFlag($lineId);
         if ($row === null) {
-            return new \WP_Error('override_failed', \__('Could not override the line.', 'kaupang-stock'), ['status' => 500]);
+            return new \WP_Error('not_review', \__('Overrides are only possible while the count is in review.', 'kaupang-stock'), ['status' => 409]);
         }
 
         $user  = \wp_get_current_user();
@@ -223,6 +230,35 @@ final class Controller {
         Counts::appendNote((int) $line['count_id'], $entry);
 
         return \rest_ensure_response(['line' => self::linePayload($row)]);
+    }
+
+    /**
+     * POST /counts/{id}/clear {location_id}. Every counted line of that location
+     * back to uncounted (open or review only): the way out of a location
+     * scanned into by mistake, or of counted lines on a location deactivated
+     * since the count was created. Returns how many lines were cleared.
+     */
+    public static function countClearLocation(\WP_REST_Request $req): \WP_REST_Response|\WP_Error {
+        if (!Settings::get('counting_enabled')) {
+            return new \WP_Error('counting_disabled', \__('Counting is not enabled.', 'kaupang-stock'), ['status' => 403]);
+        }
+        $countId    = (int) $req['id'];
+        $locationId = (int) $req->get_param('location_id');
+        if (Counts::find($countId) === null) {
+            return new \WP_Error('count_not_found', \__('Count not found.', 'kaupang-stock'), ['status' => 404]);
+        }
+        if (!isset(Counts::locations($countId)[$locationId])) {
+            return new \WP_Error('location_not_in_count', \__('That location is not part of this count.', 'kaupang-stock'), ['status' => 400]);
+        }
+        $cleared = CountLines::clearLocation($countId, $locationId);
+        if ($cleared === null) {
+            return new \WP_Error(
+                'line_not_writable',
+                \__('That line cannot be updated (it may not exist, or its count is not open for counting).', 'kaupang-stock'),
+                ['status' => 409]
+            );
+        }
+        return \rest_ensure_response(['cleared' => $cleared, 'location_id' => $locationId]);
     }
 
     /**

@@ -16,7 +16,10 @@ use Kaupang\Stock\Support\ProductSearch;
  * row per product and one column group per location (PRD-04 §2), with display-only
  * location toggles remembered per device and a "Teller i" picker for the scanner;
  * both live in counting.js. Hidden columns stay uncounted, and uncounted posts
- * nothing.
+ * nothing. With several locations visible a scan lands nowhere until "Teller i"
+ * is picked on this device. A multi-location count can also set lines back to
+ * uncounted, per line (capture: empty the field; review: "Mark uncounted") or
+ * per location (the location heading), while it is open or in review.
  */
 final class CountSheet {
 
@@ -66,7 +69,7 @@ final class CountSheet {
             </div>
 
             <div class="ks-tablewrap">
-            <?php $multi ? self::captureGrid($lines, $locations, $blind) : self::captureSheet($lines); ?>
+            <?php $multi ? self::captureGrid($lines, $locations, $blind, self::writable($count)) : self::captureSheet($lines); ?>
             </div>
         </div>
         <?php
@@ -102,7 +105,7 @@ final class CountSheet {
     }
 
     /** Multi-location sheet: one row per product, Forventet + Counted per location. */
-    private static function captureGrid(array $lines, array $locations, bool $blind): void {
+    private static function captureGrid(array $lines, array $locations, bool $blind, bool $writable): void {
         ?>
             <table class="wp-list-table widefat striped ks-sheet ks-sheet--multi">
                 <thead>
@@ -110,7 +113,7 @@ final class CountSheet {
                         <th rowspan="2"><?php \esc_html_e('SKU', 'kaupang-stock'); ?></th>
                         <th rowspan="2"><?php \esc_html_e('Product', 'kaupang-stock'); ?></th>
                         <?php foreach ($locations as $locId => $name): ?>
-                            <th class="ks-loc-head" colspan="<?php echo $blind ? 1 : 2; ?>" data-loc="<?php echo (int) $locId; ?>" data-span="2"><?php echo \esc_html($name); ?></th>
+                            <th class="ks-loc-head" colspan="<?php echo $blind ? 1 : 2; ?>" data-loc="<?php echo (int) $locId; ?>" data-span="2"><?php echo \esc_html($name); ?><?php echo $writable ? self::clearLocationButton((int) $locId, $name) : ''; // phpcs:ignore WordPress.Security.EscapeOutput ?></th>
                         <?php endforeach; ?>
                     </tr>
                     <tr>
@@ -165,7 +168,11 @@ final class CountSheet {
             }
         }
         $applied  = $status === Counts::STATUS_APPLIED;
-        $canApply = $status === Counts::STATUS_REVIEW;
+        $applying = $status === Counts::STATUS_APPLYING;
+        // An `applying` count is only seen when an apply is running or died:
+        // offering apply again finishes it (Apply takes over a stale claim).
+        $canApply = $status === Counts::STATUS_REVIEW || $applying;
+        $canClear = $multi && self::writable($count);
         ?>
         <div class="wrap ks-counts ks-review<?php echo $multi ? ' ks-multi' : ''; ?>"
              data-count-id="<?php echo (int) $countId; ?>"
@@ -182,9 +189,17 @@ final class CountSheet {
                 <p class="ks-note-trail"><strong><?php \esc_html_e('Note:', 'kaupang-stock'); ?></strong> <?php echo \esc_html((string) $count['note']); ?></p>
             <?php endif; ?>
 
+            <?php if ($applying): ?>
+                <div class="notice notice-warning inline"><p><?php echo \esc_html(sprintf(
+                    /* translators: %d: minutes after which an unfinished apply can be taken over. */
+                    \__('This count is being applied. If that was interrupted, use Bruk telling again to finish it (possible %d minutes after it started). Counting is locked meanwhile.', 'kaupang-stock'),
+                    (int) ceil(\Kaupang\Stock\Counting\Apply::CLAIM_TTL / 60)
+                )); ?></p></div>
+            <?php endif; ?>
+
             <div class="ks-review__toolbar">
                 <?php if ($multi) { self::locationToggles($locations, false); } ?>
-                <?php if ($canApply): ?>
+                <?php if ($canApply && !$applying): ?>
                     <?php echo CountsPage::transitionButton($countId, 'reopen', \__('Reopen for counting', 'kaupang-stock'), 'button'); // phpcs:ignore WordPress.Security.EscapeOutput ?>
                     <button type="button" class="button button-primary ks-apply-btn"
                             <?php echo $recountCount > 0 ? 'disabled' : ''; ?>>
@@ -194,6 +209,8 @@ final class CountSheet {
                         <span class="description"><?php echo \esc_html(sprintf(\__('%d line(s) need a recount or override before applying.', 'kaupang-stock'), $recountCount)); ?></span>
                     <?php endif; ?>
                     <?php echo CountsPage::transitionButton($countId, 'cancel', \__('Cancel count', 'kaupang-stock'), 'button ks-danger', true); // phpcs:ignore WordPress.Security.EscapeOutput ?>
+                <?php elseif ($applying): ?>
+                    <button type="button" class="button button-primary ks-apply-btn"><?php \esc_html_e('Bruk telling', 'kaupang-stock'); ?></button>
                 <?php elseif ($applied): ?>
                     <p class="description"><?php echo \esc_html(sprintf(\__('Applied %s by %s.', 'kaupang-stock'),
                         \get_date_from_gmt((string) ($count['applied_at'] ?? gmdate('Y-m-d H:i:s')), 'Y-m-d H:i'),
@@ -203,10 +220,10 @@ final class CountSheet {
             </div>
 
             <div class="ks-tablewrap">
-            <?php $multi ? self::reviewGrid($lines, $locations, $canApply) : self::reviewSheet($rows, $canApply); ?>
+            <?php $multi ? self::reviewGrid($lines, $locations, $status === Counts::STATUS_REVIEW, $canClear) : self::reviewSheet($rows, $status === Counts::STATUS_REVIEW); ?>
             </div>
 
-            <?php if ($uncounted > 0 && $canApply): ?>
+            <?php if ($uncounted > 0 && $status === Counts::STATUS_REVIEW): ?>
                 <p class="description ks-uncounted-note">
                     <?php echo \esc_html(sprintf(\__('%d line(s) have not been counted. They post nothing and will require a combined confirmation at apply.', 'kaupang-stock'), $uncounted)); ?>
                 </p>
@@ -264,7 +281,7 @@ final class CountSheet {
      * location name. Recount chip and override sit in the location's cell — they
      * are per line, i.e. per location.
      */
-    private static function reviewGrid(array $lines, array $locations, bool $canApply): void {
+    private static function reviewGrid(array $lines, array $locations, bool $canApply, bool $canClear): void {
         $span = 2 + 3 * count($locations);
         ?>
             <table class="wp-list-table widefat striped ks-grid ks-grid--multi">
@@ -272,7 +289,7 @@ final class CountSheet {
                     <tr>
                         <th rowspan="2"><?php \esc_html_e('Product', 'kaupang-stock'); ?></th>
                         <?php foreach ($locations as $locId => $name): ?>
-                            <th class="ks-loc-head" colspan="3" data-loc="<?php echo (int) $locId; ?>"><?php echo \esc_html($name); ?></th>
+                            <th class="ks-loc-head" colspan="3" data-loc="<?php echo (int) $locId; ?>"><?php echo \esc_html($name); ?><?php echo $canClear ? self::clearLocationButton((int) $locId, $name) : ''; // phpcs:ignore WordPress.Security.EscapeOutput ?></th>
                         <?php endforeach; ?>
                         <th rowspan="2"></th>
                     </tr>
@@ -308,6 +325,9 @@ final class CountSheet {
                                     <?php if ($canApply): ?>
                                         <button type="button" class="button-link ks-override-btn"><?php \esc_html_e('Override', 'kaupang-stock'); ?></button>
                                     <?php endif; ?>
+                                <?php endif; ?>
+                                <?php if ($canClear && $c['counted'] !== null): ?>
+                                    <button type="button" class="button-link ks-clear-btn"><?php \esc_html_e('Mark uncounted', 'kaupang-stock'); ?></button>
                                 <?php endif; ?>
                             </td>
                         <?php endforeach; ?>
@@ -370,12 +390,24 @@ final class CountSheet {
             <label class="ks-count-in">
                 <?php \esc_html_e('Count into', 'kaupang-stock'); ?>
                 <select id="ks-count-in">
+                    <option value=""><?php \esc_html_e('Choose location…', 'kaupang-stock'); ?></option>
                     <?php foreach ($locations as $locId => $name): ?>
                         <option value="<?php echo (int) $locId; ?>"><?php echo \esc_html($name); ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
         <?php endif;
+    }
+
+    /** The location heading's "clear every counted line here" control (multi only). */
+    private static function clearLocationButton(int $locId, string $name): string {
+        return ' <button type="button" class="button-link ks-clear-loc-btn" data-loc-id="' . $locId . '" data-loc-name="' . \esc_attr($name) . '">'
+            . \esc_html__('Mark uncounted', 'kaupang-stock') . '</button>';
+    }
+
+    /** Lines can be counted or cleared: the count is open or in review. */
+    private static function writable(array $count): bool {
+        return in_array((string) $count['status'], [Counts::STATUS_OPEN, Counts::STATUS_REVIEW], true);
     }
 
     /** @param array<int,string> $locations */
@@ -385,6 +417,39 @@ final class CountSheet {
             $list[] = ['id' => (int) $id, 'name' => $name];
         }
         return 'data-locations="' . \esc_attr((string) \wp_json_encode($list)) . '"';
+    }
+
+    /** The counting.js strings (KaupangStockCounting.i18n), translated server-side. */
+    public static function jsStrings(): array {
+        return [
+            'unknownSku'      => \__('Unknown SKU: ', 'kaupang-stock'),
+            'saveFailed'      => \__('Could not save.', 'kaupang-stock'),
+            'loading'         => \__('Loading…', 'kaupang-stock'),
+            'loadFailed'      => \__('Could not load movements.', 'kaupang-stock'),
+            'overridePrompt'  => \__('Accept this counted value. Enter a note (required):', 'kaupang-stock'),
+            'noteRequired'    => \__('A note is required.', 'kaupang-stock'),
+            'applyFailed'     => \__('Could not apply the count.', 'kaupang-stock'),
+            'expectedShort'   => \__('exp', 'kaupang-stock'),
+            'onHandShort'     => \__('on hand', 'kaupang-stock'),
+            'countedShort'    => \__('counted', 'kaupang-stock'),
+            'applyAnyway'     => \__('Bruk likevel?', 'kaupang-stock'),
+            'noMovements'     => \__('No movements since the count started.', 'kaupang-stock'),
+            'when'            => \__('When', 'kaupang-stock'),
+            'change'          => \__('Change', 'kaupang-stock'),
+            'reason'          => \__('Reason', 'kaupang-stock'),
+            'note'            => \__('Note', 'kaupang-stock'),
+            'location'        => \__('Location', 'kaupang-stock'),
+            'notCounted'      => \__('not counted — no change', 'kaupang-stock'),
+            /* translators: 1: counted lines, 2: total lines, 3: movements to post (placeholders filled in JS). */
+            'locationSummary' => \__('%1$s of %2$s counted, %3$s change(s)', 'kaupang-stock'),
+            'noLine'          => \__('No line for this location: ', 'kaupang-stock'),
+            'pickCountIn'     => \__('Scan not recorded: choose where you are counting (Count into) first.', 'kaupang-stock'),
+            'chooseCountIn'   => \__('Several locations are shown: choose where you are counting (Count into) before scanning.', 'kaupang-stock'),
+            /* translators: 1: location name (placeholder filled in JS). */
+            'clearLocation'   => \__('Mark every counted line at %1$s as uncounted?', 'kaupang-stock'),
+            'clearLine'       => \__('Mark this line as uncounted?', 'kaupang-stock'),
+            'cleared'         => \__('Marked uncounted.', 'kaupang-stock'),
+        ];
     }
 
     /* ------------------------------ Decorate ------------------------------ */

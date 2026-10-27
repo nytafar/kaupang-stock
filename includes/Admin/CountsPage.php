@@ -77,29 +77,7 @@ final class CountsPage {
             // localStorage is per origin; the home path keeps two installs on one
             // origin apart ("remembered per device, per site").
             'siteKey' => (string) \wp_parse_url(\home_url('/'), PHP_URL_HOST) . (string) \wp_parse_url(\home_url('/'), PHP_URL_PATH),
-            'i18n'    => [
-                'unknownSku'      => \__('Unknown SKU: ', 'kaupang-stock'),
-                'saveFailed'      => \__('Could not save.', 'kaupang-stock'),
-                'loading'         => \__('Loading…', 'kaupang-stock'),
-                'loadFailed'      => \__('Could not load movements.', 'kaupang-stock'),
-                'overridePrompt'  => \__('Accept this counted value. Enter a note (required):', 'kaupang-stock'),
-                'noteRequired'    => \__('A note is required.', 'kaupang-stock'),
-                'applyFailed'     => \__('Could not apply the count.', 'kaupang-stock'),
-                'expectedShort'   => \__('exp', 'kaupang-stock'),
-                'onHandShort'     => \__('on hand', 'kaupang-stock'),
-                'countedShort'    => \__('counted', 'kaupang-stock'),
-                'applyAnyway'     => \__('Bruk likevel?', 'kaupang-stock'),
-                'noMovements'     => \__('No movements since the count started.', 'kaupang-stock'),
-                'when'            => \__('When', 'kaupang-stock'),
-                'change'          => \__('Change', 'kaupang-stock'),
-                'reason'          => \__('Reason', 'kaupang-stock'),
-                'note'            => \__('Note', 'kaupang-stock'),
-                'location'        => \__('Location', 'kaupang-stock'),
-                'notCounted'      => \__('not counted — no change', 'kaupang-stock'),
-                /* translators: 1: counted lines, 2: total lines, 3: movements to post (placeholders filled in JS). */
-                'locationSummary' => \__('%1$s of %2$s counted, %3$s change(s)', 'kaupang-stock'),
-                'noLine'          => \__('No line for this location: ', 'kaupang-stock'),
-            ],
+            'i18n'    => CountSheet::jsStrings(),
         ]);
     }
 
@@ -451,6 +429,7 @@ final class CountsPage {
         $labels = [
             Counts::STATUS_OPEN      => \__('Open', 'kaupang-stock'),
             Counts::STATUS_REVIEW    => \__('Til gjennomgang', 'kaupang-stock'),
+            Counts::STATUS_APPLYING  => \__('Applying', 'kaupang-stock'),
             Counts::STATUS_APPLIED   => \__('Applied', 'kaupang-stock'),
             Counts::STATUS_CANCELLED => \__('Cancelled', 'kaupang-stock'),
         ];

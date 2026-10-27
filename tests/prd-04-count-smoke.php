@@ -23,6 +23,12 @@
  *    reports the table not ready, and install() then leaves the version
  *    unstamped so the next load retries;
  *  - a count whose line insert fails throws and leaves no partial count;
+ *  - a counted line (and a whole location) can be set back to uncounted while
+ *    open or in review, which also clears the deactivated-location refusal;
+ *  - the apply claim: a scan that lands before the claim is posted, a scan
+ *    after the claim is refused (REST 409), a fresh claim refuses a second
+ *    apply and every write, a stale one is taken over, a ledger failure
+ *    releases it;
  *  - a one-location count keeps the v1 shape: no location UI, the v1 CSV header,
  *    a location-less import, per-line uncounted issues.
  *
@@ -147,6 +153,14 @@ $csvHandle = static function (array $header, array $rows) {
     }
     rewind($h);
     return $h;
+};
+
+/** POST to a kaupang-stock/v1 route as the current user. */
+$rest = static function (string $path, array $body): WP_REST_Response {
+    $req = new WP_REST_Request('POST', '/kaupang-stock/v1/' . ltrim($path, '/'));
+    $req->set_header('Content-Type', 'application/json');
+    $req->set_body((string) wp_json_encode($body));
+    return rest_do_request($req);
 };
 
 $zeroAll = static function (array $productIds, string $tag) use ($run): void {
@@ -285,6 +299,8 @@ try {
     CountSheet::capture(Counts::find($c1));
     $html = (string) ob_get_clean();
     $assert(strpos($html, 'ks-loc-toggle') !== false && strpos($html, 'id="ks-count-in"') !== false && strpos($html, 'data-loc="' . $store . '"') !== false, 'multi capture renders location toggles, Teller i and per-location columns');
+    $assert((bool) preg_match('~<select id="ks-count-in">\s*<option value="">~', $html), 'Teller i starts unchosen (no silent default location)');
+    $assert(strpos($html, 'ks-clear-loc-btn') !== false, 'multi capture offers a per-location "Mark uncounted"');
 
     // All or nothing: the second line insert fails → exception, nothing left.
     $maxCount = (int) $wpdb->get_var('SELECT COALESCE(MAX(id), 0) FROM ' . Schema::counts());
@@ -378,6 +394,175 @@ try {
     $assert((int) $wpdb->get_var('SELECT COUNT(*) FROM ' . Schema::movements()) === $before && Counts::find($c3)['status'] === Counts::STATUS_REVIEW, 'nothing posted, count stays in review');
     Counts::cancel($c3);
 
+    /* --- Clearing a counted line ---------------------------------------- */
+    WP_CLI::log('Clear');
+    $c7 = Counts::create(['scope' => Counts::SCOPE_MANUAL, 'products' => [$a, $b], 'blind' => true]);
+    $countIds[] = $c7;
+    $lAd = (int) $lineOf($c7, $a, $default)['id'];
+    $lAs = (int) $lineOf($c7, $a, $store)['id'];
+    $lBs = (int) $lineOf($c7, $b, $store)['id'];
+    CountLines::setCounted($lAd, 2);
+    $row = CountLines::clear($lAd);
+    $assert($row !== null && $row['counted'] === null && $row['counted_by'] === null && $row['counted_at'] === null && (int) $row['recount'] === 0, 'a counted line goes back to uncounted while open');
+    $r = $rest('count-lines/' . $lAs, ['increment' => 1]);
+    $assert($r->get_status() === 200 && $near((float) $r->get_data()['line']['counted'], 1.0), 'REST: a scan increments the store line');
+    $r = $rest('count-lines/' . $lAs, ['clear' => true]);
+    $assert($r->get_status() === 200 && $r->get_data()['line']['counted'] === null, 'REST: {clear: true} sets it back to uncounted (a mis-scan undone)');
+    CountLines::setCounted($lAs, 3);
+    CountLines::setCounted($lBs, 1);
+    CountLines::setCounted($lAd, 4);
+    $r = $rest('counts/' . $c7 . '/clear', ['location_id' => $store]);
+    $assert($r->get_status() === 200 && (int) $r->get_data()['cleared'] === 2, 'REST: clearing the store clears its 2 counted lines');
+    $assert($lineOf($c7, $a, $store)['counted'] === null && $lineOf($c7, $b, $store)['counted'] === null && $lineOf($c7, $a, $default)['counted'] !== null, 'only that location is cleared; the other location keeps its counting');
+    $assert($rest('counts/' . $c7 . '/clear', ['location_id' => 999999])->get_status() === 400, 'REST: a location outside the count is a 400');
+
+    Counts::toReview($c7);
+    CountLines::setCounted($lAs, 5); // writes are still allowed in review
+    ob_start();
+    CountSheet::review(Counts::find($c7));
+    $html = (string) ob_get_clean();
+    $assert(strpos($html, 'ks-clear-btn') !== false && strpos($html, 'ks-clear-loc-btn') !== false, 'multi review offers "Mark uncounted" per counted line and per location');
+    $row = CountLines::clear($lAs);
+    $assert($row !== null && $row['counted'] === null, 'a counted line can be cleared in review');
+
+    // The way out of the deactivated-location refusal: clear, then apply.
+    CountLines::setCounted($lAs, 5);
+    CountLines::setCounted($lAd, (float) $lineOf($c7, $a, $default)['expected']); // zero delta
+    Locations::setActive($store, false);
+    $res = Apply::apply($c7, true);
+    $assert($res['status'] === 'error', 'counted lines on the deactivated store refuse the apply');
+    $cleared = CountLines::clearLocation($c7, $store);
+    $res = Apply::apply($c7, true);
+    Locations::setActive($store, true);
+    $assert($cleared === 1 && $res['status'] === 'ok' && $res['movements'] === 0, 'after clearing the store the count applies (store untouched)');
+    $assert(CountLines::clear($lAd) === null && CountLines::clearLocation($c7, $default) === null, 'an applied count refuses clearing');
+
+    /* --- Apply claim: no write after apply has read the lines ------------ */
+    WP_CLI::log('Apply claim');
+    $isClaim = static fn (string $q): bool => stripos($q, 'UPDATE ' . Schema::counts()) !== false && stripos($q, "status = 'review' OR") !== false;
+    $isLinesRead = static fn (string $q): bool => stripos($q, 'SELECT * FROM ' . Schema::countLines() . ' WHERE count_id') !== false;
+
+    // (1) A scan that commits just before the claim is in the posted batch.
+    $c8 = Counts::create(['scope' => Counts::SCOPE_MANUAL, 'products' => [$a], 'blind' => true]);
+    $countIds[] = $c8;
+    $l8s = (int) $lineOf($c8, $a, $store)['id'];
+    CountLines::setCounted($l8s, (float) $lineOf($c8, $a, $store)['expected']); // zero delta at first look
+    CountLines::setCounted((int) $lineOf($c8, $a, $default)['id'], (float) $lineOf($c8, $a, $default)['expected']);
+    Counts::toReview($c8);
+    $early = null;
+    $busy  = false;
+    $addFilter(static function (string $q) use (&$early, &$busy, $isClaim, $l8s): string {
+        if (!$busy && $early === null && $isClaim($q)) {
+            $busy  = true;
+            $early = CountLines::increment($l8s, 1);
+            $busy  = false;
+        }
+        return $q;
+    });
+    $res = Apply::apply($c8, true);
+    $dropFilters();
+    $moves = $appliedMoves($c8);
+    $assert($early !== null, 'a scan just before the claim is accepted');
+    $assert($res['status'] === 'ok' && $res['movements'] === 1 && $near((float) ($moves[$l8s][0]['delta'] ?? 0), 1.0), 'and its +1 is posted: apply re-reads the lines under the claim');
+
+    // (2) A scan once apply holds the claim and reads the lines is refused.
+    $c9 = Counts::create(['scope' => Counts::SCOPE_MANUAL, 'products' => [$a], 'blind' => true]);
+    $countIds[] = $c9;
+    $l9s = (int) $lineOf($c9, $a, $store)['id'];
+    CountLines::setCounted($l9s, (float) $lineOf($c9, $a, $store)['expected'] + 2); // +2
+    Counts::toReview($c9);
+    $claimed = false;
+    $late    = 'unset';
+    $lateRest = 0;
+    $busy    = false;
+    $addFilter(static function (string $q) use (&$claimed, &$late, &$lateRest, &$busy, $isClaim, $isLinesRead, $l9s, $rest): string {
+        if ($busy) {
+            return $q;
+        }
+        if ($isClaim($q)) {
+            $claimed = true;
+        } elseif ($claimed && $late === 'unset' && $isLinesRead($q)) {
+            $busy     = true;
+            $late     = CountLines::increment($l9s, 1);
+            $lateRest = $rest('count-lines/' . $l9s, ['increment' => 1])->get_status();
+            $busy     = false;
+        }
+        return $q;
+    });
+    $res = Apply::apply($c9, true);
+    $dropFilters();
+    $moves = $appliedMoves($c9);
+    $assert($claimed && $late === null && $lateRest === 409, 'a scan after the claim is refused (CountLines null, REST 409)');
+    $assert($res['status'] === 'ok' && $near((float) ($moves[$l9s][0]['delta'] ?? 0), 2.0) && $near((float) $lineOf($c9, $a, $store)['counted'], (float) $lineOf($c9, $a, $store)['expected'] + 2), 'the posted delta is what the lines held at the claim (+2), and the line still says so');
+
+    // (3) The lock, across two connections: a write in flight (shared lock on
+    // the count row) makes the claim wait, so it cannot slip past it.
+    $c10 = Counts::create(['scope' => Counts::SCOPE_MANUAL, 'products' => [$a], 'blind' => true]);
+    $countIds[] = $c10;
+    $l10s = (int) $lineOf($c10, $a, $store)['id'];
+    CountLines::setCounted($l10s, (float) $lineOf($c10, $a, $store)['expected'] + 1);
+    Counts::toReview($c10);
+    [$dbHost, $dbPort, $dbSocket] = array_slice(array_pad((array) $wpdb->parse_db_host(DB_HOST), 4, null), 0, 3);
+    $m2 = @new mysqli((string) $dbHost, DB_USER, DB_PASSWORD, DB_NAME, $dbPort ? (int) $dbPort : 3306, $dbSocket ? (string) $dbSocket : null);
+    if ($m2->connect_errno) {
+        WP_CLI::warning('second connection unavailable; cross-connection lock check skipped: ' . $m2->connect_error);
+    } else {
+        $waitWas = (int) $wpdb->get_var('SELECT @@SESSION.innodb_lock_wait_timeout');
+        $wpdb->query('SET SESSION innodb_lock_wait_timeout = 1');
+        $m2->query('START TRANSACTION');
+        $m2->query('SELECT status FROM ' . Schema::counts() . ' WHERE id = ' . $c10 . ' LOCK IN SHARE MODE');
+        $wpdb->suppress_errors(true);
+        $res = Apply::apply($c10, true);
+        $wpdb->suppress_errors(false);
+        $m2->query('ROLLBACK');
+        $assert($res['status'] === 'error' && Counts::find($c10)['status'] === Counts::STATUS_REVIEW && $appliedMoves($c10) === [], 'a write in flight on another connection blocks the claim: nothing posted, still in review');
+        // And the other way: an apply holding the claim lock blocks the write.
+        $m2->query('START TRANSACTION');
+        $m2->query("UPDATE " . Schema::counts() . " SET status = 'applying' WHERE id = " . $c10);
+        $wpdb->suppress_errors(true);
+        $blocked = CountLines::increment($l10s, 1);
+        $wpdb->suppress_errors(false);
+        $m2->query('ROLLBACK');
+        $m2->close();
+        $wpdb->query($wpdb->prepare('SET SESSION innodb_lock_wait_timeout = %d', max(1, $waitWas)));
+        $assert($blocked === null && $near((float) $lineOf($c10, $a, $store)['counted'], (float) $lineOf($c10, $a, $store)['expected'] + 1), 'a claim in progress on another connection blocks the write: refused, line unchanged');
+    }
+
+    // (4) A fresh claim refuses a second apply and every write; a stale one is taken over.
+    $wpdb->update(Schema::counts(), ['status' => Counts::STATUS_APPLYING, 'applied_by' => get_current_user_id(), 'applied_at' => gmdate('Y-m-d H:i:s')], ['id' => $c10], ['%s', '%d', '%s'], ['%d']);
+    $res = Apply::apply($c10, true);
+    $assert($res['status'] === 'error' && $appliedMoves($c10) === [], 'a fresh applying claim refuses a second apply');
+    $assert(CountLines::setCounted($l10s, 9) === null && CountLines::clear($l10s) === null && $rest('count-lines/' . $l10s, ['counted' => 9])->get_status() === 409, 'while applying every line write is refused (REST 409)');
+    $assert(!Counts::reopen($c10) && !Counts::cancel($c10), 'while applying the count can be neither reopened nor cancelled');
+    $h = $csvHandle(['sku', 'location_id', 'counted'], [['KSTEST-PRD04C-A', (string) $store, '9']]);
+    $res = Import::fill($c10, $h);
+    fclose($h);
+    $assert($res['filled'] === 0 && count($res['errors']) === 1, 'an import into an applying count writes nothing and says so');
+    ob_start();
+    CountSheet::review(Counts::find($c10));
+    $html = (string) ob_get_clean();
+    $assert(strpos($html, 'ks-apply-btn') !== false && strpos($html, 'ks-clear-btn') === false, 'the applying review screen offers apply (to finish) and no clearing');
+    $wpdb->update(Schema::counts(), ['applied_at' => gmdate('Y-m-d H:i:s', time() - Apply::CLAIM_TTL - 60)], ['id' => $c10], ['%s'], ['%d']);
+    $res = Apply::apply($c10, true);
+    $assert($res['status'] === 'ok' && $res['movements'] === 1 && Counts::find($c10)['status'] === Counts::STATUS_APPLIED, 'a stale claim (a died apply) is taken over and the count applies once');
+
+    // (5) A ledger failure releases the claim; the next apply succeeds.
+    $c11 = Counts::create(['scope' => Counts::SCOPE_MANUAL, 'products' => [$a], 'blind' => true]);
+    $countIds[] = $c11;
+    $l11s = (int) $lineOf($c11, $a, $store)['id'];
+    CountLines::setCounted($l11s, (float) $lineOf($c11, $a, $store)['expected'] + 1);
+    Counts::toReview($c11);
+    $addFilter(static fn (string $q): string => stripos($q, 'INSERT INTO `' . Schema::movements() . '`') === 0 ? 'INSERT INTO kstest_missing_table_prd04c (id) VALUES (1)' : $q);
+    $wpdb->suppress_errors(true);
+    $res = Apply::apply($c11, true);
+    $wpdb->suppress_errors(false);
+    $dropFilters();
+    $c11row = Counts::find($c11);
+    $assert($res['status'] === 'error' && $c11row['status'] === Counts::STATUS_REVIEW && $c11row['applied_at'] === null && $appliedMoves($c11) === [], 'a ledger failure: nothing posted, claim released back to review');
+    $assert(CountLines::setCounted($l11s, (float) $lineOf($c11, $a, $store)['expected'] + 1) !== null, 'counting works again after the release');
+    $res = Apply::apply($c11, true);
+    $assert($res['status'] === 'ok' && $res['movements'] === 1, 'the retried apply posts once');
+
     /* --- CSV per location ------------------------------------------------ */
     WP_CLI::log('CSV');
     $c4 = Counts::create(['scope' => Counts::SCOPE_MANUAL, 'products' => [$a, $b], 'blind' => false]);
@@ -424,7 +609,7 @@ try {
     ob_start();
     CountSheet::review(Counts::find($c6));
     $html .= (string) ob_get_clean();
-    $assert(strpos($html, 'ks-loc-toggle') === false && strpos($html, 'id="ks-count-in"') === false && strpos($html, 'data-loc=') === false && strpos($html, 'ks-multi') === false, 'one-location capture/review: no toggles, no Teller i, no location columns');
+    $assert(strpos($html, 'ks-loc-toggle') === false && strpos($html, 'id="ks-count-in"') === false && strpos($html, 'data-loc=') === false && strpos($html, 'ks-multi') === false && strpos($html, 'ks-clear') === false, 'one-location capture/review: no toggles, no Teller i, no location columns, no clear controls');
     [$header] = CountsPage::exportSheet(Counts::find($c6));
     $assert($header === ['sku', 'product', 'counted', 'product_id'], 'one-location blind export keeps the v1 header');
     $h = $csvHandle(['sku', 'counted'], [['KSTEST-PRD04C-A', '2']]);
@@ -438,10 +623,11 @@ try {
     $res = Apply::apply($c6, false);
     $assert($res['status'] === 'confirm_required' && $res['multi'] === false, 'one-location count: confirm for the uncounted line');
     $assert(count($res['issues']) === 1 && $res['issues'][0]['kind'] === 'uncounted' && (int) $res['issues'][0]['product_id'] === $b, 'uncounted listed per line, as before');
+    $storeBefore = Balances::onHand($a, $store);
     $res = Apply::apply($c6, true);
     $assert($res['status'] === 'ok' && $res['movements'] === 1, 'one-location apply posts one movement');
     $moves = $appliedMoves($c6);
-    $assert((int) current($moves)[0]['location_id'] === $default && $near(Balances::onHand($a, $default), 2.0) && $near(Balances::onHand($a, $store), 4.0), 'posted at the default only (3 → 2); the store is outside this count');
+    $assert((int) current($moves)[0]['location_id'] === $default && $near(Balances::onHand($a, $default), 2.0) && $near(Balances::onHand($a, $store), $storeBefore), 'posted at the default only (3 → 2); the store is outside this count');
 
     WP_CLI::success('PRD-04 §2 counting-per-location smoke test passed.');
 } finally {
