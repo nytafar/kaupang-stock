@@ -741,7 +741,6 @@ msgstr "Ny innkjøpsordre"
 
 #: includes/Admin/Purchasing/InboundView.php:33
 #: includes/Admin/Purchasing/ListView.php:29
-#: includes/Admin/Purchasing/PrintView.php:40
 msgid "PO"
 msgstr "Innkjøpsordre"
 
@@ -763,7 +762,7 @@ msgstr "Ingen innkjøpsordrer ennå."
 
 #: includes/Admin/Purchasing/EditView.php:37
 #: includes/Admin/Purchasing/EditView.php:648
-#: includes/Admin/Purchasing/PrintView.php:22
+#: includes/Admin/Purchasing/PrintView.php:28
 #: includes/Admin/Purchasing/ReceiveView.php:21
 #: includes/Admin/PurchasingPage.php:198
 #: includes/Purchasing/Receiving.php:62
@@ -777,7 +776,7 @@ msgid "Back to list"
 msgstr "Tilbake til listen"
 
 #: includes/Admin/Purchasing/EditView.php:73
-#: includes/Admin/Purchasing/PrintView.php:43
+#: includes/Admin/Purchasing/PrintView.php:74
 msgid "Supplier reference"
 msgstr "Leverandørreferanse"
 
@@ -888,7 +887,7 @@ msgid "Add line"
 msgstr "Legg til linje"
 
 #. translators: %d: purchase order number
-#: includes/Admin/Purchasing/PrintView.php:32
+#: includes/Admin/Purchasing/PrintView.php:35
 #: includes/Admin/Purchasing/ReceiveView.php:37
 msgid "Back to order"
 msgstr "Tilbake til ordren"
@@ -1450,7 +1449,7 @@ msgstr "Enhetskost"
 msgid "Ref"
 msgstr "Ref"
 
-#: includes/Admin/Purchasing/PrintView.php:41
+#: includes/Admin/Purchasing/PrintView.php:72
 #: includes/Admin/ValuationPage.php:336
 #: includes/Admin/ValuationPage.php:363
 msgid "Date"
@@ -1723,6 +1722,7 @@ msgstr "Leverandører"
 #: includes/Admin/Purchasing/EditView.php:69
 #: includes/Admin/Purchasing/InboundView.php:32
 #: includes/Admin/Purchasing/ListView.php:30
+#: includes/Admin/Purchasing/PrintView.php:79
 msgid "Supplier"
 msgstr "Leverandør"
 
@@ -1917,11 +1917,6 @@ msgstr "Leverandørprodukter"
 msgid "Supplier identity"
 msgstr "Leverandørens navn og SKU"
 
-#: includes/Admin/Purchasing/EditView.php:54
-#: includes/Admin/Purchasing/PrintView.php:37
-msgid "Ordering list"
-msgstr "Bestillingsliste"
-
 #: includes/Admin/Purchasing/EditView.php:154
 #: includes/Admin/Purchasing/EditView.php:263
 msgid "Supplier product"
@@ -1931,13 +1926,13 @@ msgstr "Leverandørprodukt"
 #: includes/Admin/Purchasing/EditView.php:178
 #: includes/Admin/Purchasing/EditView.php:264
 #: includes/Admin/Purchasing/EditView.php:360
-#: includes/Admin/Purchasing/PrintView.php:50
+#: includes/Admin/Purchasing/PrintView.php:95
 msgid "Supplier SKU"
 msgstr "Leverandørens SKU"
 
 #: includes/Admin/Purchasing/EditView.php:180
 #: includes/Admin/Purchasing/EditView.php:362
-#: includes/Admin/Purchasing/PrintView.php:49
+#: includes/Admin/Purchasing/PrintView.php:94
 msgid "Supplier product name"
 msgstr "Leverandørens produktnavn"
 
@@ -1957,19 +1952,11 @@ msgstr "Leverandørkatalogen er tom. Legg til et produkt nedenfor og fyll inn le
 msgid "Our product"
 msgstr "Vårt produkt"
 
-#: includes/Admin/Purchasing/PrintView.php:33
+#: includes/Admin/Purchasing/PrintView.php:36
 msgid "Print / Save as PDF"
 msgstr "Skriv ut / lagre som PDF"
 
-#: includes/Admin/Purchasing/PrintView.php:51
-msgid "Our product name"
-msgstr "Vårt produktnavn"
-
-#: includes/Admin/Purchasing/PrintView.php:52
-msgid "Our SKU"
-msgstr "Vår SKU"
-
-#: includes/Admin/Purchasing/PrintView.php:53
+#: includes/Admin/Purchasing/PrintView.php:96
 msgid "Qty ordered"
 msgstr "Antall bestilt"
 
@@ -2471,3 +2458,20 @@ msgstr "Lagerinnstillinger"
 #: includes/Admin/ValuationPage.php:75
 msgid "Cost tracking is not enabled. Turn it on in the stock settings."
 msgstr "Kostprissporing er ikke aktivert. Slå det på i lagerinnstillingene."
+
+#: includes/Admin/Purchasing/EditView.php:54
+#: includes/Admin/Purchasing/PrintView.php:69
+msgid "Purchase Order"
+msgstr "Innkjøpsordre"
+
+#: includes/Admin/Purchasing/PrintView.php:71
+msgid "Order no."
+msgstr "Ordrenr."
+
+#: includes/Admin/Purchasing/PrintView.php:83
+msgid "Invoice address"
+msgstr "Fakturaadresse"
+
+#: includes/Admin/Purchasing/PrintView.php:87
+msgid "Delivery address"
+msgstr "Leveringsadresse"

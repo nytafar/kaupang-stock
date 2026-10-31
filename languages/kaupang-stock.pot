@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-31T16:03:20+00:00\n"
+"POT-Creation-Date: 2026-10-31T16:08:16+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: kaupang-stock\n"
@@ -883,6 +883,7 @@ msgstr ""
 #: includes/Admin/Purchasing/EditView.php:69
 #: includes/Admin/Purchasing/InboundView.php:32
 #: includes/Admin/Purchasing/ListView.php:30
+#: includes/Admin/Purchasing/PrintView.php:79
 msgid "Supplier"
 msgstr ""
 
@@ -904,7 +905,7 @@ msgstr ""
 
 #: includes/Admin/Purchasing/EditView.php:37
 #: includes/Admin/Purchasing/EditView.php:648
-#: includes/Admin/Purchasing/PrintView.php:22
+#: includes/Admin/Purchasing/PrintView.php:28
 #: includes/Admin/Purchasing/ReceiveView.php:21
 #: includes/Admin/PurchasingPage.php:198
 #: includes/Purchasing/Receiving.php:62
@@ -923,8 +924,8 @@ msgid "Purchase order #%d"
 msgstr ""
 
 #: includes/Admin/Purchasing/EditView.php:54
-#: includes/Admin/Purchasing/PrintView.php:37
-msgid "Ordering list"
+#: includes/Admin/Purchasing/PrintView.php:69
+msgid "Purchase Order"
 msgstr ""
 
 #: includes/Admin/Purchasing/EditView.php:57
@@ -939,7 +940,7 @@ msgid "Details"
 msgstr ""
 
 #: includes/Admin/Purchasing/EditView.php:73
-#: includes/Admin/Purchasing/PrintView.php:43
+#: includes/Admin/Purchasing/PrintView.php:74
 msgid "Supplier reference"
 msgstr ""
 
@@ -1010,7 +1011,7 @@ msgstr ""
 #: includes/Admin/Purchasing/EditView.php:178
 #: includes/Admin/Purchasing/EditView.php:264
 #: includes/Admin/Purchasing/EditView.php:360
-#: includes/Admin/Purchasing/PrintView.php:50
+#: includes/Admin/Purchasing/PrintView.php:95
 msgid "Supplier SKU"
 msgstr ""
 
@@ -1053,7 +1054,7 @@ msgstr ""
 
 #: includes/Admin/Purchasing/EditView.php:180
 #: includes/Admin/Purchasing/EditView.php:362
-#: includes/Admin/Purchasing/PrintView.php:49
+#: includes/Admin/Purchasing/PrintView.php:94
 msgid "Supplier product name"
 msgstr ""
 
@@ -1215,7 +1216,6 @@ msgstr ""
 
 #: includes/Admin/Purchasing/InboundView.php:33
 #: includes/Admin/Purchasing/ListView.php:29
-#: includes/Admin/Purchasing/PrintView.php:40
 msgid "PO"
 msgstr ""
 
@@ -1233,30 +1233,34 @@ msgid "No purchase orders yet."
 msgstr ""
 
 #. translators: %d: purchase order number
-#: includes/Admin/Purchasing/PrintView.php:32
+#: includes/Admin/Purchasing/PrintView.php:35
 #: includes/Admin/Purchasing/ReceiveView.php:37
 msgid "Back to order"
 msgstr ""
 
-#: includes/Admin/Purchasing/PrintView.php:33
+#: includes/Admin/Purchasing/PrintView.php:36
 msgid "Print / Save as PDF"
 msgstr ""
 
-#: includes/Admin/Purchasing/PrintView.php:41
+#: includes/Admin/Purchasing/PrintView.php:71
+msgid "Order no."
+msgstr ""
+
+#: includes/Admin/Purchasing/PrintView.php:72
 #: includes/Admin/ValuationPage.php:336
 #: includes/Admin/ValuationPage.php:363
 msgid "Date"
 msgstr ""
 
-#: includes/Admin/Purchasing/PrintView.php:51
-msgid "Our product name"
+#: includes/Admin/Purchasing/PrintView.php:83
+msgid "Invoice address"
 msgstr ""
 
-#: includes/Admin/Purchasing/PrintView.php:52
-msgid "Our SKU"
+#: includes/Admin/Purchasing/PrintView.php:87
+msgid "Delivery address"
 msgstr ""
 
-#: includes/Admin/Purchasing/PrintView.php:53
+#: includes/Admin/Purchasing/PrintView.php:96
 msgid "Qty ordered"
 msgstr ""
 

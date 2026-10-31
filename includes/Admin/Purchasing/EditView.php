@@ -51,7 +51,7 @@ final class EditView {
         <?php if ($po !== null): ?>
             <span class="ks-inline-status"><?php PurchasingPage::statusChip($status); ?></span>
             <?php if ($lines !== []): ?>
-                <a href="<?php echo \esc_url(PurchasingPage::url(['view' => 'print', 'po' => $poId])); ?>" class="page-title-action" target="_blank" rel="noopener"><?php \esc_html_e('Ordering list', 'kaupang-stock'); ?></a>
+                <a href="<?php echo \esc_url(PurchasingPage::url(['view' => 'print', 'po' => $poId])); ?>" class="page-title-action" target="_blank" rel="noopener"><?php \esc_html_e('Purchase Order', 'kaupang-stock'); ?></a>
             <?php endif; ?>
         <?php endif; ?>
         <a href="<?php echo \esc_url(PurchasingPage::url(['view' => 'list'])); ?>" class="page-title-action"><?php \esc_html_e('Back to list', 'kaupang-stock'); ?></a>

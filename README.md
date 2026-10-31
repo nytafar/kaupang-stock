@@ -79,7 +79,9 @@ slug where it is active. With the ledger off, only Stock status (a pointer to th
   one-location count looks as before, except that a counted line can be cleared there
   too. Check: `tests/prd-04-count-smoke.php` (staging only).
 - **Innkjøp** — suppliers (brreg org-nr lookup when kaupang-brreg is active), purchase
-  orders, and receiving (2-click happy path, partial/over-receipt, derived status).
+  orders, and receiving (2-click happy path, partial/over-receipt, derived status). The printable purchase
+  order is in the supplier's language (Norwegian for a Norwegian supplier, English otherwise) and names the
+  store as invoice and delivery address.
 
 Embedded: a "Lager" panel on the product edit screen and a read-only movements meta box on
 the order edit screen — provenance is always one click away.

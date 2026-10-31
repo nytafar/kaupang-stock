@@ -20,6 +20,8 @@ $assert = static function (bool $condition, string $message): void {
 $productId = 0;
 $supplierId = 0;
 $poIds = [];
+$fallbackId = 0;
+$foreignId = 0;
 
 try {
     Schema::maybeUpgrade();
@@ -98,11 +100,59 @@ try {
     $assert($parsed['lines'] === [$productId => 7.0], 'the known SKU line maps to its product id with its counted qty');
     $assert(count($parsed['errors']) === 2, 'both unknown SKUs are reported as errors');
 
+    // PO document (stock#3): the supplier's language, buyer header, supplier-facing columns only.
+    $fallbackId = (int) wp_insert_post(['post_type' => 'product', 'post_status' => 'draft', 'post_title' => 'KSTEST PRD-01 fallback product']);
+    $foreignId  = Suppliers::create(['name' => 'KSTEST PRD-01 supplier SE', 'country' => 'SE', 'active' => 1]);
+    $assert($fallbackId > 0 && $foreignId > 0, 'print fixtures were created');
+    $ourSku = (string) get_post_meta($productId, '_sku', true);
+    $printHtml = static function (int $poId): array {
+        $_GET = ['page' => 'kaupang-stock-purchasing', 'view' => 'print', 'po' => (string) $poId];
+        ob_start();
+        \Kaupang\Stock\Admin\Purchasing\PrintView::render();
+        $html = (string) ob_get_clean();
+        $at   = (int) strpos($html, '<article');
+        return [substr($html, 0, $at), substr($html, $at)]; // [user-locale chrome, supplier document]
+    };
+    $nb = ['Innkjøpsordre', 'Ordrenr.', 'Dato', 'Leverandør', 'Fakturaadresse', 'Leveringsadresse', 'Leverandørens produktnavn', 'Leverandørens SKU', 'Antall bestilt', '15. mars 2026'];
+    $en = ['Purchase Order', 'Order no.', 'Date', 'Supplier', 'Invoice address', 'Delivery address', 'Supplier product name', 'Supplier SKU', 'Qty ordered', '15. March 2026'];
+    $has = static fn (string $html, array $needles): array => array_values(array_filter($needles, static fn (string $n): bool => strpos($html, $n) === false));
+    $hasAny = static fn (string $html, array $needles): array => array_values(array_filter($needles, static fn (string $n): bool => strpos($html, '>' . $n . '<') !== false));
+    $blog = wp_specialchars_decode((string) get_bloginfo('name'), ENT_QUOTES);
+    foreach (['NO' => $supplierId, 'SE' => $foreignId] as $country => $sid) {
+        SupplierProducts::save($sid, $productId, 'SUP-' . $country, 'Supplier name ' . $country);
+        SupplierProducts::save($sid, $fallbackId, 'SUP-FB-' . $country, ''); // no supplier name: falls back to ours
+        $poIds[] = $po = PurchaseOrders::create(['supplier_id' => $sid, 'supplier_ref' => 'KSTEST-PRINT-' . $country]);
+        Lines::add($po, $productId, 4, null, null);
+        Lines::add($po, $fallbackId, 2, null, null);
+        $wpdb->update(Schema::purchaseOrders(), ['created_at' => '2026-03-15 10:00:00', 'ordered_at' => null], ['id' => $po], ['%s', '%s'], ['%d']);
+
+        // A Norwegian supplier printed by an English-locale user, a Swedish one by a Norwegian-locale user.
+        $userLocale = $country === 'NO' ? 'en_US' : 'nb_NO';
+        $switched   = switch_to_locale($userLocale);
+        [$chrome, $doc] = $printHtml($po);
+        $back = __('Back to order', 'kaupang-stock');
+        $switched && restore_previous_locale();
+        [$want, $not] = $country === 'NO' ? [$nb, $en] : [$en, $nb];
+        $assert($has($doc, $want) === [], "$country print is fully in its language; missing: " . implode(', ', $has($doc, $want)));
+        $assert($hasAny($doc, array_diff($not, $want)) === [], "$country print has no other-language label; found: " . implode(', ', $hasAny($doc, array_diff($not, $want))));
+        $assert(strpos($chrome, $back) !== false && $back === ($userLocale === 'nb_NO' ? 'Tilbake til ordren' : 'Back to order'), "$country print: action buttons stay in the user's locale ($userLocale)");
+        $assert(substr_count($doc, $blog) === 2, "$country print: the store is both invoice and delivery address");
+        $assert(strpos($doc, 'Supplier name ' . $country) !== false && strpos($doc, '>KSTEST PRD-01 fallback product<') !== false, "$country print: supplier product name, else ours");
+        $assert(strpos($doc, 'KSTEST PRD-01 product') === false && strpos($doc, $ourSku) === false
+            && $hasAny($doc, ['Our product name', 'Our SKU', 'Vårt produktnavn', 'Vår SKU']) === [], "$country print: no internal product name/SKU column");
+    }
+    $assert(strpos($doc, 'Norway') !== false && strpos($doc, 'Norge') === false, 'SE print: the buyer country is shown, in English');
+
     WP_CLI::success('PRD-01 supplier catalog / PO-line smoke test passed.');
 } finally {
     if ($supplierId > 0 && $productId > 0) {
         SupplierProducts::delete($supplierId, $productId);
     }
+    foreach ([$supplierId, $foreignId] as $sid) {
+        $sid > 0 && $wpdb->delete(Schema::supplierProducts(), ['supplier_id' => $sid], ['%d']);
+    }
+    $foreignId > 0 && $wpdb->delete(Schema::suppliers(), ['id' => $foreignId], ['%d']);
+    $fallbackId > 0 && wp_delete_post($fallbackId, true);
     foreach ($poIds as $poId) {
         $wpdb->delete(Schema::purchaseOrderLines(), ['po_id' => (int) $poId], ['%d']);
         $wpdb->delete(Schema::purchaseOrders(), ['id' => (int) $poId], ['%d']);
