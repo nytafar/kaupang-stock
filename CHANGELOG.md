@@ -5,6 +5,13 @@ All notable changes to Kaupang Stock. Format: [Keep a Changelog](https://keepach
 
 ## [Unreleased]
 
+### Changed
+- The printable PO is a supplier document (stock#3): titled Purchase Order / Innkjøpsordre and printed in the supplier's language (country NO → nb_NO, any other → English; `switch_to_locale()` around the document only, so the admin chrome and buttons stay in the user's language; dates via `wp_date()` follow it). The header names the buyer, the WooCommerce store name and address, as both invoice and delivery address (with the country line for a supplier abroad). Columns are supplier name, supplier SKU and quantity; our product name and SKU are dropped from the print (the editor keeps them), and a line without a supplier product name shows ours. The editor's "Ordering list" link is now "Purchase Order". `tests/prd-01-smoke.php` asserts a Norwegian and a Swedish supplier's print.
+- The stock pages register under WooCommerce instead of a top-level "Lager" menu (stock#11). Every page slug is kept, so `admin.php?page=…` links and kaupang-admin's placement are unchanged. Menu labels are English sources with nb_NO translations and say "stock" under WooCommerce (Stock status / Lagerstatus, Stock movements / Lagerbevegelser, Stock value, Stock counts / Varetelling, Purchasing, Stock settings / Lagerinnstillinger). The status screen id is now `woocommerce_page_kaupang-stock` (`Admin\Menu::SCREEN_STATUS`).
+- Schema v8 (no table change): each user's hidden Stock status columns (Screen Options, user meta `manage{screen id}columnshidden`) move from the old `toplevel_page_kaupang-stock` key to the new id on the next wp-admin load. A value already saved on the new id wins; the old key is deleted, so it runs once.
+- `Admin\PurchasingPage` is split into one class per view under `Admin\Purchasing\` (`ListView`, `EditView`, `PrintView`, `ReceiveView`, `InboundView`, `SuppliersView`); `PurchasingPage` keeps the router, hook registration, notices and the shared helpers. The async line REST routes now call `Admin\Purchasing\EditView`. Rendered output is unchanged (stock#2).
+- Purchasing i18n: the hardcoded Norwegian source strings (`Innkjøp #%d`, `Motta varer`, `Motta varer — innkjøp #%d`, the PO status labels, the locked-line note written to the PO note trail and the receipt note written on each receipt movement) are English sources with nb_NO translations. New notes are written in the acting user's language; existing notes are left as written. The "enable it in settings" pointers no longer name a menu path. Catalogues regenerated.
+
 ## [0.15.0] - 2026-10-27
 
 ### Added

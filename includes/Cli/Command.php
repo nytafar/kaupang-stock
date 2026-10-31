@@ -255,7 +255,7 @@ final class Command {
                 \WP_CLI::error('--cost only applies when adding stock (positive delta).');
             }
             if (!\Kaupang\Stock\Costing\Costing::enabled()) {
-                \WP_CLI::error('--cost requires cost tracking (Lager → Innstillinger → Cost tracking).');
+                \WP_CLI::error('--cost requires cost tracking (stock settings → Cost tracking).');
             }
             if (!is_numeric($costRaw) || (float) $costRaw < 0) {
                 \WP_CLI::error('--cost must be a non-negative kr amount, e.g. 101 or 88.50.');
@@ -435,7 +435,7 @@ final class Command {
     public function cost(array $args, array $assoc): void {
         $action = (string) ($args[0] ?? '');
         if (!\Kaupang\Stock\Costing\Costing::enabled() && $action !== 'verify') {
-            \WP_CLI::error('Cost tracking is not enabled (Lager → Innstillinger → Cost tracking).');
+            \WP_CLI::error('Cost tracking is not enabled (stock settings → Cost tracking).');
         }
 
         switch ($action) {

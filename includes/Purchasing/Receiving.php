@@ -98,7 +98,7 @@ final class Receiving {
                 '',
                 0,
                 self::deriveStatus($po),
-                \__('Receiving writes stock and requires active mode. Enable active mode under Lager → Innstillinger.', 'kaupang-stock')
+                \__('Receiving writes stock and requires active mode. Enable active mode in the stock settings.', 'kaupang-stock')
             );
         }
 
@@ -249,12 +249,15 @@ final class Receiving {
         $ref      = trim((string) ($po['supplier_ref'] ?? ''));
         $supplier = Suppliers::name(isset($po['supplier_id']) ? (int) $po['supplier_id'] : null);
 
-        $parts = [sprintf('Varemottak innkjøp #%d', $poId)];
+        // Written into the movement note: the actor's language at receipt time; old notes stay as written.
+        /* translators: %d: purchase order number */
+        $parts = [sprintf(\__('Goods receipt, purchase order #%d', 'kaupang-stock'), $poId)];
         if ($supplier !== '' && $supplier !== '—') {
             $parts[] = $supplier;
         }
         if ($ref !== '') {
-            $parts[] = 'ref: ' . $ref;
+            /* translators: %s: supplier's order reference */
+            $parts[] = sprintf(\__('ref: %s', 'kaupang-stock'), $ref);
         }
         return mb_substr(implode(' · ', $parts), 0, 255);
     }

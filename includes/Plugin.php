@@ -245,10 +245,10 @@ final class Plugin {
             ],
         ]);
 
-        // Async draft-PO line editing. Callbacks live in the admin PurchasingPage
+        // Async draft-PO line editing. Callbacks live in the admin PO editor view
         // (they share its line helpers + row rendering); registered here because
         // that page only boots under is_admin() and REST is not admin context.
-        $page = '\\Kaupang\\Stock\\Admin\\PurchasingPage';
+        $page = '\\Kaupang\\Stock\\Admin\\Purchasing\\EditView';
         \register_rest_route(self::REST_NS, '/po/(?P<po>\d+)/lines', [
             'methods'             => 'POST',
             'callback'            => [$page, 'restAddLine'],

@@ -7,10 +7,11 @@ use Kaupang\Stock\Settings;
 use Kaupang\Stock\Support\Assets;
 
 /**
- * The "Lager" admin menu — the single entry point Plugin.php calls (§6). The
- * top level plus Innstillinger are always present; the feature screens gate
- * themselves on the flags, so a fresh activation shows only Lager → Innstillinger
- * and the top-level page points the operator at the settings until enabled.
+ * The stock admin pages — the single entry point Plugin.php calls (§6). They sit
+ * under WooCommerce (conventions §4: no top-level menu; kaupang-admin groups them
+ * by slug). Stock status plus Stock settings are always present; the feature
+ * screens gate themselves on the flags, so a fresh activation shows only those
+ * two and the status page points the operator at the settings until enabled.
  *
  * Assets are REGISTERED here (always, so the other pages can depend on the
  * `kaupang-stock-admin` handles) and only ENQUEUED on this plugin's own screens.
@@ -24,6 +25,9 @@ final class Menu {
     public const SLUG_COUNTS    = 'kaupang-stock-counts';
     public const SLUG_PURCHASE  = 'kaupang-stock-purchasing';
     public const SLUG_SETTINGS  = 'kaupang-stock-settings';
+
+    /** Screen id of the status page (its Screen Options columns key on it). */
+    public const SCREEN_STATUS  = 'woocommerce_page_kaupang-stock';
 
     public const STYLE_HANDLE  = 'kaupang-stock-admin';
     public const SCRIPT_HANDLE = 'kaupang-stock-admin';
@@ -56,59 +60,34 @@ final class Menu {
     }
 
     public static function menu(): void {
-        $cap = Settings::capability();
+        $cap    = Settings::capability();
+        $parent = 'woocommerce'; // conventions §4: under the parent users expect; kaupang-admin regroups by slug.
 
         // Core's Screen Options column toggles: the panel renders for any screen
         // whose manage_{id}_columns filter returns columns; visibility is per
         // user (column-<id> classes + user meta), no WP_List_Table needed.
-        \add_filter('manage_toplevel_page_' . self::SLUG . '_columns', [StatusPage::class, 'columns']);
+        \add_filter('manage_' . self::SCREEN_STATUS . '_columns', [StatusPage::class, 'columns']);
 
-        \add_menu_page(
-            'Lager',
-            'Lager',
-            $cap,
-            self::SLUG,
-            [StatusPage::class, 'render'],
-            'dashicons-archive',
-            56
-        );
-
-        if (!Settings::enabled()) {
-            // Disabled: only the top level (which renders a "not enabled"
-            // pointer) plus Innstillinger.
-            \add_submenu_page(
-                self::SLUG,
-                \__('Stock status', 'kaupang-stock'),
-                'Lagerstatus',
-                $cap,
-                self::SLUG,
-                [StatusPage::class, 'render']
-            );
-            \add_submenu_page(
-                self::SLUG,
-                \__('Settings', 'kaupang-stock'),
-                'Innstillinger',
-                $cap,
-                self::SLUG_SETTINGS,
-                [SettingsPage::class, 'render']
-            );
-            return;
-        }
-
-        // Lagerstatus reuses the top-level slug so the parent row is labelled.
+        // Stock status keeps the bare slug: disabled, it renders the "not enabled" pointer.
         \add_submenu_page(
-            self::SLUG,
+            $parent,
             \__('Stock status', 'kaupang-stock'),
-            'Lagerstatus',
+            \_x('Stock status', 'admin menu', 'kaupang-stock'),
             $cap,
             self::SLUG,
             [StatusPage::class, 'render']
         );
 
+        if (!Settings::enabled()) {
+            // Disabled: only the status pointer plus the settings.
+            self::settingsItem($parent, $cap);
+            return;
+        }
+
         \add_submenu_page(
-            self::SLUG,
+            $parent,
             \__('Movements', 'kaupang-stock'),
-            'Bevegelser',
+            \_x('Stock movements', 'admin menu', 'kaupang-stock'),
             $cap,
             self::SLUG_MOVES,
             [MovementsPage::class, 'render']
@@ -116,9 +95,9 @@ final class Menu {
 
         if (Settings::get('costing_enabled')) {
             \add_submenu_page(
-                self::SLUG,
+                $parent,
                 \__('Stock value', 'kaupang-stock'),
-                'Lagerverdi',
+                \_x('Stock value', 'admin menu', 'kaupang-stock'),
                 $cap,
                 self::SLUG_VALUATION,
                 [ValuationPage::class, 'render']
@@ -127,9 +106,9 @@ final class Menu {
 
         if (Settings::get('counting_enabled') && class_exists('\\Kaupang\\Stock\\Admin\\CountsPage')) {
             \add_submenu_page(
-                self::SLUG,
+                $parent,
                 \__('Stock counts', 'kaupang-stock'),
-                'Varetelling',
+                \_x('Stock counts', 'admin menu', 'kaupang-stock'),
                 $cap,
                 self::SLUG_COUNTS,
                 ['\\Kaupang\\Stock\\Admin\\CountsPage', 'render']
@@ -138,19 +117,23 @@ final class Menu {
 
         if (Settings::get('po_enabled') && class_exists('\\Kaupang\\Stock\\Admin\\PurchasingPage')) {
             \add_submenu_page(
-                self::SLUG,
+                $parent,
                 \__('Purchasing', 'kaupang-stock'),
-                'Innkjøp',
+                \_x('Purchasing', 'admin menu', 'kaupang-stock'),
                 $cap,
                 self::SLUG_PURCHASE,
                 ['\\Kaupang\\Stock\\Admin\\PurchasingPage', 'render']
             );
         }
 
+        self::settingsItem($parent, $cap);
+    }
+
+    private static function settingsItem(string $parent, string $cap): void {
         \add_submenu_page(
-            self::SLUG,
+            $parent,
             \__('Settings', 'kaupang-stock'),
-            'Innstillinger',
+            \_x('Stock settings', 'admin menu', 'kaupang-stock'),
             $cap,
             self::SLUG_SETTINGS,
             [SettingsPage::class, 'render']
@@ -199,8 +182,8 @@ final class Menu {
 
     /** True on any of this plugin's own admin pages (`page=kaupang-stock*`). */
     private static function isOwnScreen(string $hook): bool {
-        // Our pages all carry ?page=kaupang-stock…; the top-level hook suffix is
-        // "toplevel_page_kaupang-stock", submenus "lager_page_kaupang-stock-…".
+        // Our pages all carry ?page=kaupang-stock…; their hook suffixes are
+        // "woocommerce_page_kaupang-stock" and "woocommerce_page_kaupang-stock-…".
         if (strpos($hook, 'kaupang-stock') !== false) {
             return true;
         }

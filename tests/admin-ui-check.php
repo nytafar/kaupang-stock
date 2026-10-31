@@ -94,5 +94,70 @@ $checks['note: other without text = empty']  = \Kaupang\Stock\Admin\Screen::adju
 $_POST = ['note' => 'plain'];
 $checks['note: plain text (no preset)']      = \Kaupang\Stock\Admin\Screen::adjustNote() === 'plain';
 
+// Purchasing: the router reaches every per-view class; status labels are English sources with nb_NO translations.
+$poOn = static fn($v) => array_merge((array) $v, ['stock_enabled' => true, 'po_enabled' => true]);
+add_filter('option_kaupang_stock_settings', $poOn);
+\Kaupang\Stock\Settings::flushCache();
+foreach (['list' => 'page-title-action', 'inbound' => 'Nothing incoming|<td', 'suppliers' => 'kaupang_stock_save_supplier', 'edit' => 'kaupang_stock_save_po'] as $view => $marker) {
+    $h = ks_render(\Kaupang\Stock\Admin\PurchasingPage::class, ['page' => 'kaupang-stock-purchasing', 'view' => $view, 'po' => 'new']);
+    $checks["purchasing $view: balanced markup + rendered"] = ks_balanced($h) && preg_match('/' . $marker . '/', $h) === 1;
+}
+remove_filter('option_kaupang_stock_settings', $poOn);
+\Kaupang\Stock\Settings::flushCache();
+$switched = switch_to_locale('en_US'); // false when already en_US (WP-CLI on GridPane)
+$checks['purchasing: status label English source'] = \Kaupang\Stock\Purchasing\PurchaseOrders::statusLabel('partial') === 'Partially received';
+$switched && restore_previous_locale();
+switch_to_locale('nb_NO');
+$checks['purchasing: status label nb_NO']  = \Kaupang\Stock\Purchasing\PurchaseOrders::statusLabel('partial') === 'Delvis mottatt';
+restore_previous_locale();
+
+// Menu (stock#11): every page under WooCommerce, no top-level menu; translated labels; disabled = status + settings.
+$menuRun = static function (bool $enabled, string $locale): array {
+    $f = static fn($v) => array_merge((array) $v, ['stock_enabled' => $enabled, 'po_enabled' => true, 'counting_enabled' => true, 'costing_enabled' => true]);
+    add_filter('option_kaupang_stock_settings', $f);
+    \Kaupang\Stock\Settings::flushCache();
+    $switched = switch_to_locale($locale);
+    [$keep, $GLOBALS['menu'], $GLOBALS['submenu']] = [[$GLOBALS['menu'] ?? [], $GLOBALS['submenu'] ?? []], [], []];
+    \Kaupang\Stock\Admin\Menu::menu();
+    $out = [array_column($GLOBALS['submenu']['woocommerce'] ?? [], 0, 2), array_keys($GLOBALS['submenu']), $GLOBALS['menu']];
+    [$GLOBALS['menu'], $GLOBALS['submenu']] = $keep;
+    $switched && restore_previous_locale();
+    remove_filter('option_kaupang_stock_settings', $f);
+    \Kaupang\Stock\Settings::flushCache();
+    return $out;
+};
+$slugs = ['kaupang-stock', 'kaupang-stock-movements', 'kaupang-stock-valuation', 'kaupang-stock-counts', 'kaupang-stock-purchasing', 'kaupang-stock-settings'];
+[$en, $parents, $top] = $menuRun(true, 'en_US');
+$checks['menu: every page under woocommerce, slugs kept'] = array_keys($en) === $slugs && $parents === ['woocommerce'] && $top === [];
+$checks['menu: English labels say stock'] = $en['kaupang-stock'] === 'Stock status' && $en['kaupang-stock-settings'] === 'Stock settings';
+[$nb] = $menuRun(true, 'nb_NO');
+$checks['menu: nb_NO labels'] = array_values($nb) === ['Lagerstatus', 'Lagerbevegelser', 'Lagerverdi', 'Varetelling', 'Innkjøp', 'Lagerinnstillinger'];
+[$off] = $menuRun(false, 'en_US');
+$checks['menu: disabled keeps status pointer + settings'] = array_keys($off) === ['kaupang-stock', 'kaupang-stock-settings'];
+
+// Screen Options (stock#11): hidden status columns follow the screen from toplevel_page_ to its WooCommerce id.
+$uid    = get_current_user_id();
+$oldKey = 'managetoplevel_page_kaupang-stockcolumnshidden';
+$newKey = 'manage' . \Kaupang\Stock\Admin\Menu::SCREEN_STATUS . 'columnshidden';
+$had    = [metadata_exists('user', $uid, $oldKey) ? get_user_meta($uid, $oldKey, true) : null, metadata_exists('user', $uid, $newKey) ? get_user_meta($uid, $newKey, true) : null];
+$col    = array_keys(\Kaupang\Stock\Admin\StatusPage::columns())[2];
+try {
+    delete_user_meta($uid, $newKey);
+    update_user_meta($uid, $oldKey, [$col]);
+    \Kaupang\Stock\Schema::migrateScreenOptions();
+    \Kaupang\Stock\Schema::migrateScreenOptions(); // idempotent
+    $h = ks_render(\Kaupang\Stock\Admin\StatusPage::class, ['page' => 'kaupang-stock']);
+    $checks['screen options: hidden columns migrated'] = get_user_meta($uid, $newKey, true) === [$col] && !metadata_exists('user', $uid, $oldKey);
+    $checks['screen options: status page honours them'] = preg_match('/<th scope="col" id="' . $col . '" class="[^"]* hidden"/', $h) === 1;
+    update_user_meta($uid, $oldKey, ['product']);
+    \Kaupang\Stock\Schema::migrateScreenOptions();
+    $checks['screen options: a value on the new id wins'] = get_user_meta($uid, $newKey, true) === [$col] && !metadata_exists('user', $uid, $oldKey);
+} finally {
+    delete_user_meta($uid, $oldKey);
+    delete_user_meta($uid, $newKey);
+    $had[0] !== null && update_user_meta($uid, $oldKey, $had[0]);
+    $had[1] !== null && update_user_meta($uid, $newKey, $had[1]);
+}
+
 foreach ($checks as $k => $ok) { echo ($ok ? 'PASS' : 'FAIL') . " $k\n"; }
 exit(in_array(false, $checks, true) ? 1 : 0);

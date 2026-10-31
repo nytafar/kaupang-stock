@@ -406,7 +406,7 @@ a.ks-danger {
 	margin: 0.5em 0 1em;
 }
 
-/* --- printable ordering list ------------------------------------------- */
+/* --- printable purchase order ------------------------------------------ */
 /* A sheet of paper: literal black-on-white on purpose, in every admin palette. */
 
 .ks-print-actions {
@@ -437,14 +437,6 @@ a.ks-danger {
 	font-size: 2em;
 }
 
-.ks-print-kicker {
-	margin: 0;
-	font-size: 0.8em;
-	font-weight: 700;
-	letter-spacing: 0.1em;
-	text-transform: uppercase;
-}
-
 .ks-po-print dl {
 	display: flex;
 	flex-wrap: wrap;
@@ -463,6 +455,24 @@ a.ks-danger {
 }
 
 .ks-po-print dd {
+	margin: 0;
+}
+
+.ks-po-parties {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 1.5em;
+	margin-top: 1.5em;
+}
+
+.ks-po-parties h2 {
+	margin: 0 0 0.4em;
+	font-size: 0.8em;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+}
+
+.ks-po-parties p {
 	margin: 0;
 }
 
