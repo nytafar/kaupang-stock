@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Kaupang\Stock\Admin\Purchasing;
 
+defined('ABSPATH') || exit;
+
 use Kaupang\Stock\Purchasing\Suppliers;
 use Kaupang\Stock\Admin\Menu;
 use Kaupang\Stock\Admin\Screen;

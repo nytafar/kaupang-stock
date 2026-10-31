@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Kaupang\Stock\Admin\Purchasing;
 
+defined('ABSPATH') || exit;
+
 use Kaupang\Stock\Ledger\Movements;
 use Kaupang\Stock\Ledger\Balances;
 use Kaupang\Stock\Purchasing\Lines;
