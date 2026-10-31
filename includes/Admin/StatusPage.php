@@ -108,7 +108,7 @@ final class StatusPage {
 
             <?php
             $columns = self::columns();
-            $hidden  = array_fill_keys(\get_hidden_columns('toplevel_page_' . Menu::SLUG), true);
+            $hidden  = array_fill_keys(\get_hidden_columns(Menu::SCREEN_STATUS), true);
             $colspan = count($columns);
             ?>
             <div class="ks-tablewrap">

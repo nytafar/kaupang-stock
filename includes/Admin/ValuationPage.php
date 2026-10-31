@@ -72,7 +72,7 @@ final class ValuationPage {
 
     private static function renderDisabled(): void {
         echo '<div class="wrap ks-wrap"><h1>' . \esc_html__('Stock value (Lagerverdi)', 'kaupang-stock') . '</h1>';
-        echo '<p>' . \esc_html__('Cost tracking is not enabled. Turn it on under Lager → Innstillinger.', 'kaupang-stock') . '</p></div>';
+        echo '<p>' . \esc_html__('Cost tracking is not enabled. Turn it on in the stock settings.', 'kaupang-stock') . '</p></div>';
     }
 
     /* --------------------------- Opening box ------------------------------ */

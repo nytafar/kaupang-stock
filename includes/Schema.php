@@ -29,7 +29,9 @@ final class Schema {
     // v7: count_lines.location_id — a count line is (product, location). Existing
     //     lines backfill to the default location; the old count_product unique key
     //     is dropped explicitly (dbDelta never drops keys) — migrateCountLines().
-    public const VERSION        = 7;
+    // v8: no table change; the status screen moved under WooCommerce, so per-user
+    //     Screen Options hidden columns move to the new screen id — migrateScreenOptions().
+    public const VERSION        = 8;
     public const VERSION_OPTION = 'kaupang_stock_schema_version';
 
     public static function movements(): string {
@@ -293,6 +295,8 @@ final class Schema {
             return;
         }
 
+        self::migrateScreenOptions();
+
         \update_option(self::VERSION_OPTION, self::VERSION, false);
         // v6: settings + version marker off autoload (no storefront request reads them).
         \wp_set_option_autoload_values([Settings::OPTION_KEY => false, self::VERSION_OPTION => false]);
@@ -394,6 +398,26 @@ final class Schema {
             $cols[] = (string) $row->Column_name;
         }
         return $cols;
+    }
+
+    /**
+     * v8 (stock#11): core keeps each user's hidden Screen Options columns in user meta
+     * keyed on the screen id (`manage{id}columnshidden`, wp_ajax_hidden_columns). The status
+     * screen id changed from toplevel_page_kaupang-stock to Admin\Menu::SCREEN_STATUS, so
+     * carry the value over. A value already saved on the new id wins. Idempotent: the old
+     * key is deleted, so a second run finds nothing.
+     */
+    public static function migrateScreenOptions(): void {
+        global $wpdb;
+        $old = 'managetoplevel_page_kaupang-stockcolumnshidden';
+        $new = 'manage' . Admin\Menu::SCREEN_STATUS . 'columnshidden';
+        $ids = $wpdb->get_col($wpdb->prepare("SELECT DISTINCT user_id FROM {$wpdb->usermeta} WHERE meta_key = %s", $old));
+        foreach (array_map('intval', $ids) as $userId) {
+            if (!\metadata_exists('user', $userId, $new)) {
+                \update_user_meta($userId, $new, \get_user_meta($userId, $old, true));
+            }
+            \delete_user_meta($userId, $old);
+        }
     }
 
     /**

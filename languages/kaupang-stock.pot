@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-31T15:57:52+00:00\n"
+"POT-Creation-Date: 2026-10-31T16:03:20+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: kaupang-stock\n"
@@ -233,7 +233,7 @@ msgid "Accept this counted value. Enter a note (required):"
 msgstr ""
 
 #: includes/Admin/CountSheet.php:446
-#: includes/Admin/Menu.php:185
+#: includes/Admin/Menu.php:168
 #: includes/Admin/MovementsPage.php:535
 msgid "A note is required."
 msgstr ""
@@ -350,7 +350,7 @@ msgid "Marked uncounted."
 msgstr ""
 
 #: includes/Admin/CountsPage.php:122
-#: includes/Admin/Menu.php:131
+#: includes/Admin/Menu.php:110
 #: includes/Admin/SettingsPage.php:233
 #: includes/Admin/SettingsPage.php:236
 msgid "Stock counts"
@@ -534,62 +534,90 @@ msgid_plural "%d CSV rows were not imported:"
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Admin/Menu.php:81
-#: includes/Admin/Menu.php:101
+#: includes/Admin/Menu.php:74
 #: includes/Admin/SettingsPage.php:315
 #: includes/Admin/StatusPage.php:88
 msgid "Stock status"
 msgstr ""
 
-#: includes/Admin/Menu.php:89
-#: includes/Admin/Menu.php:152
-msgid "Settings"
+#: includes/Admin/Menu.php:75
+msgctxt "admin menu"
+msgid "Stock status"
 msgstr ""
 
-#: includes/Admin/Menu.php:110
+#: includes/Admin/Menu.php:89
 #: includes/Admin/MovementsPage.php:50
 msgid "Movements"
 msgstr ""
 
-#: includes/Admin/Menu.php:120
+#: includes/Admin/Menu.php:90
+msgctxt "admin menu"
+msgid "Stock movements"
+msgstr ""
+
+#: includes/Admin/Menu.php:99
 msgid "Stock value"
 msgstr ""
 
-#: includes/Admin/Menu.php:142
+#: includes/Admin/Menu.php:100
+msgctxt "admin menu"
+msgid "Stock value"
+msgstr ""
+
+#: includes/Admin/Menu.php:111
+msgctxt "admin menu"
+msgid "Stock counts"
+msgstr ""
+
+#: includes/Admin/Menu.php:121
 #: includes/Admin/Purchasing/ListView.php:19
 #: includes/Admin/PurchasingPage.php:133
 #: includes/Admin/SettingsPage.php:226
 msgid "Purchasing"
 msgstr ""
 
-#: includes/Admin/Menu.php:183
+#: includes/Admin/Menu.php:122
+msgctxt "admin menu"
+msgid "Purchasing"
+msgstr ""
+
+#: includes/Admin/Menu.php:135
+msgid "Settings"
+msgstr ""
+
+#: includes/Admin/Menu.php:136
+msgctxt "admin menu"
+msgid "Stock settings"
+msgstr ""
+
+#: includes/Admin/Menu.php:166
 msgid "Adjust"
 msgstr ""
 
-#: includes/Admin/Menu.php:184
+#: includes/Admin/Menu.php:167
 #: includes/Admin/Purchasing/EditView.php:184
 #: includes/Admin/Purchasing/SuppliersView.php:175
 #: includes/Admin/PurchasingPage.php:78
 msgid "Cancel"
 msgstr ""
 
-#: includes/Admin/Menu.php:186
+#: includes/Admin/Menu.php:169
 msgid "No products match."
 msgstr ""
 
-#: includes/Admin/Menu.php:187
+#: includes/Admin/Menu.php:170
 msgid "Reverse this movement? Enter a note (required):"
 msgstr ""
 
-#: includes/Admin/Menu.php:188
+#: includes/Admin/Menu.php:171
 msgid "A note is required to reverse a movement."
 msgstr ""
 
-#: includes/Admin/Menu.php:189
+#: includes/Admin/Menu.php:172
 msgid "Searching…"
 msgstr ""
 
-#: includes/Admin/Menu.php:190
+#: includes/Admin/Menu.php:173
 #: includes/Admin/Purchasing/EditView.php:322
 msgid "No products found."
 msgstr ""
@@ -1907,7 +1935,7 @@ msgid "Stock value (Lagerverdi)"
 msgstr ""
 
 #: includes/Admin/ValuationPage.php:75
-msgid "Cost tracking is not enabled. Turn it on under Lager → Innstillinger."
+msgid "Cost tracking is not enabled. Turn it on in the stock settings."
 msgstr ""
 
 #: includes/Admin/ValuationPage.php:90

@@ -41,7 +41,7 @@ nothing and shows only the settings screen.
    for an append-only log) and seeds the single default location `Hovedlager`.
    Dev and staging share code by symlink but have **separate DBs** — activate on each so
    `dbDelta` runs.
-2. **Enable in shadow.** *Lager → Innstillinger*: turn on `stock_enabled` with `mode = shadow`.
+2. **Enable in shadow.** *WooCommerce → Stock settings* (*Lagerinnstillinger*): turn on `stock_enabled` with `mode = shadow`.
    Then prime the catalog: `wp kaupang-stock seed`. The observer now records every
    WooCommerce stock change, but nothing writes back to `_stock`.
 3. **Prove reconciliation is clean.** Let real traffic run (≥ ~1 week on staging), then
@@ -53,7 +53,11 @@ nothing and shows only the settings screen.
 
 Purge caches after flag changes: `wp --path=… nginx-helper purge-all --allow-root`.
 
-## Admin screens (menu: "Lager", `manage_woocommerce`)
+## Admin screens (under WooCommerce, `manage_woocommerce`)
+
+The pages register under the `woocommerce` menu (conventions §4) with stable slugs (`kaupang-stock`,
+`kaupang-stock-movements`, `-valuation`, `-counts`, `-purchasing`, `-settings`); kaupang-admin groups them by
+slug where it is active. With the ledger off, only Stock status (a pointer to the settings) and Stock settings show.
 
 - **Lagerstatus** — one row per stock-managed product: on hand / reserved / available /
   incoming, last movement, status chips; inline quick adjust (required note).

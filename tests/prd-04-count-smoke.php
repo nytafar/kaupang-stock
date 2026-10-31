@@ -206,7 +206,7 @@ try {
 
     /* --- Migration ------------------------------------------------------- */
     WP_CLI::log('Migration (v6 → v7)');
-    $assert((int) get_option(Schema::VERSION_OPTION) === 7, 'schema version is 7');
+    $assert((int) get_option(Schema::VERSION_OPTION) === Schema::VERSION, 'schema is at the current version (v7 or later)');
     $realKeys = array_unique(array_map(static fn ($r) => $r->Key_name, (array) $wpdb->get_results('SHOW INDEX FROM ' . Schema::countLines())));
     $assert(!in_array('count_product', $realKeys, true) && in_array('count_product_location', $realKeys, true), 'live count_lines: count_product dropped, (count, product, location) key present');
     $assert((int) $wpdb->get_var('SELECT COUNT(*) FROM ' . Schema::countLines() . ' WHERE location_id = 0') === 0, 'live count_lines: no line left without a location');
@@ -240,7 +240,7 @@ try {
     $dropFilters();
     $assert((int) get_option(Schema::VERSION_OPTION) === 6, 'install() does not stamp v7 while the table does not verify');
     Schema::maybeUpgrade();
-    $assert((int) get_option(Schema::VERSION_OPTION) === 7, 'the next upgrade run verifies and stamps v7');
+    $assert((int) get_option(Schema::VERSION_OPTION) === Schema::VERSION, 'the next upgrade run verifies and stamps the current version');
 
     // A scratch table in the exact v6 shape, with data, migrated twice.
     $createV6();

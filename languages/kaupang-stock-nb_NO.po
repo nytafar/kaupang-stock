@@ -350,46 +350,44 @@ msgid_plural "%d lines filled from the CSV. The count is now in review."
 msgstr[0] "%d linje fylt ut fra CSV-en. Varetellingen er nå til gjennomgang."
 msgstr[1] "%d linjer fylt ut fra CSV-en. Varetellingen er nå til gjennomgang."
 
-#: includes/Admin/Menu.php:81
-#: includes/Admin/Menu.php:101
+#: includes/Admin/Menu.php:74
 #: includes/Admin/SettingsPage.php:315
 #: includes/Admin/StatusPage.php:88
 msgid "Stock status"
 msgstr "Lagerstatus"
 
-#: includes/Admin/Menu.php:89
-#: includes/Admin/Menu.php:152
+#: includes/Admin/Menu.php:135
 msgid "Settings"
 msgstr "Innstillinger"
 
-#: includes/Admin/Menu.php:110
+#: includes/Admin/Menu.php:89
 #: includes/Admin/MovementsPage.php:50
 msgid "Movements"
 msgstr "Bevegelser"
 
-#: includes/Admin/Menu.php:120
+#: includes/Admin/Menu.php:99
 msgid "Stock value"
 msgstr "Lagerverdi"
 
 #: includes/Admin/CountsPage.php:122
-#: includes/Admin/Menu.php:131
+#: includes/Admin/Menu.php:110
 #: includes/Admin/SettingsPage.php:233
 #: includes/Admin/SettingsPage.php:236
 msgid "Stock counts"
 msgstr "Varetellinger"
 
-#: includes/Admin/Menu.php:142
+#: includes/Admin/Menu.php:121
 #: includes/Admin/Purchasing/ListView.php:19
 #: includes/Admin/PurchasingPage.php:133
 #: includes/Admin/SettingsPage.php:226
 msgid "Purchasing"
 msgstr "Innkjøp"
 
-#: includes/Admin/Menu.php:183
+#: includes/Admin/Menu.php:166
 msgid "Adjust"
 msgstr "Juster"
 
-#: includes/Admin/Menu.php:184
+#: includes/Admin/Menu.php:167
 #: includes/Admin/Purchasing/EditView.php:184
 #: includes/Admin/Purchasing/SuppliersView.php:175
 #: includes/Admin/PurchasingPage.php:78
@@ -397,24 +395,24 @@ msgid "Cancel"
 msgstr "Avbryt"
 
 #: includes/Admin/CountSheet.php:446
-#: includes/Admin/Menu.php:185
+#: includes/Admin/Menu.php:168
 #: includes/Admin/MovementsPage.php:535
 msgid "A note is required."
 msgstr "Et notat er påkrevd."
 
-#: includes/Admin/Menu.php:187
+#: includes/Admin/Menu.php:170
 msgid "Reverse this movement? Enter a note (required):"
 msgstr "Reversere denne bevegelsen? Skriv inn et notat (påkrevd):"
 
-#: includes/Admin/Menu.php:188
+#: includes/Admin/Menu.php:171
 msgid "A note is required to reverse a movement."
 msgstr "Et notat er påkrevd for å reversere en bevegelse."
 
-#: includes/Admin/Menu.php:189
+#: includes/Admin/Menu.php:172
 msgid "Searching…"
 msgstr "Søker…"
 
-#: includes/Admin/Menu.php:190
+#: includes/Admin/Menu.php:173
 #: includes/Admin/Purchasing/EditView.php:322
 msgid "No products found."
 msgstr "Fant ingen produkter."
@@ -1318,10 +1316,6 @@ msgstr[1] "%d varer"
 msgid "Stock value (Lagerverdi)"
 msgstr "Lagerverdi"
 
-#: includes/Admin/ValuationPage.php:75
-msgid "Cost tracking is not enabled. Turn it on under Lager → Innstillinger."
-msgstr "Kostprissporing er ikke aktivert. Slå det på under Lager → Innstillinger."
-
 #: includes/Admin/ValuationPage.php:90
 msgid "Opening costs missing"
 msgstr "Inngående kostpriser mangler"
@@ -1752,7 +1746,7 @@ msgstr "Koble created_via"
 msgid "Costing"
 msgstr "Kostpris"
 
-#: includes/Admin/Menu.php:186
+#: includes/Admin/Menu.php:169
 msgid "No products match."
 msgstr "Ingen produkter samsvarer."
 
@@ -2443,3 +2437,37 @@ msgstr "Varemottak innkjøp #%d"
 #, php-format
 msgid "ref: %s"
 msgstr "ref: %s"
+
+#: includes/Admin/Menu.php:75
+msgctxt "admin menu"
+msgid "Stock status"
+msgstr "Lagerstatus"
+
+#: includes/Admin/Menu.php:90
+msgctxt "admin menu"
+msgid "Stock movements"
+msgstr "Lagerbevegelser"
+
+#: includes/Admin/Menu.php:100
+msgctxt "admin menu"
+msgid "Stock value"
+msgstr "Lagerverdi"
+
+#: includes/Admin/Menu.php:111
+msgctxt "admin menu"
+msgid "Stock counts"
+msgstr "Varetelling"
+
+#: includes/Admin/Menu.php:122
+msgctxt "admin menu"
+msgid "Purchasing"
+msgstr "Innkjøp"
+
+#: includes/Admin/Menu.php:136
+msgctxt "admin menu"
+msgid "Stock settings"
+msgstr "Lagerinnstillinger"
+
+#: includes/Admin/ValuationPage.php:75
+msgid "Cost tracking is not enabled. Turn it on in the stock settings."
+msgstr "Kostprissporing er ikke aktivert. Slå det på i lagerinnstillingene."

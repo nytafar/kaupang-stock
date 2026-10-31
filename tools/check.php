@@ -299,7 +299,7 @@ $queued = array_merge(wp_scripts()->queue, wp_styles()->queue);
 $leaked = array_values(array_filter($queued, static fn(string $h): bool => strpos($h, 'kaupang-stock') === 0));
 ks_check('no kaupang-stock asset on a foreign screen (index.php)', $leaked === [], implode(', ', $leaked));
 foreach ($own as [$fn]) {
-    call_user_func($fn, 'toplevel_page_kaupang-stock');
+    call_user_func($fn, Menu::SCREEN_STATUS);
 }
 ks_check('own screen gets the admin assets', in_array(Menu::SCRIPT_HANDLE, wp_scripts()->queue, true));
 $restore();
