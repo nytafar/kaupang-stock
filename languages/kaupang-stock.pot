@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T15:21:37+00:00\n"
+"POT-Creation-Date: 2026-10-31T15:57:52+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: kaupang-stock\n"
@@ -79,9 +79,9 @@ msgstr ""
 #: includes/Admin/MovementsPage.php:627
 #: includes/Admin/OrderMetaBox.php:93
 #: includes/Admin/ProductPanel.php:139
-#: includes/Admin/PurchasingPage.php:322
-#: includes/Admin/PurchasingPage.php:650
-#: includes/Admin/PurchasingPage.php:815
+#: includes/Admin/Purchasing/EditView.php:153
+#: includes/Admin/Purchasing/InboundView.php:27
+#: includes/Admin/Purchasing/ReceiveView.php:65
 #: includes/Admin/StatusPage.php:312
 #: includes/Admin/StatusPage.php:739
 #: includes/Admin/ValuationPage.php:94
@@ -286,8 +286,8 @@ msgstr ""
 #: includes/Admin/CountsPage.php:231
 #: includes/Admin/MovementsPage.php:126
 #: includes/Admin/MovementsPage.php:639
-#: includes/Admin/PurchasingPage.php:251
-#: includes/Admin/PurchasingPage.php:988
+#: includes/Admin/Purchasing/EditView.php:82
+#: includes/Admin/Purchasing/SuppliersView.php:163
 #: includes/Admin/Screen.php:115
 #: includes/Admin/StatusPage.php:683
 msgid "Note"
@@ -298,7 +298,7 @@ msgstr ""
 #: includes/Admin/MovementsPage.php:174
 #: includes/Admin/MovementsPage.php:429
 #: includes/Admin/MovementsPage.php:630
-#: includes/Admin/PurchasingPage.php:699
+#: includes/Admin/Purchasing/ReceiveView.php:114
 #: includes/Admin/SettingsPage.php:260
 #: includes/Admin/StatusPage.php:597
 #: includes/Admin/ValuationPage.php:174
@@ -361,7 +361,7 @@ msgid "New count"
 msgstr ""
 
 #: includes/Admin/CountsPage.php:136
-#: includes/Admin/PurchasingPage.php:161
+#: includes/Admin/Purchasing/ListView.php:31
 #: includes/Admin/SettingsPage.php:345
 msgid "Status"
 msgstr ""
@@ -442,7 +442,7 @@ msgstr ""
 
 #: includes/Admin/CountsPage.php:430
 #: includes/Admin/CountsPage.php:446
-#: includes/Admin/PurchasingPage.php:185
+#: includes/Admin/Purchasing/ListView.php:55
 msgid "Open"
 msgstr ""
 
@@ -556,8 +556,8 @@ msgid "Stock value"
 msgstr ""
 
 #: includes/Admin/Menu.php:142
-#: includes/Admin/PurchasingPage.php:138
-#: includes/Admin/PurchasingPage.php:149
+#: includes/Admin/Purchasing/ListView.php:19
+#: includes/Admin/PurchasingPage.php:133
 #: includes/Admin/SettingsPage.php:226
 msgid "Purchasing"
 msgstr ""
@@ -567,9 +567,9 @@ msgid "Adjust"
 msgstr ""
 
 #: includes/Admin/Menu.php:184
-#: includes/Admin/PurchasingPage.php:83
-#: includes/Admin/PurchasingPage.php:353
-#: includes/Admin/PurchasingPage.php:1000
+#: includes/Admin/Purchasing/EditView.php:184
+#: includes/Admin/Purchasing/SuppliersView.php:175
+#: includes/Admin/PurchasingPage.php:78
 msgid "Cancel"
 msgstr ""
 
@@ -590,7 +590,7 @@ msgid "Searching…"
 msgstr ""
 
 #: includes/Admin/Menu.php:190
-#: includes/Admin/PurchasingPage.php:491
+#: includes/Admin/Purchasing/EditView.php:322
 msgid "No products found."
 msgstr ""
 
@@ -627,7 +627,7 @@ msgstr ""
 
 #: includes/Admin/MovementsPage.php:125
 #: includes/Admin/MovementsPage.php:636
-#: includes/Admin/PurchasingPage.php:164
+#: includes/Admin/Purchasing/ListView.php:34
 msgid "Reference"
 msgstr ""
 
@@ -645,9 +645,9 @@ msgid "Quantity change"
 msgstr ""
 
 #: includes/Admin/MovementsPage.php:188
-#: includes/Admin/PurchasingPage.php:345
-#: includes/Admin/PurchasingPage.php:527
-#: includes/Admin/PurchasingPage.php:656
+#: includes/Admin/Purchasing/EditView.php:176
+#: includes/Admin/Purchasing/EditView.php:358
+#: includes/Admin/Purchasing/ReceiveView.php:71
 #: includes/Admin/StatusPage.php:605
 #: includes/Admin/ValuationPage.php:97
 msgid "Unit cost ex-VAT (kr)"
@@ -813,7 +813,7 @@ msgstr ""
 
 #: includes/Admin/ProductPanel.php:78
 #: includes/Admin/ProductPanel.php:105
-#: includes/Admin/PurchasingPage.php:435
+#: includes/Admin/Purchasing/EditView.php:266
 #: includes/Admin/StatusPage.php:314
 #: includes/Admin/StatusPage.php:741
 msgid "On hand"
@@ -852,9 +852,9 @@ msgid "Supplier products"
 msgstr ""
 
 #: includes/Admin/ProductPanel.php:141
-#: includes/Admin/PurchasingPage.php:160
-#: includes/Admin/PurchasingPage.php:238
-#: includes/Admin/PurchasingPage.php:820
+#: includes/Admin/Purchasing/EditView.php:69
+#: includes/Admin/Purchasing/InboundView.php:32
+#: includes/Admin/Purchasing/ListView.php:30
 msgid "Supplier"
 msgstr ""
 
@@ -874,197 +874,146 @@ msgstr ""
 msgid "View all movements →"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:80
-msgid "Confirm over-receipt"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:81
-msgid "These lines exceed the remaining quantity. Receiving anyway is allowed (supplier overs are normal):"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:82
-msgid "Receive anyway"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:84
-#: includes/Purchasing/Receiving.php:238
-msgid "Goods received."
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:85
-msgid "Something went wrong. Please try again."
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:86
-#: includes/Admin/PurchasingPage.php:325
-#: includes/Admin/PurchasingPage.php:651
-#: includes/Admin/PurchasingPage.php:816
-msgid "Ordered"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:87
-#: includes/Admin/PurchasingPage.php:326
-#: includes/Admin/PurchasingPage.php:652
-#: includes/Admin/PurchasingPage.php:817
-msgid "Received"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:88
-#: includes/Admin/PurchasingPage.php:327
-#: includes/Admin/PurchasingPage.php:653
-#: includes/Admin/PurchasingPage.php:818
-#: includes/Admin/ValuationPage.php:333
-msgid "Remaining"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:89
-msgid "Entered"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:90
-msgid "Enter a quantity on at least one line."
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:92
-#: includes/Admin/PurchasingPage.php:457
-#: includes/Admin/PurchasingPage.php:508
-msgid "Add"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:93
-msgid "No companies found."
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:140
-msgid "Purchasing (Innkjøp) is not enabled. Turn it on under Lager → Innstillinger."
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:150
-#: includes/Admin/PurchasingPage.php:218
-msgid "New purchase order"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:151
-#: includes/Admin/PurchasingPage.php:806
-msgid "Inbound"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:152
-#: includes/Admin/PurchasingPage.php:861
-msgid "Suppliers"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:159
-#: includes/Admin/PurchasingPage.php:563
-#: includes/Admin/PurchasingPage.php:821
-msgid "PO"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:162
-#: includes/Admin/PurchasingPage.php:290
-#: includes/Admin/PurchasingPage.php:770
-msgid "Lines"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:163
-#: includes/Admin/PurchasingPage.php:247
-#: includes/Admin/PurchasingPage.php:819
-msgid "ETA"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:170
-msgid "No purchase orders yet."
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:206
-#: includes/Admin/PurchasingPage.php:545
-#: includes/Admin/PurchasingPage.php:606
-#: includes/Admin/PurchasingPage.php:1224
-#: includes/Admin/PurchasingPage.php:1509
+#: includes/Admin/Purchasing/EditView.php:37
+#: includes/Admin/Purchasing/EditView.php:648
+#: includes/Admin/Purchasing/PrintView.php:22
+#: includes/Admin/Purchasing/ReceiveView.php:21
+#: includes/Admin/PurchasingPage.php:198
 #: includes/Purchasing/Receiving.php:62
 msgid "Purchase order not found."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:223
-#: includes/Admin/PurchasingPage.php:560
+#: includes/Admin/Purchasing/EditView.php:49
+#: includes/Admin/Purchasing/ListView.php:20
+msgid "New purchase order"
+msgstr ""
+
+#. translators: %d: purchase order number
+#: includes/Admin/Purchasing/EditView.php:49
+#, php-format
+msgid "Purchase order #%d"
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:54
+#: includes/Admin/Purchasing/PrintView.php:37
 msgid "Ordering list"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:226
-#: includes/Admin/PurchasingPage.php:807
-#: includes/Admin/PurchasingPage.php:862
+#: includes/Admin/Purchasing/EditView.php:57
+#: includes/Admin/Purchasing/InboundView.php:19
+#: includes/Admin/Purchasing/SuppliersView.php:37
 msgid "Back to list"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:231
+#: includes/Admin/Purchasing/EditView.php:62
 #: includes/Admin/ValuationPage.php:206
 msgid "Details"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:242
-#: includes/Admin/PurchasingPage.php:566
+#: includes/Admin/Purchasing/EditView.php:73
+#: includes/Admin/Purchasing/PrintView.php:43
 msgid "Supplier reference"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:255
+#: includes/Admin/Purchasing/EditView.php:78
+#: includes/Admin/Purchasing/InboundView.php:31
+#: includes/Admin/Purchasing/ListView.php:33
+msgid "ETA"
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:86
 msgid "The order is placed — line changes append to this note trail rather than editing locked lines."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:260
+#: includes/Admin/Purchasing/EditView.php:91
 msgid "Create draft"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:260
+#: includes/Admin/Purchasing/EditView.php:91
 msgid "Save details"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:265
+#: includes/Admin/Purchasing/EditView.php:96
 msgid "Place this order? Lines will be locked; further changes append to the note."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:269
+#: includes/Admin/Purchasing/EditView.php:100
 msgid "Place order"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:279
+#: includes/Admin/Purchasing/EditView.php:105
+#: includes/Admin/Purchasing/ListView.php:57
+#: includes/Admin/Purchasing/ReceiveView.php:137
+msgid "Receive goods"
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:110
 msgid "Cancel this purchase order? Any received stock stays; the remainder is written off."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:283
+#: includes/Admin/Purchasing/EditView.php:114
 msgid "Cancel order"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:295
+#: includes/Admin/Purchasing/EditView.php:121
+#: includes/Admin/Purchasing/EditView.php:399
+#: includes/Admin/Purchasing/ListView.php:32
+msgid "Lines"
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:126
 msgid "Add product"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:297
+#: includes/Admin/Purchasing/EditView.php:128
 msgid "Adding a product already on the order merges into that line (its quantity is increased)."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:302
+#: includes/Admin/Purchasing/EditView.php:133
 msgid "Save the draft first, then add product lines."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:323
-#: includes/Admin/PurchasingPage.php:432
+#: includes/Admin/Purchasing/EditView.php:154
+#: includes/Admin/Purchasing/EditView.php:263
 msgid "Supplier product"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:324
-#: includes/Admin/PurchasingPage.php:347
-#: includes/Admin/PurchasingPage.php:433
-#: includes/Admin/PurchasingPage.php:529
-#: includes/Admin/PurchasingPage.php:573
+#: includes/Admin/Purchasing/EditView.php:155
+#: includes/Admin/Purchasing/EditView.php:178
+#: includes/Admin/Purchasing/EditView.php:264
+#: includes/Admin/Purchasing/EditView.php:360
+#: includes/Admin/Purchasing/PrintView.php:50
 msgid "Supplier SKU"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:328
+#: includes/Admin/Purchasing/EditView.php:156
+#: includes/Admin/Purchasing/InboundView.php:28
+#: includes/Admin/Purchasing/ReceiveView.php:66
+#: includes/Admin/PurchasingPage.php:81
+msgid "Ordered"
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:157
+#: includes/Admin/Purchasing/InboundView.php:29
+#: includes/Admin/Purchasing/ReceiveView.php:67
+#: includes/Admin/PurchasingPage.php:82
+msgid "Received"
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:158
+#: includes/Admin/Purchasing/InboundView.php:30
+#: includes/Admin/Purchasing/ReceiveView.php:68
+#: includes/Admin/PurchasingPage.php:83
+#: includes/Admin/ValuationPage.php:333
+msgid "Remaining"
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:159
 msgid "Unit cost ex-VAT"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:343
-#: includes/Admin/PurchasingPage.php:525
+#: includes/Admin/Purchasing/EditView.php:174
+#: includes/Admin/Purchasing/EditView.php:356
 #: includes/Admin/StatusPage.php:679
 #: includes/Admin/StatusPage.php:680
 #: includes/Admin/ValuationPage.php:175
@@ -1074,374 +1023,443 @@ msgstr ""
 msgid "Qty"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:349
-#: includes/Admin/PurchasingPage.php:531
-#: includes/Admin/PurchasingPage.php:572
+#: includes/Admin/Purchasing/EditView.php:180
+#: includes/Admin/Purchasing/EditView.php:362
+#: includes/Admin/Purchasing/PrintView.php:49
 msgid "Supplier product name"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:352
+#: includes/Admin/Purchasing/EditView.php:183
 msgid "Save line"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:370
+#: includes/Admin/Purchasing/EditView.php:201
 msgid "No lines yet."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:397
-#: includes/Admin/PurchasingPage.php:892
+#: includes/Admin/Purchasing/EditView.php:228
+#: includes/Admin/Purchasing/SuppliersView.php:67
 msgid "Edit"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:402
+#: includes/Admin/Purchasing/EditView.php:233
 msgid "Remove this line?"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:402
+#: includes/Admin/Purchasing/EditView.php:233
 msgid "Remove"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:419
+#: includes/Admin/Purchasing/EditView.php:250
 msgid "Choose a supplier to use its product catalog."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:425
+#: includes/Admin/Purchasing/EditView.php:256
 msgid "Add from supplier catalog"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:427
+#: includes/Admin/Purchasing/EditView.php:258
 msgid "The supplier catalog is empty. Add a product below and enter the supplier identity to start it."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:434
+#: includes/Admin/Purchasing/EditView.php:265
 msgid "Our product"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:436
+#: includes/Admin/Purchasing/EditView.php:267
 #: includes/Admin/StatusPage.php:322
 msgid "Incoming"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:485
+#: includes/Admin/Purchasing/EditView.php:288
+#: includes/Admin/Purchasing/EditView.php:339
+#: includes/Admin/PurchasingPage.php:87
+msgid "Add"
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:316
 msgid "Search product by name or SKU…"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:486
-#: includes/Admin/PurchasingPage.php:930
+#: includes/Admin/Purchasing/EditView.php:317
+#: includes/Admin/Purchasing/SuppliersView.php:105
 msgid "Search"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:522
+#: includes/Admin/Purchasing/EditView.php:353
 msgid "Product (SKU or id)"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:524
+#: includes/Admin/Purchasing/EditView.php:355
 msgid "Pick above, or type a SKU / product id"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:533
+#: includes/Admin/Purchasing/EditView.php:364
 msgid "Add line"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:555
-#: includes/Admin/PurchasingPage.php:622
+#: includes/Admin/Purchasing/EditView.php:393
+msgid "Receipts"
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:398
+#: includes/Admin/Purchasing/ReceiveView.php:126
+msgid "Received at"
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:400
+msgid "Total qty"
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:419
+msgid "View in movements"
+msgstr ""
+
+#. translators: 1: product label, 2: requested qty
+#: includes/Admin/Purchasing/EditView.php:496
+#, php-format
+msgid "Change after ordering refused: %1$s → %2$s (lines are locked)."
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:571
+msgid "Pick a product, or enter a valid SKU / product id."
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:583
+#: includes/Admin/Purchasing/EditView.php:619
+msgid "Enter a quantity of at least 1."
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:585
+#: includes/Admin/Purchasing/EditView.php:621
+msgid "The line could not be saved."
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:589
+msgid "Merged into the existing line."
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:589
+#: includes/Admin/PurchasingPage.php:190
+msgid "Line added."
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:603
+#: includes/Admin/Purchasing/EditView.php:635
+msgid "That line was not found on this order."
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:623
+#: includes/Admin/PurchasingPage.php:192
+msgid "Line saved."
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:638
+#: includes/Admin/PurchasingPage.php:193
+msgid "Line removed."
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:644
+#: includes/Rest/Controller.php:291
+msgid "Purchasing is not enabled."
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:651
+msgid "This order is placed — its lines are locked."
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:684
+msgid "— none —"
+msgstr ""
+
+#: includes/Admin/Purchasing/EditView.php:691
+msgid "inactive"
+msgstr ""
+
+#: includes/Admin/Purchasing/InboundView.php:18
+#: includes/Admin/Purchasing/ListView.php:21
+msgid "Inbound"
+msgstr ""
+
+#: includes/Admin/Purchasing/InboundView.php:21
+msgid "Every open purchase-order line across all orders — the single \"what is coming\" answer."
+msgstr ""
+
+#: includes/Admin/Purchasing/InboundView.php:33
+#: includes/Admin/Purchasing/ListView.php:29
+#: includes/Admin/Purchasing/PrintView.php:40
+msgid "PO"
+msgstr ""
+
+#: includes/Admin/Purchasing/InboundView.php:38
+msgid "Nothing incoming."
+msgstr ""
+
+#: includes/Admin/Purchasing/ListView.php:22
+#: includes/Admin/Purchasing/SuppliersView.php:36
+msgid "Suppliers"
+msgstr ""
+
+#: includes/Admin/Purchasing/ListView.php:40
+msgid "No purchase orders yet."
+msgstr ""
+
+#. translators: %d: purchase order number
+#: includes/Admin/Purchasing/PrintView.php:32
+#: includes/Admin/Purchasing/ReceiveView.php:37
 msgid "Back to order"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:556
+#: includes/Admin/Purchasing/PrintView.php:33
 msgid "Print / Save as PDF"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:564
+#: includes/Admin/Purchasing/PrintView.php:41
 #: includes/Admin/ValuationPage.php:336
 #: includes/Admin/ValuationPage.php:363
 msgid "Date"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:574
+#: includes/Admin/Purchasing/PrintView.php:51
 msgid "Our product name"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:575
+#: includes/Admin/Purchasing/PrintView.php:52
 msgid "Our SKU"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:576
+#: includes/Admin/Purchasing/PrintView.php:53
 msgid "Qty ordered"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:627
+#. translators: %d: purchase order number
+#: includes/Admin/Purchasing/ReceiveView.php:36
+#, php-format
+msgid "Receive goods — purchase order #%d"
+msgstr ""
+
+#: includes/Admin/Purchasing/ReceiveView.php:42
 msgid "This purchase order is not open for receiving."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:634
-msgid "Receiving writes stock and requires active mode. It is disabled while the ledger runs in shadow mode — enable active mode under Lager → Innstillinger."
+#: includes/Admin/Purchasing/ReceiveView.php:49
+msgid "Receiving writes stock and requires active mode. It is disabled while the ledger runs in shadow mode — enable active mode in the stock settings."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:643
+#: includes/Admin/Purchasing/ReceiveView.php:58
 msgid "Quantities are pre-filled with what remains. Adjust for a partial delivery, then confirm. The server re-checks each remaining quantity at submit."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:654
+#: includes/Admin/Purchasing/ReceiveView.php:69
 msgid "Receive now"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:686
+#: includes/Admin/Purchasing/ReceiveView.php:101
 msgid "Actual unit cost ex-VAT for THIS delivery — pre-filled from the PO line; adjust if the invoice differs."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:706
+#: includes/Admin/Purchasing/ReceiveView.php:121
 msgid "Which location these goods arrive at. Partial receipts of the same order can go to different locations."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:711
-#: includes/Admin/PurchasingPage.php:769
-msgid "Received at"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:715
+#: includes/Admin/Purchasing/ReceiveView.php:130
 msgid "When the goods physically arrived. Defaults to now; set it back for \"the goods came last week\"."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:722
-msgid "Receive goods"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:764
-msgid "Receipts"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:771
-msgid "Total qty"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:790
-msgid "View in movements"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:809
-msgid "Every open purchase-order line across all orders — the single \"what is coming\" answer."
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:826
-msgid "Nothing incoming."
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:869
-#: includes/Admin/PurchasingPage.php:951
+#: includes/Admin/Purchasing/SuppliersView.php:44
+#: includes/Admin/Purchasing/SuppliersView.php:126
 #: includes/Admin/SettingsPage.php:343
 msgid "Name"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:870
-#: includes/Admin/PurchasingPage.php:968
+#: includes/Admin/Purchasing/SuppliersView.php:45
+#: includes/Admin/Purchasing/SuppliersView.php:143
 msgid "Org. nr"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:871
-#: includes/Admin/PurchasingPage.php:956
+#: includes/Admin/Purchasing/SuppliersView.php:46
+#: includes/Admin/Purchasing/SuppliersView.php:131
 msgid "Country"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:872
-#: includes/Admin/PurchasingPage.php:978
+#: includes/Admin/Purchasing/SuppliersView.php:47
+#: includes/Admin/Purchasing/SuppliersView.php:153
 msgid "Email"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:873
-#: includes/Admin/PurchasingPage.php:983
+#: includes/Admin/Purchasing/SuppliersView.php:48
+#: includes/Admin/Purchasing/SuppliersView.php:158
 msgid "Phone"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:874
-#: includes/Admin/PurchasingPage.php:993
+#: includes/Admin/Purchasing/SuppliersView.php:49
+#: includes/Admin/Purchasing/SuppliersView.php:168
 #: includes/Admin/SettingsPage.php:197
 #: includes/Admin/SettingsPage.php:358
 msgid "Active"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:880
+#: includes/Admin/Purchasing/SuppliersView.php:55
 msgid "No suppliers yet."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:895
+#: includes/Admin/Purchasing/SuppliersView.php:70
 #: includes/Admin/SettingsPage.php:363
 msgid "Deactivate"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:895
+#: includes/Admin/Purchasing/SuppliersView.php:70
 #: includes/Admin/SettingsPage.php:363
 msgid "Activate"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:916
+#: includes/Admin/Purchasing/SuppliersView.php:91
 msgid "Edit supplier"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:916
+#: includes/Admin/Purchasing/SuppliersView.php:91
 msgid "New supplier"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:925
+#: includes/Admin/Purchasing/SuppliersView.php:100
 msgid "Search Brønnøysund (name or org. nr)"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:928
+#: includes/Admin/Purchasing/SuppliersView.php:103
 msgid "Company name or 9-digit org. nr…"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:932
+#. translators: %s: registry name
+#: includes/Admin/Purchasing/SuppliersView.php:107
 #, php-format
 msgid "Looks the company up in %s and fills the name and org. nr."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:935
+#: includes/Admin/Purchasing/SuppliersView.php:110
 msgid "Search results"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:938
+#. translators: %s: registry name
+#: includes/Admin/Purchasing/SuppliersView.php:113
 #, php-format
 msgid "Filled from %s."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:939
+#. translators: %s: registry name
+#: includes/Admin/Purchasing/SuppliersView.php:114
 msgid "Source"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:973
+#: includes/Admin/Purchasing/SuppliersView.php:148
 msgid "Norwegian 9-digit organisation number (MOD11-validated)."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:995
+#: includes/Admin/Purchasing/SuppliersView.php:170
 msgid "Available for new purchase orders"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:998
+#: includes/Admin/Purchasing/SuppliersView.php:173
 msgid "Save supplier"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:998
+#: includes/Admin/Purchasing/SuppliersView.php:173
 msgid "Add supplier"
 msgstr ""
 
-#. translators: 1: product label, 2: requested qty
-#: includes/Admin/PurchasingPage.php:1072
-#, php-format
-msgid "Endring etter bestilling avvist: %1$s → %2$s (linjer er låst)."
+#: includes/Admin/PurchasingPage.php:75
+msgid "Confirm over-receipt"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1147
-msgid "Pick a product, or enter a valid SKU / product id."
+#: includes/Admin/PurchasingPage.php:76
+msgid "These lines exceed the remaining quantity. Receiving anyway is allowed (supplier overs are normal):"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1159
-#: includes/Admin/PurchasingPage.php:1195
-msgid "Enter a quantity of at least 1."
+#: includes/Admin/PurchasingPage.php:77
+msgid "Receive anyway"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1161
-#: includes/Admin/PurchasingPage.php:1197
-msgid "The line could not be saved."
+#: includes/Admin/PurchasingPage.php:79
+#: includes/Purchasing/Receiving.php:238
+msgid "Goods received."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1165
-msgid "Merged into the existing line."
+#: includes/Admin/PurchasingPage.php:80
+msgid "Something went wrong. Please try again."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1165
-#: includes/Admin/PurchasingPage.php:1501
-msgid "Line added."
+#: includes/Admin/PurchasingPage.php:84
+msgid "Entered"
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1179
-#: includes/Admin/PurchasingPage.php:1211
-msgid "That line was not found on this order."
+#: includes/Admin/PurchasingPage.php:85
+msgid "Enter a quantity on at least one line."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1199
-#: includes/Admin/PurchasingPage.php:1503
-msgid "Line saved."
+#: includes/Admin/PurchasingPage.php:88
+msgid "No companies found."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1214
-#: includes/Admin/PurchasingPage.php:1504
-msgid "Line removed."
+#: includes/Admin/PurchasingPage.php:135
+msgid "Purchasing is not enabled. Turn it on in the stock settings."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1220
-#: includes/Rest/Controller.php:291
-msgid "Purchasing is not enabled."
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:1227
-msgid "This order is placed — its lines are locked."
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:1343
-msgid "— none —"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:1350
-msgid "inactive"
-msgstr ""
-
-#: includes/Admin/PurchasingPage.php:1497
+#: includes/Admin/PurchasingPage.php:186
 msgid "Draft purchase order created."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1498
+#: includes/Admin/PurchasingPage.php:187
 msgid "Purchase order saved."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1499
+#: includes/Admin/PurchasingPage.php:188
 msgid "Order placed. Lines are now locked."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1500
+#: includes/Admin/PurchasingPage.php:189
 msgid "Purchase order cancelled. Any received stock was kept."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1502
+#: includes/Admin/PurchasingPage.php:191
 msgid "Product already on the order — its quantity was increased."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1505
+#: includes/Admin/PurchasingPage.php:194
 msgid "Supplier saved."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1506
+#: includes/Admin/PurchasingPage.php:195
 msgid "Company found — the name was filled in below."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1510
+#: includes/Admin/PurchasingPage.php:199
 msgid "Could not save. Please try again."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1511
+#: includes/Admin/PurchasingPage.php:200
 msgid "Could not place the order — add at least one line to a draft first."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1512
+#: includes/Admin/PurchasingPage.php:201
 msgid "Could not save the line."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1513
+#: includes/Admin/PurchasingPage.php:202
 msgid "Pick a product first."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1514
+#: includes/Admin/PurchasingPage.php:203
 msgid "The order is placed — lines are locked. The change was noted on the order instead."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1515
+#: includes/Admin/PurchasingPage.php:204
 msgid "A supplier name is required."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1516
+#: includes/Admin/PurchasingPage.php:205
 msgid "That organisation number failed the MOD11 check."
 msgstr ""
 
-#: includes/Admin/PurchasingPage.php:1517
+#: includes/Admin/PurchasingPage.php:206
 msgid "No company found for that organisation number (or the registry was unavailable)."
 msgstr ""
 
@@ -2324,23 +2342,28 @@ msgid "Kaupang Stock requires WooCommerce to be active."
 msgstr ""
 
 #: includes/Purchasing/PurchaseOrders.php:284
-msgid "Kladd"
+msgctxt "purchase order status"
+msgid "Draft"
 msgstr ""
 
 #: includes/Purchasing/PurchaseOrders.php:285
-msgid "Bestilt"
+msgctxt "purchase order status"
+msgid "Ordered"
 msgstr ""
 
 #: includes/Purchasing/PurchaseOrders.php:286
-msgid "Delvis mottatt"
+msgctxt "purchase order status"
+msgid "Partially received"
 msgstr ""
 
 #: includes/Purchasing/PurchaseOrders.php:287
-msgid "Mottatt"
+msgctxt "purchase order status"
+msgid "Received"
 msgstr ""
 
 #: includes/Purchasing/PurchaseOrders.php:288
-msgid "Kansellert"
+msgctxt "purchase order status"
+msgid "Cancelled"
 msgstr ""
 
 #: includes/Purchasing/Receiving.php:67
@@ -2352,7 +2375,7 @@ msgid "This purchase order is not open for receiving (it must be ordered)."
 msgstr ""
 
 #: includes/Purchasing/Receiving.php:101
-msgid "Receiving writes stock and requires active mode. Enable active mode under Lager → Innstillinger."
+msgid "Receiving writes stock and requires active mode. Enable active mode in the stock settings."
 msgstr ""
 
 #: includes/Purchasing/Receiving.php:132
@@ -2365,6 +2388,18 @@ msgstr ""
 
 #: includes/Purchasing/Receiving.php:192
 msgid "Some lines exceed the remaining quantity. Confirm to receive anyway (over-receipt is allowed)."
+msgstr ""
+
+#. translators: %d: purchase order number
+#: includes/Purchasing/Receiving.php:254
+#, php-format
+msgid "Goods receipt, purchase order #%d"
+msgstr ""
+
+#. translators: %s: supplier's order reference
+#: includes/Purchasing/Receiving.php:260
+#, php-format
+msgid "ref: %s"
 msgstr ""
 
 #: includes/Rest/Controller.php:149

@@ -281,11 +281,11 @@ final class PurchaseOrders {
     /** Norwegian labels for the status chips. */
     public static function statusLabel(string $status): string {
         $labels = [
-            self::STATUS_DRAFT     => \__('Kladd', 'kaupang-stock'),
-            self::STATUS_ORDERED   => \__('Bestilt', 'kaupang-stock'),
-            self::STATUS_PARTIAL   => \__('Delvis mottatt', 'kaupang-stock'),
-            self::STATUS_RECEIVED  => \__('Mottatt', 'kaupang-stock'),
-            self::STATUS_CANCELLED => \__('Kansellert', 'kaupang-stock'),
+            self::STATUS_DRAFT     => \_x('Draft', 'purchase order status', 'kaupang-stock'),
+            self::STATUS_ORDERED   => \_x('Ordered', 'purchase order status', 'kaupang-stock'),
+            self::STATUS_PARTIAL   => \_x('Partially received', 'purchase order status', 'kaupang-stock'),
+            self::STATUS_RECEIVED  => \_x('Received', 'purchase order status', 'kaupang-stock'),
+            self::STATUS_CANCELLED => \_x('Cancelled', 'purchase order status', 'kaupang-stock'),
         ];
         return $labels[$status] ?? $status;
     }

@@ -43,7 +43,7 @@ msgid "Varetelling"
 msgstr "Varetelling"
 
 #: includes/Admin/CountsPage.php:136
-#: includes/Admin/PurchasingPage.php:161
+#: includes/Admin/Purchasing/ListView.php:31
 #: includes/Admin/SettingsPage.php:345
 msgid "Status"
 msgstr "Status"
@@ -128,8 +128,8 @@ msgstr "Skjul forventet mengde under tellingen (anbefalt)."
 #: includes/Admin/CountsPage.php:231
 #: includes/Admin/MovementsPage.php:126
 #: includes/Admin/MovementsPage.php:639
-#: includes/Admin/PurchasingPage.php:251
-#: includes/Admin/PurchasingPage.php:988
+#: includes/Admin/Purchasing/EditView.php:82
+#: includes/Admin/Purchasing/SuppliersView.php:163
 #: includes/Admin/Screen.php:115
 #: includes/Admin/StatusPage.php:683
 msgid "Note"
@@ -175,9 +175,9 @@ msgstr "SKU"
 #: includes/Admin/MovementsPage.php:627
 #: includes/Admin/OrderMetaBox.php:93
 #: includes/Admin/ProductPanel.php:139
-#: includes/Admin/PurchasingPage.php:322
-#: includes/Admin/PurchasingPage.php:650
-#: includes/Admin/PurchasingPage.php:815
+#: includes/Admin/Purchasing/EditView.php:153
+#: includes/Admin/Purchasing/InboundView.php:27
+#: includes/Admin/Purchasing/ReceiveView.php:65
 #: includes/Admin/StatusPage.php:312
 #: includes/Admin/StatusPage.php:739
 #: includes/Admin/ValuationPage.php:94
@@ -266,7 +266,7 @@ msgstr "Last opp"
 
 #: includes/Admin/CountsPage.php:430
 #: includes/Admin/CountsPage.php:446
-#: includes/Admin/PurchasingPage.php:185
+#: includes/Admin/Purchasing/ListView.php:55
 msgid "Open"
 msgstr "Åpen"
 
@@ -379,8 +379,8 @@ msgid "Stock counts"
 msgstr "Varetellinger"
 
 #: includes/Admin/Menu.php:142
-#: includes/Admin/PurchasingPage.php:138
-#: includes/Admin/PurchasingPage.php:149
+#: includes/Admin/Purchasing/ListView.php:19
+#: includes/Admin/PurchasingPage.php:133
 #: includes/Admin/SettingsPage.php:226
 msgid "Purchasing"
 msgstr "Innkjøp"
@@ -390,9 +390,9 @@ msgid "Adjust"
 msgstr "Juster"
 
 #: includes/Admin/Menu.php:184
-#: includes/Admin/PurchasingPage.php:83
-#: includes/Admin/PurchasingPage.php:353
-#: includes/Admin/PurchasingPage.php:1000
+#: includes/Admin/Purchasing/EditView.php:184
+#: includes/Admin/Purchasing/SuppliersView.php:175
+#: includes/Admin/PurchasingPage.php:78
 msgid "Cancel"
 msgstr "Avbryt"
 
@@ -415,7 +415,7 @@ msgid "Searching…"
 msgstr "Søker…"
 
 #: includes/Admin/Menu.php:190
-#: includes/Admin/PurchasingPage.php:491
+#: includes/Admin/Purchasing/EditView.php:322
 msgid "No products found."
 msgstr "Fant ingen produkter."
 
@@ -460,7 +460,7 @@ msgstr "Årsak"
 
 #: includes/Admin/MovementsPage.php:125
 #: includes/Admin/MovementsPage.php:636
-#: includes/Admin/PurchasingPage.php:164
+#: includes/Admin/Purchasing/ListView.php:34
 msgid "Reference"
 msgstr "Referanse"
 
@@ -635,7 +635,7 @@ msgstr "Lagre produktet først for å se lageret."
 
 #: includes/Admin/ProductPanel.php:78
 #: includes/Admin/ProductPanel.php:105
-#: includes/Admin/PurchasingPage.php:435
+#: includes/Admin/Purchasing/EditView.php:266
 #: includes/Admin/StatusPage.php:314
 #: includes/Admin/StatusPage.php:741
 msgid "On hand"
@@ -675,181 +675,177 @@ msgstr "Nylige bevegelser"
 msgid "View all movements →"
 msgstr "Vis alle bevegelser →"
 
-#: includes/Admin/PurchasingPage.php:80
+#: includes/Admin/PurchasingPage.php:75
 msgid "Confirm over-receipt"
 msgstr "Bekreft overmottak"
 
-#: includes/Admin/PurchasingPage.php:81
+#: includes/Admin/PurchasingPage.php:76
 msgid "These lines exceed the remaining quantity. Receiving anyway is allowed (supplier overs are normal):"
 msgstr "Disse linjene overstiger gjenstående mengde. Å motta likevel er tillatt (overleveranser fra leverandør er normalt):"
 
-#: includes/Admin/PurchasingPage.php:82
+#: includes/Admin/PurchasingPage.php:77
 msgid "Receive anyway"
 msgstr "Motta likevel"
 
-#: includes/Admin/PurchasingPage.php:84
+#: includes/Admin/PurchasingPage.php:79
 #: includes/Purchasing/Receiving.php:238
 msgid "Goods received."
 msgstr "Varer mottatt."
 
-#: includes/Admin/PurchasingPage.php:85
+#: includes/Admin/PurchasingPage.php:80
 msgid "Something went wrong. Please try again."
 msgstr "Noe gikk galt. Prøv igjen."
 
-#: includes/Admin/PurchasingPage.php:86
-#: includes/Admin/PurchasingPage.php:325
-#: includes/Admin/PurchasingPage.php:651
-#: includes/Admin/PurchasingPage.php:816
+#: includes/Admin/Purchasing/EditView.php:156
+#: includes/Admin/Purchasing/InboundView.php:28
+#: includes/Admin/Purchasing/ReceiveView.php:66
+#: includes/Admin/PurchasingPage.php:81
 msgid "Ordered"
 msgstr "Bestilt"
 
-#: includes/Admin/PurchasingPage.php:87
-#: includes/Admin/PurchasingPage.php:326
-#: includes/Admin/PurchasingPage.php:652
-#: includes/Admin/PurchasingPage.php:817
+#: includes/Admin/Purchasing/EditView.php:157
+#: includes/Admin/Purchasing/InboundView.php:29
+#: includes/Admin/Purchasing/ReceiveView.php:67
+#: includes/Admin/PurchasingPage.php:82
 msgid "Received"
 msgstr "Mottatt"
 
-#: includes/Admin/PurchasingPage.php:88
-#: includes/Admin/PurchasingPage.php:327
-#: includes/Admin/PurchasingPage.php:653
-#: includes/Admin/PurchasingPage.php:818
+#: includes/Admin/Purchasing/EditView.php:158
+#: includes/Admin/Purchasing/InboundView.php:30
+#: includes/Admin/Purchasing/ReceiveView.php:68
+#: includes/Admin/PurchasingPage.php:83
 #: includes/Admin/ValuationPage.php:333
 msgid "Remaining"
 msgstr "Gjenstående"
 
-#: includes/Admin/PurchasingPage.php:89
+#: includes/Admin/PurchasingPage.php:84
 msgid "Entered"
 msgstr "Angitt"
 
-#: includes/Admin/PurchasingPage.php:90
+#: includes/Admin/PurchasingPage.php:85
 msgid "Enter a quantity on at least one line."
 msgstr "Angi en mengde på minst én linje."
 
-#: includes/Admin/PurchasingPage.php:92
-#: includes/Admin/PurchasingPage.php:457
-#: includes/Admin/PurchasingPage.php:508
+#: includes/Admin/Purchasing/EditView.php:288
+#: includes/Admin/Purchasing/EditView.php:339
+#: includes/Admin/PurchasingPage.php:87
 msgid "Add"
 msgstr "Legg til"
 
-#: includes/Admin/PurchasingPage.php:93
+#: includes/Admin/PurchasingPage.php:88
 msgid "No companies found."
 msgstr "Fant ingen selskaper."
 
-#: includes/Admin/PurchasingPage.php:140
-msgid "Purchasing (Innkjøp) is not enabled. Turn it on under Lager → Innstillinger."
-msgstr "Innkjøp er ikke aktivert. Slå det på under Lager → Innstillinger."
-
-#: includes/Admin/PurchasingPage.php:150
-#: includes/Admin/PurchasingPage.php:218
+#: includes/Admin/Purchasing/EditView.php:49
+#: includes/Admin/Purchasing/ListView.php:20
 msgid "New purchase order"
 msgstr "Ny innkjøpsordre"
 
-#: includes/Admin/PurchasingPage.php:159
-#: includes/Admin/PurchasingPage.php:563
-#: includes/Admin/PurchasingPage.php:821
+#: includes/Admin/Purchasing/InboundView.php:33
+#: includes/Admin/Purchasing/ListView.php:29
+#: includes/Admin/Purchasing/PrintView.php:40
 msgid "PO"
 msgstr "Innkjøpsordre"
 
-#: includes/Admin/PurchasingPage.php:162
-#: includes/Admin/PurchasingPage.php:290
-#: includes/Admin/PurchasingPage.php:770
+#: includes/Admin/Purchasing/EditView.php:121
+#: includes/Admin/Purchasing/EditView.php:399
+#: includes/Admin/Purchasing/ListView.php:32
 msgid "Lines"
 msgstr "Linjer"
 
-#: includes/Admin/PurchasingPage.php:163
-#: includes/Admin/PurchasingPage.php:247
-#: includes/Admin/PurchasingPage.php:819
+#: includes/Admin/Purchasing/EditView.php:78
+#: includes/Admin/Purchasing/InboundView.php:31
+#: includes/Admin/Purchasing/ListView.php:33
 msgid "ETA"
 msgstr "Forventet levering"
 
-#: includes/Admin/PurchasingPage.php:170
+#: includes/Admin/Purchasing/ListView.php:40
 msgid "No purchase orders yet."
 msgstr "Ingen innkjøpsordrer ennå."
 
-#: includes/Admin/PurchasingPage.php:206
-#: includes/Admin/PurchasingPage.php:545
-#: includes/Admin/PurchasingPage.php:606
-#: includes/Admin/PurchasingPage.php:1224
-#: includes/Admin/PurchasingPage.php:1509
+#: includes/Admin/Purchasing/EditView.php:37
+#: includes/Admin/Purchasing/EditView.php:648
+#: includes/Admin/Purchasing/PrintView.php:22
+#: includes/Admin/Purchasing/ReceiveView.php:21
+#: includes/Admin/PurchasingPage.php:198
 #: includes/Purchasing/Receiving.php:62
 msgid "Purchase order not found."
 msgstr "Fant ikke innkjøpsordren."
 
-#: includes/Admin/PurchasingPage.php:226
-#: includes/Admin/PurchasingPage.php:807
-#: includes/Admin/PurchasingPage.php:862
+#: includes/Admin/Purchasing/EditView.php:57
+#: includes/Admin/Purchasing/InboundView.php:19
+#: includes/Admin/Purchasing/SuppliersView.php:37
 msgid "Back to list"
 msgstr "Tilbake til listen"
 
-#: includes/Admin/PurchasingPage.php:242
-#: includes/Admin/PurchasingPage.php:566
+#: includes/Admin/Purchasing/EditView.php:73
+#: includes/Admin/Purchasing/PrintView.php:43
 msgid "Supplier reference"
 msgstr "Leverandørreferanse"
 
-#: includes/Admin/PurchasingPage.php:255
+#: includes/Admin/Purchasing/EditView.php:86
 msgid "The order is placed — line changes append to this note trail rather than editing locked lines."
 msgstr "Ordren er lagt inn — linjeendringer legges til i dette notatsporet i stedet for å endre låste linjer."
 
-#: includes/Admin/PurchasingPage.php:260
+#: includes/Admin/Purchasing/EditView.php:91
 msgid "Create draft"
 msgstr "Opprett kladd"
 
-#: includes/Admin/PurchasingPage.php:260
+#: includes/Admin/Purchasing/EditView.php:91
 msgid "Save details"
 msgstr "Lagre detaljer"
 
-#: includes/Admin/PurchasingPage.php:265
+#: includes/Admin/Purchasing/EditView.php:96
 msgid "Place this order? Lines will be locked; further changes append to the note."
 msgstr "Legge inn denne ordren? Linjene blir låst; videre endringer legges til i notatet."
 
-#: includes/Admin/PurchasingPage.php:269
+#: includes/Admin/Purchasing/EditView.php:100
 msgid "Place order"
 msgstr "Legg inn ordre"
 
-#: includes/Admin/PurchasingPage.php:279
+#: includes/Admin/Purchasing/EditView.php:110
 msgid "Cancel this purchase order? Any received stock stays; the remainder is written off."
 msgstr "Avbryte denne innkjøpsordren? Mottatt lager beholdes; resten avskrives."
 
-#: includes/Admin/PurchasingPage.php:283
+#: includes/Admin/Purchasing/EditView.php:114
 msgid "Cancel order"
 msgstr "Avbryt ordre"
 
-#: includes/Admin/PurchasingPage.php:295
+#: includes/Admin/Purchasing/EditView.php:126
 msgid "Add product"
 msgstr "Legg til produkt"
 
-#: includes/Admin/PurchasingPage.php:297
+#: includes/Admin/Purchasing/EditView.php:128
 msgid "Adding a product already on the order merges into that line (its quantity is increased)."
 msgstr "Å legge til et produkt som allerede finnes på ordren, slås sammen med den linjen (mengden økes)."
 
-#: includes/Admin/PurchasingPage.php:302
+#: includes/Admin/Purchasing/EditView.php:133
 msgid "Save the draft first, then add product lines."
 msgstr "Lagre kladden først, og legg deretter til produktlinjer."
 
-#: includes/Admin/PurchasingPage.php:328
+#: includes/Admin/Purchasing/EditView.php:159
 msgid "Unit cost ex-VAT"
 msgstr "Enhetskostnad eks. mva."
 
-#: includes/Admin/PurchasingPage.php:370
+#: includes/Admin/Purchasing/EditView.php:201
 msgid "No lines yet."
 msgstr "Ingen linjer ennå."
 
-#: includes/Admin/PurchasingPage.php:397
-#: includes/Admin/PurchasingPage.php:892
+#: includes/Admin/Purchasing/EditView.php:228
+#: includes/Admin/Purchasing/SuppliersView.php:67
 msgid "Edit"
 msgstr "Rediger"
 
-#: includes/Admin/PurchasingPage.php:402
+#: includes/Admin/Purchasing/EditView.php:233
 msgid "Remove this line?"
 msgstr "Fjerne denne linjen?"
 
-#: includes/Admin/PurchasingPage.php:402
+#: includes/Admin/Purchasing/EditView.php:233
 msgid "Remove"
 msgstr "Fjern"
 
-#: includes/Admin/PurchasingPage.php:343
-#: includes/Admin/PurchasingPage.php:525
+#: includes/Admin/Purchasing/EditView.php:174
+#: includes/Admin/Purchasing/EditView.php:356
 #: includes/Admin/StatusPage.php:679
 #: includes/Admin/StatusPage.php:680
 #: includes/Admin/ValuationPage.php:175
@@ -860,280 +856,276 @@ msgid "Qty"
 msgstr "Ant."
 
 #: includes/Admin/MovementsPage.php:188
-#: includes/Admin/PurchasingPage.php:345
-#: includes/Admin/PurchasingPage.php:527
-#: includes/Admin/PurchasingPage.php:656
+#: includes/Admin/Purchasing/EditView.php:176
+#: includes/Admin/Purchasing/EditView.php:358
+#: includes/Admin/Purchasing/ReceiveView.php:71
 #: includes/Admin/StatusPage.php:605
 #: includes/Admin/ValuationPage.php:97
 msgid "Unit cost ex-VAT (kr)"
 msgstr "Enhetskostnad eks. mva. (kr)"
 
-#: includes/Admin/PurchasingPage.php:352
+#: includes/Admin/Purchasing/EditView.php:183
 msgid "Save line"
 msgstr "Lagre linje"
 
-#: includes/Admin/PurchasingPage.php:485
+#: includes/Admin/Purchasing/EditView.php:316
 msgid "Search product by name or SKU…"
 msgstr "Søk etter produkt på navn eller SKU…"
 
-#: includes/Admin/PurchasingPage.php:486
-#: includes/Admin/PurchasingPage.php:930
+#: includes/Admin/Purchasing/EditView.php:317
+#: includes/Admin/Purchasing/SuppliersView.php:105
 msgid "Search"
 msgstr "Søk"
 
-#: includes/Admin/PurchasingPage.php:522
+#: includes/Admin/Purchasing/EditView.php:353
 msgid "Product (SKU or id)"
 msgstr "Produkt (SKU eller ID)"
 
-#: includes/Admin/PurchasingPage.php:524
+#: includes/Admin/Purchasing/EditView.php:355
 msgid "Pick above, or type a SKU / product id"
 msgstr "Velg over, eller skriv en SKU / produkt-ID"
 
-#: includes/Admin/PurchasingPage.php:533
+#: includes/Admin/Purchasing/EditView.php:364
 msgid "Add line"
 msgstr "Legg til linje"
 
-#: includes/Admin/PurchasingPage.php:555
-#: includes/Admin/PurchasingPage.php:622
+#. translators: %d: purchase order number
+#: includes/Admin/Purchasing/PrintView.php:32
+#: includes/Admin/Purchasing/ReceiveView.php:37
 msgid "Back to order"
 msgstr "Tilbake til ordren"
 
-#: includes/Admin/PurchasingPage.php:627
+#: includes/Admin/Purchasing/ReceiveView.php:42
 msgid "This purchase order is not open for receiving."
 msgstr "Denne innkjøpsordren er ikke åpen for varemottak."
 
-#: includes/Admin/PurchasingPage.php:634
-msgid "Receiving writes stock and requires active mode. It is disabled while the ledger runs in shadow mode — enable active mode under Lager → Innstillinger."
-msgstr "Varemottak skriver til lageret og krever aktiv modus. Det er deaktivert mens lagerloggen kjører i skyggemodus — aktiver aktiv modus under Lager → Innstillinger."
-
-#: includes/Admin/PurchasingPage.php:643
+#: includes/Admin/Purchasing/ReceiveView.php:58
 msgid "Quantities are pre-filled with what remains. Adjust for a partial delivery, then confirm. The server re-checks each remaining quantity at submit."
 msgstr "Mengdene er forhåndsutfylt med det som gjenstår. Juster for en delleveranse, og bekreft deretter. Serveren kontrollerer hver gjenstående mengde på nytt ved innsending."
 
-#: includes/Admin/PurchasingPage.php:654
+#: includes/Admin/Purchasing/ReceiveView.php:69
 msgid "Receive now"
 msgstr "Motta nå"
 
-#: includes/Admin/PurchasingPage.php:686
+#: includes/Admin/Purchasing/ReceiveView.php:101
 msgid "Actual unit cost ex-VAT for THIS delivery — pre-filled from the PO line; adjust if the invoice differs."
 msgstr "Faktisk enhetskostnad eks. mva. for DENNE leveransen — forhåndsutfylt fra innkjøpslinjen; juster hvis fakturaen avviker."
 
-#: includes/Admin/PurchasingPage.php:711
-#: includes/Admin/PurchasingPage.php:769
+#: includes/Admin/Purchasing/EditView.php:398
+#: includes/Admin/Purchasing/ReceiveView.php:126
 msgid "Received at"
 msgstr "Mottatt tidspunkt"
 
-#: includes/Admin/PurchasingPage.php:715
+#: includes/Admin/Purchasing/ReceiveView.php:130
 msgid "When the goods physically arrived. Defaults to now; set it back for \"the goods came last week\"."
 msgstr "Når varene fysisk ankom. Settes til nå som standard; still den tilbake for «varene kom forrige uke»."
 
-#: includes/Admin/PurchasingPage.php:722
+#: includes/Admin/Purchasing/EditView.php:105
+#: includes/Admin/Purchasing/ListView.php:57
+#: includes/Admin/Purchasing/ReceiveView.php:137
 msgid "Receive goods"
 msgstr "Motta varer"
 
-#: includes/Admin/PurchasingPage.php:764
+#: includes/Admin/Purchasing/EditView.php:393
 msgid "Receipts"
 msgstr "Varemottak"
 
-#: includes/Admin/PurchasingPage.php:771
+#: includes/Admin/Purchasing/EditView.php:400
 msgid "Total qty"
 msgstr "Total ant."
 
-#: includes/Admin/PurchasingPage.php:790
+#: includes/Admin/Purchasing/EditView.php:419
 msgid "View in movements"
 msgstr "Vis i bevegelser"
 
-#: includes/Admin/PurchasingPage.php:809
+#: includes/Admin/Purchasing/InboundView.php:21
 msgid "Every open purchase-order line across all orders — the single \"what is coming\" answer."
 msgstr "Hver åpne innkjøpsordrelinje på tvers av alle ordrer — det ene svaret på «hva er på vei»."
 
-#: includes/Admin/PurchasingPage.php:826
+#: includes/Admin/Purchasing/InboundView.php:38
 msgid "Nothing incoming."
 msgstr "Ingenting innkommende."
 
-#: includes/Admin/PurchasingPage.php:869
-#: includes/Admin/PurchasingPage.php:951
+#: includes/Admin/Purchasing/SuppliersView.php:44
+#: includes/Admin/Purchasing/SuppliersView.php:126
 #: includes/Admin/SettingsPage.php:343
 msgid "Name"
 msgstr "Navn"
 
-#: includes/Admin/PurchasingPage.php:870
-#: includes/Admin/PurchasingPage.php:968
+#: includes/Admin/Purchasing/SuppliersView.php:45
+#: includes/Admin/Purchasing/SuppliersView.php:143
 msgid "Org. nr"
 msgstr "Org.nr"
 
-#: includes/Admin/PurchasingPage.php:871
-#: includes/Admin/PurchasingPage.php:956
+#: includes/Admin/Purchasing/SuppliersView.php:46
+#: includes/Admin/Purchasing/SuppliersView.php:131
 msgid "Country"
 msgstr "Land"
 
-#: includes/Admin/PurchasingPage.php:872
-#: includes/Admin/PurchasingPage.php:978
+#: includes/Admin/Purchasing/SuppliersView.php:47
+#: includes/Admin/Purchasing/SuppliersView.php:153
 msgid "Email"
 msgstr "E-post"
 
-#: includes/Admin/PurchasingPage.php:873
-#: includes/Admin/PurchasingPage.php:983
+#: includes/Admin/Purchasing/SuppliersView.php:48
+#: includes/Admin/Purchasing/SuppliersView.php:158
 msgid "Phone"
 msgstr "Telefon"
 
-#: includes/Admin/PurchasingPage.php:874
-#: includes/Admin/PurchasingPage.php:993
+#: includes/Admin/Purchasing/SuppliersView.php:49
+#: includes/Admin/Purchasing/SuppliersView.php:168
 #: includes/Admin/SettingsPage.php:197
 #: includes/Admin/SettingsPage.php:358
 msgid "Active"
 msgstr "Aktiv"
 
-#: includes/Admin/PurchasingPage.php:880
+#: includes/Admin/Purchasing/SuppliersView.php:55
 msgid "No suppliers yet."
 msgstr "Ingen leverandører ennå."
 
-#: includes/Admin/PurchasingPage.php:895
+#: includes/Admin/Purchasing/SuppliersView.php:70
 #: includes/Admin/SettingsPage.php:363
 msgid "Deactivate"
 msgstr "Deaktiver"
 
-#: includes/Admin/PurchasingPage.php:895
+#: includes/Admin/Purchasing/SuppliersView.php:70
 #: includes/Admin/SettingsPage.php:363
 msgid "Activate"
 msgstr "Aktiver"
 
-#: includes/Admin/PurchasingPage.php:916
+#: includes/Admin/Purchasing/SuppliersView.php:91
 msgid "Edit supplier"
 msgstr "Rediger leverandør"
 
-#: includes/Admin/PurchasingPage.php:916
+#: includes/Admin/Purchasing/SuppliersView.php:91
 msgid "New supplier"
 msgstr "Ny leverandør"
 
-#: includes/Admin/PurchasingPage.php:925
+#: includes/Admin/Purchasing/SuppliersView.php:100
 msgid "Search Brønnøysund (name or org. nr)"
 msgstr "Søk i Brønnøysund (navn eller org.nr)"
 
-#: includes/Admin/PurchasingPage.php:928
+#: includes/Admin/Purchasing/SuppliersView.php:103
 msgid "Company name or 9-digit org. nr…"
 msgstr "Firmanavn eller 9-sifret org.nr …"
 
-#: includes/Admin/PurchasingPage.php:932
+#. translators: %s: registry name
+#: includes/Admin/Purchasing/SuppliersView.php:107
 #, php-format
 msgid "Looks the company up in %s and fills the name and org. nr."
 msgstr "Slår opp selskapet i %s og fyller inn navn og org.nr."
 
-#: includes/Admin/PurchasingPage.php:935
+#: includes/Admin/Purchasing/SuppliersView.php:110
 msgid "Search results"
 msgstr "Søkeresultater"
 
-#: includes/Admin/PurchasingPage.php:938
+#. translators: %s: registry name
+#: includes/Admin/Purchasing/SuppliersView.php:113
 #, php-format
 msgid "Filled from %s."
 msgstr "Fylt ut fra %s."
 
-#: includes/Admin/PurchasingPage.php:939
+#. translators: %s: registry name
+#: includes/Admin/Purchasing/SuppliersView.php:114
 msgid "Source"
 msgstr "Kilde"
 
-#: includes/Admin/PurchasingPage.php:973
+#: includes/Admin/Purchasing/SuppliersView.php:148
 msgid "Norwegian 9-digit organisation number (MOD11-validated)."
 msgstr "Norsk 9-sifret organisasjonsnummer (MOD11-validert)."
 
-#: includes/Admin/PurchasingPage.php:995
+#: includes/Admin/Purchasing/SuppliersView.php:170
 msgid "Available for new purchase orders"
 msgstr "Tilgjengelig for nye innkjøpsordrer"
 
-#: includes/Admin/PurchasingPage.php:998
+#: includes/Admin/Purchasing/SuppliersView.php:173
 msgid "Save supplier"
 msgstr "Lagre leverandør"
 
-#: includes/Admin/PurchasingPage.php:998
+#: includes/Admin/Purchasing/SuppliersView.php:173
 msgid "Add supplier"
 msgstr "Legg til leverandør"
 
-#. translators: 1: product label, 2: requested qty
-#: includes/Admin/PurchasingPage.php:1072
-#, php-format
-msgid "Endring etter bestilling avvist: %1$s → %2$s (linjer er låst)."
-msgstr "Endring etter bestilling avvist: %1$s → %2$s (linjer er låst)."
-
-#: includes/Admin/PurchasingPage.php:1343
+#: includes/Admin/Purchasing/EditView.php:684
 msgid "— none —"
 msgstr "— ingen —"
 
-#: includes/Admin/PurchasingPage.php:1350
+#: includes/Admin/Purchasing/EditView.php:691
 msgid "inactive"
 msgstr "inaktiv"
 
-#: includes/Admin/PurchasingPage.php:1497
+#: includes/Admin/PurchasingPage.php:186
 msgid "Draft purchase order created."
 msgstr "Innkjøpsordrekladd opprettet."
 
-#: includes/Admin/PurchasingPage.php:1498
+#: includes/Admin/PurchasingPage.php:187
 msgid "Purchase order saved."
 msgstr "Innkjøpsordre lagret."
 
-#: includes/Admin/PurchasingPage.php:1499
+#: includes/Admin/PurchasingPage.php:188
 msgid "Order placed. Lines are now locked."
 msgstr "Ordre lagt inn. Linjene er nå låst."
 
-#: includes/Admin/PurchasingPage.php:1500
+#: includes/Admin/PurchasingPage.php:189
 msgid "Purchase order cancelled. Any received stock was kept."
 msgstr "Innkjøpsordre avbrutt. Mottatt lager ble beholdt."
 
-#: includes/Admin/PurchasingPage.php:1165
-#: includes/Admin/PurchasingPage.php:1501
+#: includes/Admin/Purchasing/EditView.php:589
+#: includes/Admin/PurchasingPage.php:190
 msgid "Line added."
 msgstr "Linje lagt til."
 
-#: includes/Admin/PurchasingPage.php:1502
+#: includes/Admin/PurchasingPage.php:191
 msgid "Product already on the order — its quantity was increased."
 msgstr "Produktet er allerede på ordren — mengden ble økt."
 
-#: includes/Admin/PurchasingPage.php:1199
-#: includes/Admin/PurchasingPage.php:1503
+#: includes/Admin/Purchasing/EditView.php:623
+#: includes/Admin/PurchasingPage.php:192
 msgid "Line saved."
 msgstr "Linje lagret."
 
-#: includes/Admin/PurchasingPage.php:1214
-#: includes/Admin/PurchasingPage.php:1504
+#: includes/Admin/Purchasing/EditView.php:638
+#: includes/Admin/PurchasingPage.php:193
 msgid "Line removed."
 msgstr "Linje fjernet."
 
-#: includes/Admin/PurchasingPage.php:1505
+#: includes/Admin/PurchasingPage.php:194
 msgid "Supplier saved."
 msgstr "Leverandør lagret."
 
-#: includes/Admin/PurchasingPage.php:1506
+#: includes/Admin/PurchasingPage.php:195
 msgid "Company found — the name was filled in below."
 msgstr "Selskap funnet — navnet ble fylt inn nedenfor."
 
-#: includes/Admin/PurchasingPage.php:1510
+#: includes/Admin/PurchasingPage.php:199
 msgid "Could not save. Please try again."
 msgstr "Kunne ikke lagre. Prøv igjen."
 
-#: includes/Admin/PurchasingPage.php:1511
+#: includes/Admin/PurchasingPage.php:200
 msgid "Could not place the order — add at least one line to a draft first."
 msgstr "Kunne ikke legge inn ordren — legg til minst én linje i en kladd først."
 
-#: includes/Admin/PurchasingPage.php:1512
+#: includes/Admin/PurchasingPage.php:201
 msgid "Could not save the line."
 msgstr "Kunne ikke lagre linjen."
 
-#: includes/Admin/PurchasingPage.php:1513
+#: includes/Admin/PurchasingPage.php:202
 msgid "Pick a product first."
 msgstr "Velg et produkt først."
 
-#: includes/Admin/PurchasingPage.php:1514
+#: includes/Admin/PurchasingPage.php:203
 msgid "The order is placed — lines are locked. The change was noted on the order instead."
 msgstr "Ordren er lagt inn — linjene er låst. Endringen ble i stedet notert på ordren."
 
-#: includes/Admin/PurchasingPage.php:1515
+#: includes/Admin/PurchasingPage.php:204
 msgid "A supplier name is required."
 msgstr "Et leverandørnavn er påkrevd."
 
-#: includes/Admin/PurchasingPage.php:1516
+#: includes/Admin/PurchasingPage.php:205
 msgid "That organisation number failed the MOD11 check."
 msgstr "Det organisasjonsnummeret bestod ikke MOD11-kontrollen."
 
-#: includes/Admin/PurchasingPage.php:1517
+#: includes/Admin/PurchasingPage.php:206
 msgid "No company found for that organisation number (or the registry was unavailable)."
 msgstr "Fant ikke noe selskap for det organisasjonsnummeret (eller registeret var utilgjengelig)."
 
@@ -1183,7 +1175,7 @@ msgstr "Søk i produkter"
 msgid "Title or SKU…"
 msgstr "Tittel eller SKU…"
 
-#: includes/Admin/PurchasingPage.php:436
+#: includes/Admin/Purchasing/EditView.php:267
 #: includes/Admin/StatusPage.php:322
 msgid "Incoming"
 msgstr "Innkommende"
@@ -1394,7 +1386,7 @@ msgstr "Estimat %s"
 msgid "Provisional %s"
 msgstr "Provisorisk %s"
 
-#: includes/Admin/PurchasingPage.php:231
+#: includes/Admin/Purchasing/EditView.php:62
 #: includes/Admin/ValuationPage.php:206
 msgid "Details"
 msgstr "Detaljer"
@@ -1464,7 +1456,7 @@ msgstr "Enhetskost"
 msgid "Ref"
 msgstr "Ref"
 
-#: includes/Admin/PurchasingPage.php:564
+#: includes/Admin/Purchasing/PrintView.php:41
 #: includes/Admin/ValuationPage.php:336
 #: includes/Admin/ValuationPage.php:363
 msgid "Date"
@@ -1632,26 +1624,6 @@ msgstr "Ekstern endring"
 msgid "Kaupang Stock requires WooCommerce to be active."
 msgstr "Kaupang Stock krever at WooCommerce er aktivert."
 
-#: includes/Purchasing/PurchaseOrders.php:284
-msgid "Kladd"
-msgstr "Kladd"
-
-#: includes/Purchasing/PurchaseOrders.php:285
-msgid "Bestilt"
-msgstr "Bestilt"
-
-#: includes/Purchasing/PurchaseOrders.php:286
-msgid "Delvis mottatt"
-msgstr "Delvis mottatt"
-
-#: includes/Purchasing/PurchaseOrders.php:287
-msgid "Mottatt"
-msgstr "Mottatt"
-
-#: includes/Purchasing/PurchaseOrders.php:288
-msgid "Kansellert"
-msgstr "Kansellert"
-
 #: includes/Purchasing/Receiving.php:67
 msgid "A receive token is required."
 msgstr "Et mottakstoken er påkrevd."
@@ -1659,10 +1631,6 @@ msgstr "Et mottakstoken er påkrevd."
 #: includes/Purchasing/Receiving.php:87
 msgid "This purchase order is not open for receiving (it must be ordered)."
 msgstr "Denne innkjøpsordren er ikke åpen for varemottak (den må være bestilt)."
-
-#: includes/Purchasing/Receiving.php:101
-msgid "Receiving writes stock and requires active mode. Enable active mode under Lager → Innstillinger."
-msgstr "Varemottak skriver til lageret og krever aktiv modus. Aktiver aktiv modus under Lager → Innstillinger."
 
 #: includes/Purchasing/Receiving.php:132
 msgid "A submitted line does not belong to this purchase order."
@@ -1710,7 +1678,7 @@ msgstr "Overstyringer er bare mulig mens varetellingen er til gjennomgang."
 msgid "[override] line #%1$d, %2$s, %3$s: %4$s"
 msgstr "[overstyring] linje #%1$d, %2$s, %3$s: %4$s"
 
-#: includes/Admin/PurchasingPage.php:1220
+#: includes/Admin/Purchasing/EditView.php:644
 #: includes/Rest/Controller.php:291
 msgid "Purchasing is not enabled."
 msgstr "Innkjøp er ikke aktivert."
@@ -1747,20 +1715,20 @@ msgstr "Annet"
 msgid "Reason…"
 msgstr "Årsak …"
 
-#: includes/Admin/PurchasingPage.php:151
-#: includes/Admin/PurchasingPage.php:806
+#: includes/Admin/Purchasing/InboundView.php:18
+#: includes/Admin/Purchasing/ListView.php:21
 msgid "Inbound"
 msgstr "Innkommende"
 
-#: includes/Admin/PurchasingPage.php:152
-#: includes/Admin/PurchasingPage.php:861
+#: includes/Admin/Purchasing/ListView.php:22
+#: includes/Admin/Purchasing/SuppliersView.php:36
 msgid "Suppliers"
 msgstr "Leverandører"
 
 #: includes/Admin/ProductPanel.php:141
-#: includes/Admin/PurchasingPage.php:160
-#: includes/Admin/PurchasingPage.php:238
-#: includes/Admin/PurchasingPage.php:820
+#: includes/Admin/Purchasing/EditView.php:69
+#: includes/Admin/Purchasing/InboundView.php:32
+#: includes/Admin/Purchasing/ListView.php:30
 msgid "Supplier"
 msgstr "Leverandør"
 
@@ -1928,7 +1896,7 @@ msgstr "https://github.com/nytafar/kaupang-stock"
 #: includes/Admin/MovementsPage.php:174
 #: includes/Admin/MovementsPage.php:429
 #: includes/Admin/MovementsPage.php:630
-#: includes/Admin/PurchasingPage.php:699
+#: includes/Admin/Purchasing/ReceiveView.php:114
 #: includes/Admin/SettingsPage.php:260
 #: includes/Admin/StatusPage.php:597
 #: includes/Admin/ValuationPage.php:174
@@ -1955,90 +1923,90 @@ msgstr "Leverandørprodukter"
 msgid "Supplier identity"
 msgstr "Leverandørens navn og SKU"
 
-#: includes/Admin/PurchasingPage.php:223
-#: includes/Admin/PurchasingPage.php:560
+#: includes/Admin/Purchasing/EditView.php:54
+#: includes/Admin/Purchasing/PrintView.php:37
 msgid "Ordering list"
 msgstr "Bestillingsliste"
 
-#: includes/Admin/PurchasingPage.php:323
-#: includes/Admin/PurchasingPage.php:432
+#: includes/Admin/Purchasing/EditView.php:154
+#: includes/Admin/Purchasing/EditView.php:263
 msgid "Supplier product"
 msgstr "Leverandørprodukt"
 
-#: includes/Admin/PurchasingPage.php:324
-#: includes/Admin/PurchasingPage.php:347
-#: includes/Admin/PurchasingPage.php:433
-#: includes/Admin/PurchasingPage.php:529
-#: includes/Admin/PurchasingPage.php:573
+#: includes/Admin/Purchasing/EditView.php:155
+#: includes/Admin/Purchasing/EditView.php:178
+#: includes/Admin/Purchasing/EditView.php:264
+#: includes/Admin/Purchasing/EditView.php:360
+#: includes/Admin/Purchasing/PrintView.php:50
 msgid "Supplier SKU"
 msgstr "Leverandørens SKU"
 
-#: includes/Admin/PurchasingPage.php:349
-#: includes/Admin/PurchasingPage.php:531
-#: includes/Admin/PurchasingPage.php:572
+#: includes/Admin/Purchasing/EditView.php:180
+#: includes/Admin/Purchasing/EditView.php:362
+#: includes/Admin/Purchasing/PrintView.php:49
 msgid "Supplier product name"
 msgstr "Leverandørens produktnavn"
 
-#: includes/Admin/PurchasingPage.php:419
+#: includes/Admin/Purchasing/EditView.php:250
 msgid "Choose a supplier to use its product catalog."
 msgstr "Velg en leverandør for å bruke leverandørens produktkatalog."
 
-#: includes/Admin/PurchasingPage.php:425
+#: includes/Admin/Purchasing/EditView.php:256
 msgid "Add from supplier catalog"
 msgstr "Legg til fra leverandørkatalogen"
 
-#: includes/Admin/PurchasingPage.php:427
+#: includes/Admin/Purchasing/EditView.php:258
 msgid "The supplier catalog is empty. Add a product below and enter the supplier identity to start it."
 msgstr "Leverandørkatalogen er tom. Legg til et produkt nedenfor og fyll inn leverandørens navn og SKU for å starte den."
 
-#: includes/Admin/PurchasingPage.php:434
+#: includes/Admin/Purchasing/EditView.php:265
 msgid "Our product"
 msgstr "Vårt produkt"
 
-#: includes/Admin/PurchasingPage.php:556
+#: includes/Admin/Purchasing/PrintView.php:33
 msgid "Print / Save as PDF"
 msgstr "Skriv ut / lagre som PDF"
 
-#: includes/Admin/PurchasingPage.php:574
+#: includes/Admin/Purchasing/PrintView.php:51
 msgid "Our product name"
 msgstr "Vårt produktnavn"
 
-#: includes/Admin/PurchasingPage.php:575
+#: includes/Admin/Purchasing/PrintView.php:52
 msgid "Our SKU"
 msgstr "Vår SKU"
 
-#: includes/Admin/PurchasingPage.php:576
+#: includes/Admin/Purchasing/PrintView.php:53
 msgid "Qty ordered"
 msgstr "Antall bestilt"
 
-#: includes/Admin/PurchasingPage.php:706
+#: includes/Admin/Purchasing/ReceiveView.php:121
 msgid "Which location these goods arrive at. Partial receipts of the same order can go to different locations."
 msgstr "Hvilken lokasjon varene kommer inn på. Delmottak av samme ordre kan gå til ulike lokasjoner."
 
-#: includes/Admin/PurchasingPage.php:1147
+#: includes/Admin/Purchasing/EditView.php:571
 msgid "Pick a product, or enter a valid SKU / product id."
 msgstr "Velg et produkt, eller skriv inn en gyldig SKU / produkt-ID."
 
-#: includes/Admin/PurchasingPage.php:1159
-#: includes/Admin/PurchasingPage.php:1195
+#: includes/Admin/Purchasing/EditView.php:583
+#: includes/Admin/Purchasing/EditView.php:619
 msgid "Enter a quantity of at least 1."
 msgstr "Skriv inn et antall på minst 1."
 
-#: includes/Admin/PurchasingPage.php:1161
-#: includes/Admin/PurchasingPage.php:1197
+#: includes/Admin/Purchasing/EditView.php:585
+#: includes/Admin/Purchasing/EditView.php:621
 msgid "The line could not be saved."
 msgstr "Linjen kunne ikke lagres."
 
-#: includes/Admin/PurchasingPage.php:1165
+#: includes/Admin/Purchasing/EditView.php:589
 msgid "Merged into the existing line."
 msgstr "Slått sammen med den eksisterende linjen."
 
-#: includes/Admin/PurchasingPage.php:1179
-#: includes/Admin/PurchasingPage.php:1211
+#: includes/Admin/Purchasing/EditView.php:603
+#: includes/Admin/Purchasing/EditView.php:635
 msgid "That line was not found on this order."
 msgstr "Fant ikke linjen på denne innkjøpsordren."
 
-#: includes/Admin/PurchasingPage.php:1227
+#: includes/Admin/Purchasing/EditView.php:651
 msgid "This order is placed — its lines are locked."
 msgstr "Innkjøpsordren er bestilt — linjene er låst."
 
@@ -2408,3 +2376,70 @@ msgid "[uncounted] %1$s: %2$d line, %3$s"
 msgid_plural "[uncounted] %1$s: %2$d lines, %3$s"
 msgstr[0] "[ikke talt] %1$s: %2$d linje, %3$s"
 msgstr[1] "[ikke talt] %1$s: %2$d linjer, %3$s"
+
+#. translators: %d: purchase order number
+#: includes/Admin/Purchasing/EditView.php:49
+#, php-format
+msgid "Purchase order #%d"
+msgstr "Innkjøp #%d"
+
+#. translators: 1: product label, 2: requested qty
+#: includes/Admin/Purchasing/EditView.php:496
+#, php-format
+msgid "Change after ordering refused: %1$s → %2$s (lines are locked)."
+msgstr "Endring etter bestilling avvist: %1$s → %2$s (linjer er låst)."
+
+#. translators: %d: purchase order number
+#: includes/Admin/Purchasing/ReceiveView.php:36
+#, php-format
+msgid "Receive goods — purchase order #%d"
+msgstr "Motta varer — innkjøp #%d"
+
+#: includes/Admin/Purchasing/ReceiveView.php:49
+msgid "Receiving writes stock and requires active mode. It is disabled while the ledger runs in shadow mode — enable active mode in the stock settings."
+msgstr "Varemottak skriver til lageret og krever aktiv modus. Det er deaktivert mens lagerloggen kjører i skyggemodus — aktiver aktiv modus i lagerinnstillingene."
+
+#: includes/Admin/PurchasingPage.php:135
+msgid "Purchasing is not enabled. Turn it on in the stock settings."
+msgstr "Innkjøp er ikke aktivert. Slå det på i lagerinnstillingene."
+
+#: includes/Purchasing/PurchaseOrders.php:284
+msgctxt "purchase order status"
+msgid "Draft"
+msgstr "Kladd"
+
+#: includes/Purchasing/PurchaseOrders.php:285
+msgctxt "purchase order status"
+msgid "Ordered"
+msgstr "Bestilt"
+
+#: includes/Purchasing/PurchaseOrders.php:286
+msgctxt "purchase order status"
+msgid "Partially received"
+msgstr "Delvis mottatt"
+
+#: includes/Purchasing/PurchaseOrders.php:287
+msgctxt "purchase order status"
+msgid "Received"
+msgstr "Mottatt"
+
+#: includes/Purchasing/PurchaseOrders.php:288
+msgctxt "purchase order status"
+msgid "Cancelled"
+msgstr "Kansellert"
+
+#: includes/Purchasing/Receiving.php:101
+msgid "Receiving writes stock and requires active mode. Enable active mode in the stock settings."
+msgstr "Varemottak skriver til lageret og krever aktiv modus. Aktiver aktiv modus i lagerinnstillingene."
+
+#. translators: %d: purchase order number
+#: includes/Purchasing/Receiving.php:254
+#, php-format
+msgid "Goods receipt, purchase order #%d"
+msgstr "Varemottak innkjøp #%d"
+
+#. translators: %s: supplier's order reference
+#: includes/Purchasing/Receiving.php:260
+#, php-format
+msgid "ref: %s"
+msgstr "ref: %s"

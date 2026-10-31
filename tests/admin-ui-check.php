@@ -94,5 +94,20 @@ $checks['note: other without text = empty']  = \Kaupang\Stock\Admin\Screen::adju
 $_POST = ['note' => 'plain'];
 $checks['note: plain text (no preset)']      = \Kaupang\Stock\Admin\Screen::adjustNote() === 'plain';
 
+// Purchasing: the router reaches every per-view class; status labels are English sources with nb_NO translations.
+$poOn = static fn($v) => array_merge((array) $v, ['stock_enabled' => true, 'po_enabled' => true]);
+add_filter('option_kaupang_stock_settings', $poOn);
+foreach (['list' => 'page-title-action', 'inbound' => 'Nothing incoming|<td', 'suppliers' => 'kaupang_stock_save_supplier', 'edit' => 'kaupang_stock_save_po'] as $view => $marker) {
+    $h = ks_render(\Kaupang\Stock\Admin\PurchasingPage::class, ['page' => 'kaupang-stock-purchasing', 'view' => $view, 'po' => 'new']);
+    $checks["purchasing $view: balanced markup + rendered"] = ks_balanced($h) && preg_match('/' . $marker . '/', $h) === 1;
+}
+remove_filter('option_kaupang_stock_settings', $poOn);
+$switched = switch_to_locale('en_US'); // false when already en_US (WP-CLI on GridPane)
+$checks['purchasing: status label English source'] = \Kaupang\Stock\Purchasing\PurchaseOrders::statusLabel('partial') === 'Partially received';
+$switched && restore_previous_locale();
+switch_to_locale('nb_NO');
+$checks['purchasing: status label nb_NO']  = \Kaupang\Stock\Purchasing\PurchaseOrders::statusLabel('partial') === 'Delvis mottatt';
+restore_previous_locale();
+
 foreach ($checks as $k => $ok) { echo ($ok ? 'PASS' : 'FAIL') . " $k\n"; }
 exit(in_array(false, $checks, true) ? 1 : 0);

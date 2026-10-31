@@ -5,6 +5,10 @@ All notable changes to Kaupang Stock. Format: [Keep a Changelog](https://keepach
 
 ## [Unreleased]
 
+### Changed
+- `Admin\PurchasingPage` is split into one class per view under `Admin\Purchasing\` (`ListView`, `EditView`, `PrintView`, `ReceiveView`, `InboundView`, `SuppliersView`); `PurchasingPage` keeps the router, hook registration, notices and the shared helpers. The async line REST routes now call `Admin\Purchasing\EditView`. Rendered output is unchanged (stock#2).
+- Purchasing i18n: the hardcoded Norwegian source strings (`Innkjøp #%d`, `Motta varer`, `Motta varer — innkjøp #%d`, the PO status labels, the locked-line note written to the PO note trail and the receipt note written on each receipt movement) are English sources with nb_NO translations. New notes are written in the acting user's language; existing notes are left as written. The "enable it in settings" pointers no longer name a menu path. Catalogues regenerated.
+
 ## [0.15.0] - 2026-10-27
 
 ### Added
